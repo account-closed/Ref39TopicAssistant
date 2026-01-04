@@ -71,6 +71,10 @@ $danger-light: #fca5a5;
   --text-color-secondary: #{$gray-600};
   --text-color-muted: #{$gray-400};
 
+  // Icon colors
+  --icon-color: #{$gray-600};
+  --icon-color-secondary: #{$gray-400};
+
   // Semantic colors
   --success-color: #{$success};
   --warning-color: #{$warning};
@@ -122,6 +126,10 @@ $danger-light: #fca5a5;
   --text-color: #{$gray-100};
   --text-color-secondary: #{$gray-400};
   --text-color-muted: #{$gray-500};
+
+  // Icon colors
+  --icon-color: #{$gray-400};
+  --icon-color-secondary: #{$gray-500};
 
   // Semantic colors (slightly adjusted for dark mode)
   --success-color: #{$success-light};
@@ -374,7 +382,7 @@ a {
     }
 
     .p-menuitem-icon {
-      color: var(--primary-color);
+      color: var(--icon-color);
     }
   }
 }

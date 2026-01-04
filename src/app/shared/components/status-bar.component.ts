@@ -71,7 +71,7 @@ import { LockStatus } from '../../core/services/lock.service';
     }
 
     .status-item i {
-      color: var(--text-color-muted);
+      color: var(--icon-color-secondary);
     }
 
     .status-item strong {

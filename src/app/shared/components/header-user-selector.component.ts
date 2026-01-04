@@ -34,7 +34,7 @@ import { Subscription } from 'rxjs';
     }
 
     .user-selector i {
-      color: var(--primary-color);
+      color: var(--icon-color);
       font-size: 1rem;
     }
   `]

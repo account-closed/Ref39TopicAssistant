@@ -1,7 +1,6 @@
 import { Component, signal, OnInit, inject } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { Drawer } from 'primeng/drawer';
 import { Button } from 'primeng/button';
 import { Menu } from 'primeng/menu';
 import { MenuItem } from 'primeng/api';
@@ -20,7 +19,6 @@ import { ThemeService } from './core/services/theme.service';
   imports: [
     CommonModule,
     RouterOutlet, 
-    Drawer, 
     Button, 
     Menu,
     Toast,
