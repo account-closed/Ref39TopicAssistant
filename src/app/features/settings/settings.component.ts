@@ -99,7 +99,7 @@ interface BackendOption {
           severity="secondary">
         </p-button>
         
-        <p-message *ngIf="isConnected && canBootstrap" severity="warn" styleClass="mt-3">
+        <p-message *ngIf="isConnected && !canBootstrap" severity="warn" styleClass="mt-3">
           Das Verzeichnis enthält bereits Daten. Ein Bootstrap würde diese überschreiben.
         </p-message>
         <p-message *ngIf="bootstrapMessage" [severity]="bootstrapMessageSeverity" styleClass="mt-3">

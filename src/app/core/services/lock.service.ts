@@ -20,6 +20,7 @@ export interface LockAcquireResult {
 const LOCK_TTL_SECONDS = 120;
 const LOCK_RENEWAL_INTERVAL_MS = 30000; // 30 seconds
 const LOCK_STATUS_POLL_INTERVAL_MS = 1000; // 1 second
+const LOCK_VERIFICATION_DELAY_MS = 1000; // Wait 1 second before verifying lock acquisition
 
 @Injectable({
   providedIn: 'root'
@@ -99,8 +100,8 @@ export class LockService implements OnDestroy {
 
       await this.fileConnection.writeLock(JSON.stringify(newLock, null, 2));
 
-      // Step 4: Wait 1000 ms
-      await this.sleep(1000);
+      // Step 4: Wait before verification to detect race conditions
+      await this.sleep(LOCK_VERIFICATION_DELAY_MS);
 
       // Step 5: Re-read and verify
       const verifyLock = await this.readLockFile();
