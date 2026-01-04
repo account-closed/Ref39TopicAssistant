@@ -1,6 +1,6 @@
-import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, interval } from 'rxjs';
-import { FileConnectionService } from './file-connection.service';
+import { Injectable, OnDestroy } from '@angular/core';
+import { BehaviorSubject, Observable, interval, Subscription } from 'rxjs';
+import { FileConnectionService, FileConnectionError } from './file-connection.service';
 import { Lock, LockPurpose, LockHolder } from '../models';
 
 export interface LockStatus {
@@ -10,113 +10,203 @@ export interface LockStatus {
   remainingSeconds?: number;
 }
 
+export interface LockAcquireResult {
+  success: boolean;
+  germanMessage: string;
+  lockHolder?: LockHolder;
+  remainingSeconds?: number;
+}
+
+const LOCK_TTL_SECONDS = 120;
+const LOCK_RENEWAL_INTERVAL_MS = 30000; // 30 seconds
+const LOCK_STATUS_POLL_INTERVAL_MS = 1000; // 1 second
+const LOCK_VERIFICATION_DELAY_MS = 1000; // Wait 1 second before verifying lock acquisition
+
 @Injectable({
   providedIn: 'root'
 })
-export class LockService {
+export class LockService implements OnDestroy {
   private lockStatusSubject = new BehaviorSubject<LockStatus>({ isLocked: false, isOwnLock: false });
   public lockStatus$: Observable<LockStatus> = this.lockStatusSubject.asObservable();
+  
   private clientId: string;
   private currentMemberId: string = '';
-  private renewalInterval?: any;
+  private currentMemberName: string = '';
+  private renewalInterval?: ReturnType<typeof setInterval>;
+  private statusPollSubscription?: Subscription;
 
   constructor(private fileConnection: FileConnectionService) {
     this.clientId = this.generateUUID();
     
-    // Update lock status every second
-    interval(1000).subscribe(() => {
-      this.updateLockStatus();
+    // Update lock status every second when connected
+    this.statusPollSubscription = interval(LOCK_STATUS_POLL_INTERVAL_MS).subscribe(() => {
+      if (this.fileConnection.isConnected()) {
+        this.updateLockStatus();
+      }
     });
   }
 
-  setCurrentMember(memberId: string): void {
-    this.currentMemberId = memberId;
+  ngOnDestroy(): void {
+    this.stopRenewal();
+    this.statusPollSubscription?.unsubscribe();
   }
 
-  async acquireLock(purpose: LockPurpose, lockHolder: LockHolder): Promise<boolean> {
+  setCurrentMember(memberId: string, displayName?: string): void {
+    this.currentMemberId = memberId;
+    if (displayName) {
+      this.currentMemberName = displayName;
+    }
+  }
+
+  setCurrentMemberName(displayName: string): void {
+    this.currentMemberName = displayName;
+  }
+
+  /**
+   * Acquire lock following the specification:
+   * 1. Read lock.json (if missing: treat as unlocked)
+   * 2. If now minus lockedAt is less than ttlSeconds: block editing
+   * 3. If unlocked or stale: write lock, wait 1000ms, re-read and verify
+   */
+  async acquireLock(purpose: LockPurpose, lockHolder?: LockHolder): Promise<LockAcquireResult> {
+    const holder = lockHolder || {
+      memberId: this.currentMemberId,
+      displayName: this.currentMemberName
+    };
+
     try {
       // Step 1: Read current lock
-      const lockContent = await this.readLockFile();
-      const existingLock = lockContent ? JSON.parse(lockContent) as Lock : null;
+      const existingLock = await this.readLockFile();
 
       // Step 2: Check if locked and not stale
       if (existingLock && !this.isLockStale(existingLock)) {
-        return false; // Lock is held by someone else
+        const remainingSeconds = this.getRemainingSeconds(existingLock);
+        return {
+          success: false,
+          germanMessage: `Sperre aktiv von ${existingLock.lockedBy.displayName}. Noch ${remainingSeconds} Sekunden.`,
+          lockHolder: existingLock.lockedBy,
+          remainingSeconds
+        };
       }
 
       // Step 3: Write new lock
       const newLock: Lock = {
         lockedAt: new Date().toISOString(),
-        ttlSeconds: 120,
-        lockedBy: lockHolder,
+        ttlSeconds: LOCK_TTL_SECONDS,
+        lockedBy: holder,
         clientId: this.clientId,
         purpose
       };
 
       await this.fileConnection.writeLock(JSON.stringify(newLock, null, 2));
 
-      // Step 4: Wait 1 second
-      await this.sleep(1000);
+      // Step 4: Wait before verification to detect race conditions
+      await this.sleep(LOCK_VERIFICATION_DELAY_MS);
 
       // Step 5: Re-read and verify
-      const verifyContent = await this.readLockFile();
-      const verifyLock = verifyContent ? JSON.parse(verifyContent) as Lock : null;
+      const verifyLock = await this.readLockFile();
 
       if (verifyLock && verifyLock.clientId === this.clientId) {
         // Successfully acquired lock
-        this.updateLockStatus();
-        this.startRenewal();
-        return true;
+        await this.updateLockStatus();
+        this.startRenewal(purpose, holder);
+        return {
+          success: true,
+          germanMessage: 'Sperre erfolgreich erworben.'
+        };
       }
 
-      return false; // Another client won
+      // Another client won the race
+      return {
+        success: false,
+        germanMessage: 'Ein anderer Benutzer hat die Sperre erworben. Bitte versuchen Sie es erneut.',
+        lockHolder: verifyLock?.lockedBy,
+        remainingSeconds: verifyLock ? this.getRemainingSeconds(verifyLock) : undefined
+      };
     } catch (error) {
       console.error('Failed to acquire lock:', error);
-      return false;
+      if (error instanceof FileConnectionError) {
+        return {
+          success: false,
+          germanMessage: error.germanMessage
+        };
+      }
+      return {
+        success: false,
+        germanMessage: 'Fehler beim Erwerben der Sperre: ' + (error as Error).message
+      };
     }
   }
 
+  /**
+   * Release lock by writing a stale lock (lockedAt = 1970-01-01T00:00:00Z).
+   */
   async releaseLock(): Promise<void> {
     try {
       this.stopRenewal();
       
-      // Write stale lock to unlock
+      // Write stale lock to unlock reliably
       const staleLock: Lock = {
         lockedAt: '1970-01-01T00:00:00Z',
-        ttlSeconds: 120,
+        ttlSeconds: LOCK_TTL_SECONDS,
         lockedBy: { memberId: '', displayName: '' },
         clientId: '',
         purpose: 'topic-save'
       };
 
       await this.fileConnection.writeLock(JSON.stringify(staleLock, null, 2));
-      this.updateLockStatus();
+      await this.updateLockStatus();
     } catch (error) {
       console.error('Failed to release lock:', error);
+      // Don't throw - best effort release
     }
   }
 
-  async renewLock(): Promise<void> {
+  /**
+   * Renew the lock (extend lock periodically while editing).
+   */
+  async renewLock(): Promise<boolean> {
     try {
-      const lockContent = await this.readLockFile();
-      const currentLock = lockContent ? JSON.parse(lockContent) as Lock : null;
+      const currentLock = await this.readLockFile();
 
       if (currentLock && currentLock.clientId === this.clientId) {
         currentLock.lockedAt = new Date().toISOString();
         await this.fileConnection.writeLock(JSON.stringify(currentLock, null, 2));
-        this.updateLockStatus();
+        await this.updateLockStatus();
+        return true;
       }
+      return false;
     } catch (error) {
       console.error('Failed to renew lock:', error);
+      return false;
     }
   }
 
-  private startRenewal(): void {
+  /**
+   * Check if we currently hold the lock.
+   */
+  async hasOwnLock(): Promise<boolean> {
+    try {
+      const lock = await this.readLockFile();
+      return lock !== null && lock.clientId === this.clientId && !this.isLockStale(lock);
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Get current lock status synchronously.
+   */
+  getLockStatus(): LockStatus {
+    return this.lockStatusSubject.value;
+  }
+
+  private startRenewal(purpose: LockPurpose, holder: LockHolder): void {
     this.stopRenewal();
-    // Renew every 30 seconds
+    // Renew every 30 seconds while there are unsaved changes
     this.renewalInterval = setInterval(() => {
       this.renewLock();
-    }, 30000);
+    }, LOCK_RENEWAL_INTERVAL_MS);
   }
 
   private stopRenewal(): void {
@@ -128,14 +218,13 @@ export class LockService {
 
   private async updateLockStatus(): Promise<void> {
     try {
-      const lockContent = await this.readLockFile();
+      const lock = await this.readLockFile();
       
-      if (!lockContent) {
+      if (!lock) {
         this.lockStatusSubject.next({ isLocked: false, isOwnLock: false });
         return;
       }
 
-      const lock = JSON.parse(lockContent) as Lock;
       const isStale = this.isLockStale(lock);
       
       if (isStale) {
@@ -158,6 +247,19 @@ export class LockService {
     }
   }
 
+  private async readLockFile(): Promise<Lock | null> {
+    try {
+      const content = await this.fileConnection.readLock();
+      if (!content || content.trim() === '') {
+        return null;
+      }
+      return JSON.parse(content) as Lock;
+    } catch (error) {
+      // File doesn't exist or invalid JSON - treat as unlocked
+      return null;
+    }
+  }
+
   private isLockStale(lock: Lock): boolean {
     const lockedAt = new Date(lock.lockedAt);
     const now = new Date();
@@ -170,14 +272,6 @@ export class LockService {
     const now = new Date();
     const ageSeconds = (now.getTime() - lockedAt.getTime()) / 1000;
     return Math.max(0, Math.ceil(lock.ttlSeconds - ageSeconds));
-  }
-
-  private async readLockFile(): Promise<string | null> {
-    try {
-      return await this.fileConnection.readLock();
-    } catch (error) {
-      return null;
-    }
   }
 
   private sleep(ms: number): Promise<void> {
