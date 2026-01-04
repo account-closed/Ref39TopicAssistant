@@ -717,8 +717,8 @@ export class TopicsComponent implements OnInit, OnDestroy {
     try {
       // Convert dates to ISO strings
       if (!this.topic.validity.alwaysValid) {
-        this.topic.validity.validFrom = this.validFromDate?.toISOString().split('T')[0];
-        this.topic.validity.validTo = this.validToDate?.toISOString().split('T')[0];
+        this.topic.validity.validFrom = this.toDateString(this.validFromDate);
+        this.topic.validity.validTo = this.toDateString(this.validToDate);
       } else {
         this.topic.validity.validFrom = undefined;
         this.topic.validity.validTo = undefined;
@@ -806,7 +806,11 @@ export class TopicsComponent implements OnInit, OnDestroy {
       this.table?.filter(null, 'tagsString', 'contains');
     } else {
       // Custom filter - topics must have at least one of the selected tags
-      this.table?.filter(this.filterTags.join('|'), 'tagsString', 'regexp');
+      // Escape special regex characters to prevent ReDoS
+      const escapedTags = this.filterTags.map(tag => 
+        tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      );
+      this.table?.filter(escapedTags.join('|'), 'tagsString', 'regexp');
     }
   }
 
@@ -835,7 +839,8 @@ export class TopicsComponent implements OnInit, OnDestroy {
       });
       this.table.filteredValue = filtered;
     } else {
-      this.table.filteredValue = null as any;
+      // Clear filter - PrimeNG expects undefined or empty array to clear filteredValue
+      this.table.filteredValue = undefined as unknown as typeof this.topics;
     }
   }
 
@@ -922,5 +927,12 @@ export class TopicsComponent implements OnInit, OnDestroy {
     if (!isoString) return '';
     const date = new Date(isoString);
     return date.toLocaleDateString('de-DE');
+  }
+
+  /**
+   * Convert a Date object to ISO date string (YYYY-MM-DD) or undefined
+   */
+  private toDateString(date: Date | null): string | undefined {
+    return date ? date.toISOString().split('T')[0] : undefined;
   }
 }
