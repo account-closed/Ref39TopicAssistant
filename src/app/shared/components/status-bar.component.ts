@@ -20,25 +20,25 @@ import { LockStatus } from '../../core/services/lock.service';
           </span>
           <span class="status-item">
             <i class="pi pi-database"></i>
-            <strong>Datenstand:</strong> 
+            <strong>Datenstand:</strong>
             {{ revisionInfo }}
           </span>
           <span class="status-item">
             <i class="pi pi-lock"></i>
-            <strong>Sperre:</strong> 
+            <strong>Sperre:</strong>
             <span [class]="getLockStatusClass()">{{ lockStatusText }}</span>
           </span>
           <span class="status-item">
             <i class="pi pi-wifi"></i>
-            <strong>Schreibzugriff:</strong> 
+            <strong>Schreibzugriff:</strong>
             <span [class]="getConnectivityClass()">{{ connectivityText }}</span>
           </span>
         </div>
       </ng-template>
       <ng-template pTemplate="end">
-        <p-button 
-          label="Dateien verbinden" 
-          icon="pi pi-link" 
+        <p-button
+          label="Dateien verbinden"
+          icon="pi pi-link"
           (onClick)="connectFiles()"
           [disabled]="isConnected"
           severity="info"
@@ -50,8 +50,8 @@ import { LockStatus } from '../../core/services/lock.service';
   styles: [`
     .status-bar {
       border-radius: 0;
-      background: var(--surface-card);
-      border-top: 1px solid var(--surface-border);
+
+      border-top: 1px solid;
       padding: 0.5rem 1rem;
       transition: background-color 0.3s ease, border-color 0.3s ease;
     }
@@ -67,37 +67,15 @@ import { LockStatus } from '../../core/services/lock.service';
       align-items: center;
       gap: 0.5rem;
       font-size: 0.8rem;
-      color: var(--text-color-secondary);
     }
 
     .status-item i {
-      color: var(--icon-color-secondary);
     }
 
     .status-item strong {
       font-weight: 600;
-      color: var(--text-color);
     }
 
-    .lock-free {
-      color: var(--success-color);
-    }
-
-    .lock-held {
-      color: var(--danger-color);
-    }
-
-    .lock-own {
-      color: var(--primary-color);
-    }
-
-    .connected {
-      color: var(--success-color);
-    }
-
-    .disconnected {
-      color: var(--danger-color);
-    }
   `]
 })
 export class StatusBarComponent implements OnInit {

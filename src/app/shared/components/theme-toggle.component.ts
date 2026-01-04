@@ -9,12 +9,12 @@ import { ThemeService } from '../../core/services/theme.service';
   standalone: true,
   imports: [CommonModule, Button, Tooltip],
   template: `
-    <p-button 
+    <p-button
       [icon]="themeService.isDarkMode() ? 'pi pi-sun' : 'pi pi-moon'"
       [rounded]="true"
       [text]="true"
       (onClick)="themeService.toggleTheme()"
-      pTooltip="{{ themeService.isDarkMode() ? 'Zum hellen Modus wechseln' : 'Zum dunklen Modus wechseln' }}"
+      [pTooltip]="themeService.isDarkMode() ? 'Zum hellen Modus wechseln' : 'Zum dunklen Modus wechseln'"
       tooltipPosition="bottom">
     </p-button>
   `,

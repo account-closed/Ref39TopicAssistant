@@ -11,7 +11,7 @@ const THEME_STORAGE_KEY = 'raci-theme-mode';
 export class ThemeService {
   private readonly themeMode = signal<ThemeMode>('system');
   private readonly systemPrefersDark = signal<boolean>(false);
-  
+
   readonly currentMode = computed(() => this.themeMode());
   readonly isDarkMode = computed(() => {
     const mode = this.themeMode();
@@ -22,26 +22,29 @@ export class ThemeService {
   });
 
   constructor(@Inject(PLATFORM_ID) private platformId: Object) {
-    if (isPlatformBrowser(this.platformId)) {
-      // Load saved preference
-      const saved = localStorage.getItem(THEME_STORAGE_KEY) as ThemeMode | null;
-      if (saved && ['light', 'dark', 'system'].includes(saved)) {
-        this.themeMode.set(saved);
-      }
+    if (!isPlatformBrowser(this.platformId)) return;
 
-      // Detect system preference
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      this.systemPrefersDark.set(mediaQuery.matches);
-      
-      mediaQuery.addEventListener('change', (e) => {
-        this.systemPrefersDark.set(e.matches);
-      });
-
-      // Apply theme on changes
-      effect(() => {
-        this.applyTheme(this.isDarkMode());
-      });
+    const saved = localStorage.getItem(THEME_STORAGE_KEY) as ThemeMode | null;
+    if (saved === 'light' || saved === 'dark' || saved === 'system') {
+      this.themeMode.set(saved);
     }
+
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    this.systemPrefersDark.set(mediaQuery.matches);
+
+    const handler = (e: MediaQueryListEvent) => this.systemPrefersDark.set(e.matches);
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', handler);
+    } else {
+      mediaQuery.addListener(handler);
+    }
+
+    effect(() => {
+      this.applyTheme(this.isDarkMode());
+    });
+
+    // wichtig: initial
+    this.applyTheme(this.isDarkMode());
   }
 
   setThemeMode(mode: ThemeMode): void {

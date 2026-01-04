@@ -12,14 +12,11 @@
   align-items: center;
   gap: 1rem;
   padding: 0.75rem 1rem;
-  background: var(--p-surface-0);
-  border-bottom: 1px solid var(--p-surface-200);
   z-index: 100;
 
   h2 {
     margin: 0;
     font-size: 1.25rem;
-    color: var(--p-primary-color);
     font-weight: 700;
     letter-spacing: -0.025em;
   }
@@ -44,8 +41,6 @@
 .app-sidebar {
   width: 260px;
   min-width: 260px;
-  background: var(--p-surface-0);
-  border-right: 1px solid var(--p-surface-200);
   overflow-y: auto;
 
   nav {
@@ -56,13 +51,13 @@
 .app-content {
   flex: 1;
   overflow-y: auto;
-  background: var(--p-surface-50);
+
 }
 
 // Menu styles for sidebar
 :host ::ng-deep .p-menu {
   background: transparent;
-  border: none;
+
   width: 100%;
 
   .p-menuitem {

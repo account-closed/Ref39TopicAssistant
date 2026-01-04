@@ -29,16 +29,16 @@ import { TeamMember, Topic } from '../../core/models';
               Wählen Sie ein Verzeichnis auf einem gemeinsamen Netzlaufwerk (z.B. SMB-Freigabe),
               damit alle Teammitglieder auf die gleichen Daten zugreifen können.
             </p>
-            <p-button 
-              label="Schnellverbindung - Datenverzeichnis wählen" 
-              icon="pi pi-folder-open" 
+            <p-button
+              label="Schnellverbindung - Datenverzeichnis wählen"
+              icon="pi pi-folder-open"
               (onClick)="quickConnect()"
               [loading]="isConnecting"
               severity="primary"
               size="large">
             </p-button>
             <p-message *ngIf="!hasFileSystemAPI" severity="error" styleClass="mt-3">
-              Ihr Browser unterstützt die File System Access API nicht. 
+              Ihr Browser unterstützt die File System Access API nicht.
               Bitte verwenden Sie Chrome, Edge oder einen anderen Chromium-basierten Browser.
             </p-message>
             <p-message *ngIf="connectError" severity="error" styleClass="mt-3">
@@ -58,9 +58,9 @@ import { TeamMember, Topic } from '../../core/models';
         <div class="search-box">
           <span class="p-input-icon-left" style="width: 100%">
             <i class="pi pi-search"></i>
-            <input 
-              type="text" 
-              pInputText 
+            <input
+              type="text"
+              pInputText
               [(ngModel)]="searchQuery"
               (ngModelChange)="onSearchChange($event)"
               placeholder="Thema suchen..."
@@ -72,20 +72,20 @@ import { TeamMember, Topic } from '../../core/models';
 
         <div class="search-results" *ngIf="searchResults.length > 0">
           <p class="results-count">{{ searchResults.length }} Ergebnis(se) gefunden</p>
-          
+
           <div class="result-list">
-            <p-card *ngFor="let result of searchResults; let i = index" 
+            <p-card *ngFor="let result of searchResults; let i = index"
                     [ngClass]="{'selected': i === selectedIndex}"
                     (click)="selectResult(i)">
               <ng-template pTemplate="header">
                 <div class="result-header">
                   <h3>{{ result.topic.header }}</h3>
-                  <p-tag [value]="getValidityBadge(result.topic)" 
+                  <p-tag [value]="getValidityBadge(result.topic)"
                          [severity]="getValiditySeverity(result.topic)">
                   </p-tag>
                 </div>
               </ng-template>
-              
+
               <div class="result-body">
                 <div class="raci-info" *ngIf="result.topic.raci">
                   <div class="raci-item">
@@ -104,8 +104,8 @@ import { TeamMember, Topic } from '../../core/models';
                 </p>
 
                 <div class="tags" *ngIf="result.topic.tags && result.topic.tags.length > 0">
-                  <p-tag *ngFor="let tag of result.topic.tags" 
-                         [value]="tag" 
+                  <p-tag *ngFor="let tag of result.topic.tags"
+                         [value]="tag"
                          severity="info">
                   </p-tag>
                 </div>
@@ -193,7 +193,6 @@ import { TeamMember, Topic } from '../../core/models';
 
     .search-header p {
       margin: 0;
-      color: var(--p-text-muted-color);
     }
 
     .search-box {
@@ -202,7 +201,6 @@ import { TeamMember, Topic } from '../../core/models';
 
     .results-count {
       margin-bottom: 1rem;
-      color: var(--p-text-muted-color);
       font-weight: 600;
     }
 
@@ -222,7 +220,6 @@ import { TeamMember, Topic } from '../../core/models';
     }
 
     .result-list p-card.selected {
-      border: 2px solid var(--p-primary-color);
     }
 
     .result-header {
@@ -246,7 +243,6 @@ import { TeamMember, Topic } from '../../core/models';
       gap: 2rem;
       margin-bottom: 1rem;
       padding: 0.5rem;
-      background: var(--p-surface-100);
       border-radius: 4px;
     }
 
@@ -255,13 +251,11 @@ import { TeamMember, Topic } from '../../core/models';
     }
 
     .raci-item strong {
-      color: var(--p-primary-color);
       margin-right: 0.25rem;
     }
 
     .description {
       margin: 1rem 0;
-      color: var(--p-text-muted-color);
     }
 
     .tags {
@@ -278,12 +272,10 @@ import { TeamMember, Topic } from '../../core/models';
     .no-results, .empty-state {
       text-align: center;
       padding: 4rem 2rem;
-      color: var(--p-text-muted-color);
     }
 
     .no-results i, .empty-state i {
       font-size: 3rem;
-      color: var(--p-text-muted-color);
     }
 
     .no-results p, .empty-state p {
@@ -348,7 +340,7 @@ export class SearchComponent implements OnInit, OnDestroy {
 
     this.isConnecting = true;
     this.connectError = '';
-    
+
     try {
       await this.backend.connect();
     } catch (error) {
@@ -443,18 +435,18 @@ export class SearchComponent implements OnInit, OnDestroy {
 
   private formatTopicForClipboard(topic: Topic): string {
     let text = `Thema: ${topic.header}\n\n`;
-    
+
     if (topic.description) {
       text += `Beschreibung: ${topic.description}\n\n`;
     }
 
     text += `Verantwortlich:\n`;
     text += `  R1: ${this.getMemberName(topic.raci.r1MemberId)}\n`;
-    
+
     if (topic.raci.r2MemberId) {
       text += `  R2: ${this.getMemberName(topic.raci.r2MemberId)}\n`;
     }
-    
+
     if (topic.raci.r3MemberId) {
       text += `  R3: ${this.getMemberName(topic.raci.r3MemberId)}\n`;
     }
