@@ -1,10 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InputText } from 'primeng/inputtext';
 import { Card } from 'primeng/card';
 import { Tag } from 'primeng/tag';
 import { Button } from 'primeng/button';
+import { Message } from 'primeng/message';
+import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
 import { SearchIndexService } from '../../core/services/search-index.service';
 import { SearchResult } from '../../core/services/search-index.service';
@@ -13,88 +15,121 @@ import { TeamMember, Topic } from '../../core/models';
 @Component({
   selector: 'app-search',
   standalone: true,
-  imports: [CommonModule, FormsModule, InputText, Card, Tag, Button],
+  imports: [CommonModule, FormsModule, InputText, Card, Tag, Button, Message],
   template: `
     <div class="search-page">
-      <div class="search-header">
-        <h1>Schnellsuche</h1>
-        <p>Finden Sie schnell den zuständigen Ansprechpartner für ein Thema</p>
+      <!-- Quick Connect Panel - shown when not connected -->
+      <div class="quick-connect-panel" *ngIf="!isConnected">
+        <p-card styleClass="connect-card">
+          <div class="connect-content">
+            <i class="pi pi-folder-open connect-icon"></i>
+            <h2>Willkommen beim RACI Topic Finder</h2>
+            <p>Um zu beginnen, verbinden Sie die Anwendung mit einem Datenverzeichnis.</p>
+            <p class="connect-hint">
+              Wählen Sie ein Verzeichnis auf einem gemeinsamen Netzlaufwerk (z.B. SMB-Freigabe),
+              damit alle Teammitglieder auf die gleichen Daten zugreifen können.
+            </p>
+            <p-button 
+              label="Schnellverbindung - Datenverzeichnis wählen" 
+              icon="pi pi-folder-open" 
+              (onClick)="quickConnect()"
+              [loading]="isConnecting"
+              severity="primary"
+              size="large">
+            </p-button>
+            <p-message *ngIf="!hasFileSystemAPI" severity="error" styleClass="mt-3">
+              Ihr Browser unterstützt die File System Access API nicht. 
+              Bitte verwenden Sie Chrome, Edge oder einen anderen Chromium-basierten Browser.
+            </p-message>
+            <p-message *ngIf="connectError" severity="error" styleClass="mt-3">
+              {{ connectError }}
+            </p-message>
+          </div>
+        </p-card>
       </div>
 
-      <div class="search-box">
-        <span class="p-input-icon-left" style="width: 100%">
-          <i class="pi pi-search"></i>
-          <input 
-            type="text" 
-            pInputText 
-            [(ngModel)]="searchQuery"
-            (ngModelChange)="onSearchChange($event)"
-            placeholder="Thema suchen..."
-            style="width: 100%"
-            #searchInput
-            autofocus />
-        </span>
-      </div>
-
-      <div class="search-results" *ngIf="searchResults.length > 0">
-        <p class="results-count">{{ searchResults.length }} Ergebnis(se) gefunden</p>
-        
-        <div class="result-list">
-          <p-card *ngFor="let result of searchResults; let i = index" 
-                  [ngClass]="{'selected': i === selectedIndex}"
-                  (click)="selectResult(i)">
-            <ng-template pTemplate="header">
-              <div class="result-header">
-                <h3>{{ result.topic.header }}</h3>
-                <p-tag [value]="getValidityBadge(result.topic)" 
-                       [severity]="getValiditySeverity(result.topic)">
-                </p-tag>
-              </div>
-            </ng-template>
-            
-            <div class="result-body">
-              <div class="raci-info" *ngIf="result.topic.raci">
-                <div class="raci-item">
-                  <strong>R1:</strong> {{ getMemberName(result.topic.raci.r1MemberId) }}
-                </div>
-                <div class="raci-item" *ngIf="result.topic.raci.r2MemberId">
-                  <strong>R2:</strong> {{ getMemberName(result.topic.raci.r2MemberId) }}
-                </div>
-                <div class="raci-item" *ngIf="result.topic.raci.r3MemberId">
-                  <strong>R3:</strong> {{ getMemberName(result.topic.raci.r3MemberId) }}
-                </div>
-              </div>
-
-              <p *ngIf="result.topic.description" class="description">
-                {{ result.topic.description }}
-              </p>
-
-              <div class="tags" *ngIf="result.topic.tags && result.topic.tags.length > 0">
-                <p-tag *ngFor="let tag of result.topic.tags" 
-                       [value]="tag" 
-                       severity="info">
-                </p-tag>
-              </div>
-            </div>
-
-            <ng-template pTemplate="footer">
-              <div class="result-actions">
-                <p-button label="Details" icon="pi pi-info-circle" severity="secondary" size="small"></p-button>
-                <p-button label="Kopieren" icon="pi pi-copy" severity="secondary" size="small" (onClick)="copyToClipboard(result.topic)"></p-button>
-              </div>
-            </ng-template>
-          </p-card>
+      <!-- Main search UI - shown when connected -->
+      <div *ngIf="isConnected">
+        <div class="search-header">
+          <h1>Schnellsuche</h1>
+          <p>Finden Sie schnell den zuständigen Ansprechpartner für ein Thema</p>
         </div>
-      </div>
 
-      <div class="no-results" *ngIf="searchQuery && searchResults.length === 0">
-        <i class="pi pi-search" style="font-size: 3rem; color: #ccc;"></i>
-        <p>Keine Ergebnisse gefunden</p>
-      </div>
+        <div class="search-box">
+          <span class="p-input-icon-left" style="width: 100%">
+            <i class="pi pi-search"></i>
+            <input 
+              type="text" 
+              pInputText 
+              [(ngModel)]="searchQuery"
+              (ngModelChange)="onSearchChange($event)"
+              placeholder="Thema suchen..."
+              style="width: 100%"
+              #searchInput
+              autofocus />
+          </span>
+        </div>
 
-      <div class="empty-state" *ngIf="!searchQuery">
-        <i class="pi pi-search" style="font-size: 3rem; color: #ccc;"></i>
-        <p>Geben Sie einen Suchbegriff ein, um Themen zu finden</p>
+        <div class="search-results" *ngIf="searchResults.length > 0">
+          <p class="results-count">{{ searchResults.length }} Ergebnis(se) gefunden</p>
+          
+          <div class="result-list">
+            <p-card *ngFor="let result of searchResults; let i = index" 
+                    [ngClass]="{'selected': i === selectedIndex}"
+                    (click)="selectResult(i)">
+              <ng-template pTemplate="header">
+                <div class="result-header">
+                  <h3>{{ result.topic.header }}</h3>
+                  <p-tag [value]="getValidityBadge(result.topic)" 
+                         [severity]="getValiditySeverity(result.topic)">
+                  </p-tag>
+                </div>
+              </ng-template>
+              
+              <div class="result-body">
+                <div class="raci-info" *ngIf="result.topic.raci">
+                  <div class="raci-item">
+                    <strong>R1:</strong> {{ getMemberName(result.topic.raci.r1MemberId) }}
+                  </div>
+                  <div class="raci-item" *ngIf="result.topic.raci.r2MemberId">
+                    <strong>R2:</strong> {{ getMemberName(result.topic.raci.r2MemberId) }}
+                  </div>
+                  <div class="raci-item" *ngIf="result.topic.raci.r3MemberId">
+                    <strong>R3:</strong> {{ getMemberName(result.topic.raci.r3MemberId) }}
+                  </div>
+                </div>
+
+                <p *ngIf="result.topic.description" class="description">
+                  {{ result.topic.description }}
+                </p>
+
+                <div class="tags" *ngIf="result.topic.tags && result.topic.tags.length > 0">
+                  <p-tag *ngFor="let tag of result.topic.tags" 
+                         [value]="tag" 
+                         severity="info">
+                  </p-tag>
+                </div>
+              </div>
+
+              <ng-template pTemplate="footer">
+                <div class="result-actions">
+                  <p-button label="Details" icon="pi pi-info-circle" severity="secondary" size="small"></p-button>
+                  <p-button label="Kopieren" icon="pi pi-copy" severity="secondary" size="small" (onClick)="copyToClipboard(result.topic)"></p-button>
+                </div>
+              </ng-template>
+            </p-card>
+          </div>
+        </div>
+
+        <div class="no-results" *ngIf="searchQuery && searchResults.length === 0">
+          <i class="pi pi-search" style="font-size: 3rem; color: #ccc;"></i>
+          <p>Keine Ergebnisse gefunden</p>
+        </div>
+
+        <div class="empty-state" *ngIf="!searchQuery">
+          <i class="pi pi-search" style="font-size: 3rem; color: #ccc;"></i>
+          <p>Geben Sie einen Suchbegriff ein, um Themen zu finden</p>
+        </div>
       </div>
     </div>
   `,
@@ -103,6 +138,50 @@ import { TeamMember, Topic } from '../../core/models';
       padding: 2rem;
       max-width: 1200px;
       margin: 0 auto;
+    }
+
+    .quick-connect-panel {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 60vh;
+    }
+
+    .connect-card {
+      max-width: 600px;
+      text-align: center;
+    }
+
+    .connect-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      padding: 2rem;
+    }
+
+    .connect-icon {
+      font-size: 4rem;
+      color: var(--primary-color);
+    }
+
+    .connect-content h2 {
+      margin: 0;
+      color: var(--text-color);
+    }
+
+    .connect-content p {
+      margin: 0;
+      color: var(--text-color-secondary);
+    }
+
+    .connect-hint {
+      font-size: 0.875rem;
+      max-width: 450px;
+    }
+
+    .mt-3 {
+      margin-top: 1rem;
     }
 
     .search-header {
@@ -212,11 +291,16 @@ import { TeamMember, Topic } from '../../core/models';
     }
   `]
 })
-export class SearchComponent implements OnInit {
+export class SearchComponent implements OnInit, OnDestroy {
   searchQuery: string = '';
   searchResults: SearchResult[] = [];
   selectedIndex: number = -1;
+  isConnected = false;
+  isConnecting = false;
+  hasFileSystemAPI = false;
+  connectError = '';
   private debounceTimer: any;
+  private subscriptions: Subscription[] = [];
 
   constructor(
     private backend: BackendService,
@@ -224,16 +308,54 @@ export class SearchComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    // Check File System API support
+    this.hasFileSystemAPI = 'showDirectoryPicker' in window;
+
+    // Subscribe to connection status
+    this.subscriptions.push(
+      this.backend.connectionStatus$.subscribe(connected => {
+        this.isConnected = connected;
+      })
+    );
+
     // Subscribe to datastore changes to rebuild index
-    this.backend.datastore$.subscribe(datastore => {
-      if (datastore) {
-        this.searchIndex.buildIndex(datastore);
-        // Re-run search if there's a query
-        if (this.searchQuery) {
-          this.performSearch();
+    this.subscriptions.push(
+      this.backend.datastore$.subscribe(datastore => {
+        if (datastore) {
+          this.searchIndex.buildIndex(datastore);
+          // Re-run search if there's a query
+          if (this.searchQuery) {
+            this.performSearch();
+          }
         }
-      }
-    });
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach(sub => sub.unsubscribe());
+    if (this.debounceTimer) {
+      clearTimeout(this.debounceTimer);
+    }
+  }
+
+  async quickConnect(): Promise<void> {
+    if (!this.hasFileSystemAPI) {
+      this.connectError = 'Ihr Browser unterstützt die File System Access API nicht.';
+      return;
+    }
+
+    this.isConnecting = true;
+    this.connectError = '';
+    
+    try {
+      await this.backend.connect();
+    } catch (error) {
+      console.error('Quick connect failed:', error);
+      this.connectError = 'Verbindung fehlgeschlagen: ' + (error as Error).message;
+    } finally {
+      this.isConnecting = false;
+    }
   }
 
   onSearchChange(query: string): void {
