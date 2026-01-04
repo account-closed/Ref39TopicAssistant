@@ -65,6 +65,7 @@ $danger-light: #fca5a5;
   --surface-overlay: #ffffff;
   --surface-border: #{$gray-200};
   --surface-hover: #{$gray-100};
+  --mask-bg: rgba(0, 0, 0, 0.4);
 
   // Text colors
   --text-color: #{$gray-900};
@@ -77,8 +78,17 @@ $danger-light: #fca5a5;
 
   // Semantic colors
   --success-color: #{$success};
+  --success-color-bg: #f0fdf4;
+  --success-color-border: #bbf7d0;
+  --success-color-text: #166534;
   --warning-color: #{$warning};
+  --warning-color-bg: #fffbeb;
+  --warning-color-border: #fde68a;
+  --warning-color-text: #92400e;
   --danger-color: #{$danger};
+  --danger-color-bg: #fef2f2;
+  --danger-color-border: #fecaca;
+  --danger-color-text: #991b1b;
 
   // Shadow
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
@@ -121,6 +131,7 @@ $danger-light: #fca5a5;
   --surface-overlay: #{$gray-800};
   --surface-border: #{$gray-700};
   --surface-hover: #{$gray-700};
+  --mask-bg: rgba(0, 0, 0, 0.6);
 
   // Text colors
   --text-color: #{$gray-100};
@@ -133,8 +144,17 @@ $danger-light: #fca5a5;
 
   // Semantic colors (slightly adjusted for dark mode)
   --success-color: #{$success-light};
+  --success-color-bg: #14532d;
+  --success-color-border: #166534;
+  --success-color-text: #86efac;
   --warning-color: #{$warning-light};
+  --warning-color-bg: #78350f;
+  --warning-color-border: #92400e;
+  --warning-color-text: #fcd34d;
   --danger-color: #{$danger-light};
+  --danger-color-bg: #7f1d1d;
+  --danger-color-border: #991b1b;
+  --danger-color-text: #fca5a5;
 
   // Shadow (more subtle in dark mode)
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
@@ -293,10 +313,27 @@ a {
 
 // Dialogs
 .p-dialog {
+  background: var(--surface-card);
+  border: 1px solid var(--surface-border);
+  box-shadow: var(--shadow-lg);
+
   .p-dialog-header {
     background: var(--surface-card);
     color: var(--text-color);
     border-bottom: 1px solid var(--surface-border);
+
+    .p-dialog-title {
+      color: var(--text-color);
+    }
+
+    .p-dialog-header-icon {
+      color: var(--icon-color);
+
+      &:hover {
+        background: var(--surface-hover);
+        color: var(--text-color);
+      }
+    }
   }
 
   .p-dialog-content {
@@ -308,6 +345,22 @@ a {
     background: var(--surface-card);
     border-top: 1px solid var(--surface-border);
   }
+}
+
+// Confirm Dialog
+.p-confirm-dialog {
+  .p-confirm-dialog-icon {
+    color: var(--icon-color);
+  }
+
+  .p-confirm-dialog-message {
+    color: var(--text-color);
+  }
+}
+
+// Dialog/Modal Overlay
+.p-dialog-mask {
+  background: var(--mask-bg);
 }
 
 // Inputs
@@ -412,21 +465,21 @@ a {
     }
 
     &.p-toast-message-success {
-      background: #f0fdf4;
-      border: 1px solid #bbf7d0;
-      color: #166534;
+      background: var(--success-color-bg);
+      border: 1px solid var(--success-color-border);
+      color: var(--success-color-text);
     }
 
     &.p-toast-message-warn {
-      background: #fffbeb;
-      border: 1px solid #fde68a;
-      color: #92400e;
+      background: var(--warning-color-bg);
+      border: 1px solid var(--warning-color-border);
+      color: var(--warning-color-text);
     }
 
     &.p-toast-message-error {
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      color: #991b1b;
+      background: var(--danger-color-bg);
+      border: 1px solid var(--danger-color-border);
+      color: var(--danger-color-text);
     }
   }
 }
@@ -465,37 +518,6 @@ a {
 :focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
-}
-
-// Dark mode specific adjustments
-.dark-mode {
-  .p-toast {
-    .p-toast-message {
-      &.p-toast-message-info {
-        background: #{$blue-900};
-        border-color: #{$blue-700};
-        color: #{$blue-200};
-      }
-
-      &.p-toast-message-success {
-        background: #14532d;
-        border-color: #166534;
-        color: #86efac;
-      }
-
-      &.p-toast-message-warn {
-        background: #78350f;
-        border-color: #92400e;
-        color: #fcd34d;
-      }
-
-      &.p-toast-message-error {
-        background: #7f1d1d;
-        border-color: #991b1b;
-        color: #fca5a5;
-      }
-    }
-  }
 }
 
 // ===========================
