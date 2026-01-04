@@ -66,11 +66,10 @@ export class ThemeService {
   private applyTheme(isDark: boolean): void {
     const root = document.documentElement;
     if (isDark) {
-      root.classList.add('dark-mode');
-      root.classList.remove('light-mode');
+      // Use PrimeNG's built-in dark mode class
+      root.classList.add('p-dark');
     } else {
-      root.classList.add('light-mode');
-      root.classList.remove('dark-mode');
+      root.classList.remove('p-dark');
     }
   }
 }

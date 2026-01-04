@@ -12,16 +12,14 @@
   align-items: center;
   gap: 1rem;
   padding: 0.75rem 1rem;
-  background: var(--surface-card);
-  border-bottom: 1px solid var(--surface-border);
-  box-shadow: var(--shadow-sm);
-  transition: background-color 0.3s ease, border-color 0.3s ease;
+  background: var(--p-surface-0);
+  border-bottom: 1px solid var(--p-surface-200);
   z-index: 100;
 
   h2 {
     margin: 0;
     font-size: 1.25rem;
-    color: var(--primary-color);
+    color: var(--p-primary-color);
     font-weight: 700;
     letter-spacing: -0.025em;
   }
@@ -35,11 +33,6 @@
     align-items: center;
     gap: 0.5rem;
   }
-
-  // Header button icons
-  :host ::ng-deep .p-button-icon {
-    color: var(--icon-color);
-  }
 }
 
 .app-body {
@@ -51,10 +44,9 @@
 .app-sidebar {
   width: 260px;
   min-width: 260px;
-  background: var(--surface-card);
-  border-right: 1px solid var(--surface-border);
+  background: var(--p-surface-0);
+  border-right: 1px solid var(--p-surface-200);
   overflow-y: auto;
-  transition: background-color 0.3s ease, border-color 0.3s ease;
 
   nav {
     padding: 0.5rem 0;
@@ -64,8 +56,7 @@
 .app-content {
   flex: 1;
   overflow-y: auto;
-  background: var(--surface-ground);
-  transition: background-color 0.3s ease;
+  background: var(--p-surface-50);
 }
 
 // Menu styles for sidebar
@@ -84,25 +75,16 @@
       .p-menuitem-link {
         padding: 0.875rem 1.25rem;
         border-radius: 0;
-        transition: background-color 0.2s ease;
-        color: var(--text-color);
         display: flex;
         align-items: center;
         gap: 0.75rem;
 
-        &:hover {
-          background: var(--surface-hover);
-        }
-
         .p-menuitem-icon {
-          color: var(--icon-color);
           font-size: 1rem;
-          transition: color 0.3s ease;
         }
 
         .p-menuitem-text {
           font-weight: 500;
-          color: var(--text-color);
         }
       }
     }

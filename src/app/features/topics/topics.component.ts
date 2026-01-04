@@ -418,12 +418,11 @@ interface MemberOption {
 
     .page-header h1 {
       margin: 0 0 0.5rem 0;
-      color: var(--text-color);
     }
 
     .page-header p {
       margin: 0;
-      color: var(--text-color-secondary);
+      color: var(--p-text-muted-color);
     }
 
     .mb-4 {
@@ -443,10 +442,9 @@ interface MemberOption {
     }
 
     .card {
-      background: var(--surface-card);
+      background: var(--p-surface-0);
       padding: 2rem;
-      border-radius: var(--border-radius);
-      box-shadow: var(--card-shadow);
+      border-radius: var(--p-border-radius);
     }
 
     .text-center {
@@ -454,7 +452,7 @@ interface MemberOption {
     }
 
     .text-secondary {
-      color: var(--text-color-secondary);
+      color: var(--p-text-muted-color);
     }
 
     .text-sm {
@@ -479,19 +477,17 @@ interface MemberOption {
 
     .field label {
       font-weight: 600;
-      color: var(--text-color);
     }
 
     .field-group {
-      border: 1px solid var(--surface-border);
-      border-radius: var(--border-radius);
+      border: 1px solid var(--p-surface-200);
+      border-radius: var(--p-border-radius);
       padding: 1rem;
       margin-top: 0.5rem;
     }
 
     .field-group h4 {
       margin: 0 0 1rem 0;
-      color: var(--text-color);
     }
 
     .field-checkbox {
@@ -508,17 +504,6 @@ interface MemberOption {
 
     :host ::ng-deep .p-datatable .p-datatable-header {
       padding: 1rem;
-      background: var(--surface-ground);
-    }
-
-    :host ::ng-deep .p-datatable .p-datatable-thead > tr > th {
-      background: var(--surface-ground);
-    }
-
-    :host ::ng-deep .p-toolbar {
-      background: var(--surface-card);
-      border: 1px solid var(--surface-border);
-      border-radius: var(--border-radius);
     }
   `]
 })

@@ -162,17 +162,16 @@ import { TeamMember, Topic } from '../../core/models';
 
     .connect-icon {
       font-size: 4rem;
-      color: var(--primary-color);
+      color: var(--p-primary-color);
     }
 
     .connect-content h2 {
       margin: 0;
-      color: var(--text-color);
     }
 
     .connect-content p {
       margin: 0;
-      color: var(--text-color-secondary);
+      color: var(--p-text-muted-color);
     }
 
     .connect-hint {
@@ -190,12 +189,11 @@ import { TeamMember, Topic } from '../../core/models';
 
     .search-header h1 {
       margin: 0 0 0.5rem 0;
-      color: var(--text-color);
     }
 
     .search-header p {
       margin: 0;
-      color: var(--text-color-secondary);
+      color: var(--p-text-muted-color);
     }
 
     .search-box {
@@ -204,7 +202,7 @@ import { TeamMember, Topic } from '../../core/models';
 
     .results-count {
       margin-bottom: 1rem;
-      color: var(--text-color-secondary);
+      color: var(--p-text-muted-color);
       font-weight: 600;
     }
 
@@ -221,11 +219,10 @@ import { TeamMember, Topic } from '../../core/models';
 
     .result-list p-card:hover {
       transform: translateY(-2px);
-      box-shadow: var(--shadow-md);
     }
 
     .result-list p-card.selected {
-      border: 2px solid var(--primary-color);
+      border: 2px solid var(--p-primary-color);
     }
 
     .result-header {
@@ -237,7 +234,6 @@ import { TeamMember, Topic } from '../../core/models';
 
     .result-header h3 {
       margin: 0;
-      color: var(--text-color);
       font-size: 1.25rem;
     }
 
@@ -250,23 +246,22 @@ import { TeamMember, Topic } from '../../core/models';
       gap: 2rem;
       margin-bottom: 1rem;
       padding: 0.5rem;
-      background: var(--surface-hover);
+      background: var(--p-surface-100);
       border-radius: 4px;
     }
 
     .raci-item {
       font-size: 0.875rem;
-      color: var(--text-color);
     }
 
     .raci-item strong {
-      color: var(--primary-color);
+      color: var(--p-primary-color);
       margin-right: 0.25rem;
     }
 
     .description {
       margin: 1rem 0;
-      color: var(--text-color-secondary);
+      color: var(--p-text-muted-color);
     }
 
     .tags {
@@ -283,12 +278,12 @@ import { TeamMember, Topic } from '../../core/models';
     .no-results, .empty-state {
       text-align: center;
       padding: 4rem 2rem;
-      color: var(--text-color-muted);
+      color: var(--p-text-muted-color);
     }
 
     .no-results i, .empty-state i {
       font-size: 3rem;
-      color: var(--text-color-muted);
+      color: var(--p-text-muted-color);
     }
 
     .no-results p, .empty-state p {
