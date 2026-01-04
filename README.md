@@ -1,59 +1,256 @@
-# RaciTopicFinder
+# RACI Topic Finder
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.0.4.
+A browser-only Angular 21 + PrimeNG 21 application for finding responsible persons for organizational topics using a RACI model. The application runs directly from a UNC path and uses shared JSON files on an SMB share for multi-user collaboration.
 
-## Development server
+## Features
 
-To start a local development server, run:
+- **Browser-only**: No backend server required - runs directly from `\\server\share\app\index.html`
+- **Fast search**: FlexSearch-powered topic search with German text normalization
+- **Multi-user support**: Lockfile-based concurrency control for safe concurrent editing
+- **RACI model**: Assign Responsible (R1/R2/R3), Consulted (C), and Informed (I) roles
+- **Real-time updates**: Automatic refresh every 10 seconds when other users make changes
+- **Backend abstraction**: Easy switch between File System and REST API backends
 
-```bash
-ng serve
+## Technology Stack
+
+- **Angular 21** with strict TypeScript
+- **PrimeNG 21** with Aura theme
+- **FlexSearch** for high-performance search
+- **File System Access API** for SMB file access
+- **Hash-based routing** for UNC compatibility
+
+## Project Structure
+
+```
+src/app/
+├── core/
+│   ├── models/          # Data models (Topic, TeamMember, Datastore, Lock, Refresh)
+│   └── services/        # Core services (Backend, FileConnection, Lock, Refresh, SearchIndex)
+├── features/
+│   ├── search/          # Fast search page
+│   ├── quick-assignment/# Quick assignment workflow
+│   ├── topics/          # Topics management (CRUD)
+│   ├── members/         # Team members management (CRUD)
+│   ├── topics-by-member/# Topics filtered by team member
+│   └── settings/        # Settings and diagnostics
+└── shared/
+    ├── components/      # Reusable components (StatusBar, UserSelectorDialog)
+    ├── pipes/           # Custom pipes
+    └── utils/           # Utility functions
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## Deployment
 
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+### 1. Build the Application
 
 ```bash
-ng generate component component-name
+npm install
+npm run build
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+The build output is in `server/share/app/`.
+
+### 2. Deploy to SMB Share
+
+Copy the entire `server/share/app/` directory to your SMB share:
+
+```
+\\server\share\app\
+├── browser\          # Angular application files
+│   ├── index.html
+│   └── ...
+└── data\            # Data files (create this folder)
+    ├── datastore.json
+    ├── lock.json
+    └── refresh.json
+```
+
+### 3. Initial Setup
+
+1. Copy the example data files from `server/share/app/data/` to your deployment location
+2. Ensure all users have read/write permissions to the `data\` folder
+3. Users open the app by navigating to `\\server\share\app\browser\index.html` in Microsoft Edge
+
+### 4. First Run
+
+1. The app will prompt for file system permissions
+2. Click "Dateien verbinden" (Connect Files)
+3. Select the `data\` folder containing `datastore.json`, `lock.json`, and `refresh.json`
+4. Select your identity from the "Ich bin..." dialog
+5. Start searching!
+
+## Backend Architecture
+
+The application uses a **Backend Abstraction Layer** that allows easy switching between different storage implementations:
+
+### Current: File System Backend
+
+Uses the File System Access API to read/write shared JSON files on SMB:
+- `datastore.json` - Topics and team members
+- `lock.json` - Edit lock with 120-second TTL
+- `refresh.json` - Refresh signal for other clients
+
+### Future: REST API Backend
+
+To switch to a REST API backend:
+
+1. Implement your REST API endpoints
+2. Update `src/app/app.config.ts`:
+
+```typescript
+// Change this line:
+{ provide: BackendService, useClass: FileSystemBackendService }
+
+// To this:
+{ provide: BackendService, useClass: RestBackendService }
+```
+
+3. Configure the API base URL in `RestBackendService`
+4. **No component changes needed!** All components use the `BackendService` interface.
+
+## Concurrency Model
+
+### Lock Protocol
+
+- **TTL**: 120 seconds
+- **Lock renewal**: Every 30 seconds while editing
+- **Lock acquisition**:
+  1. Read `lock.json`
+  2. Check if lock is stale (age > TTL)
+  3. Write new lock with current timestamp
+  4. Wait 1 second
+  5. Re-read and verify clientId matches
+  
+### Commit Pipeline
+
+1. Acquire lock
+2. Re-read datastore
+3. Validate schema
+4. Apply changes
+5. Increment revisionId
+6. Write datastore
+7. Verify write (re-read and check revisionId)
+8. Write refresh signal
+9. Release lock
+
+### Refresh Protocol
+
+- Every client polls `refresh.json` every 10 seconds
+- If revisionId changes, reload datastore and rebuild search index
+- Current search query is preserved
+
+## Search
+
+The application uses **FlexSearch** for high-performance search:
+
+- **German text normalization**: ä→ae, ö→oe, ü→ue, ß→ss
+- **Priority ranking**:
+  - Header exact match: 2000 points
+  - Header prefix match: 1500 points
+  - Header contains: 1000 points
+  - Tags: 200 points
+  - Keywords: 150 points
+  - Description: 100 points
+  - Notes: 50 points
+- **Debounced search**: 100ms delay for responsive typing
+- **Performance**: Optimized for 5,000+ topics
+
+## Development
+
+### Running Locally
 
 ```bash
-ng generate --help
+npm install
+npm start
 ```
 
-## Building
+Navigate to `http://localhost:4200/`. The app will automatically reload when you change source files.
 
-To build the project run:
+### Building
 
 ```bash
-ng build
+npm run build
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
-
-## Running unit tests
-
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+### Running Tests
 
 ```bash
-ng test
+npm test
 ```
 
-## Running end-to-end tests
+## Troubleshooting
 
-For end-to-end (e2e) testing, run:
+### File System Access Issues
 
-```bash
-ng e2e
-```
+**Problem**: "Failed to connect files" error
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+**Solutions**:
+- Ensure you're using Microsoft Edge or Chrome (File System Access API)
+- Check that you have read/write permissions to the SMB share
+- Verify the data files exist and are valid JSON
 
-## Additional Resources
+### Lock Contention
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+**Problem**: "Lock is held by another user" when trying to save
+
+**Solutions**:
+- Wait for the lock to expire (shows countdown in status bar)
+- Contact the lock holder if they're not actively editing
+- In emergencies, manually set `lockedAt` to `1970-01-01T00:00:00Z` in `lock.json`
+
+### UNC Path Issues
+
+**Problem**: App doesn't load from UNC path
+
+**Solutions**:
+- Use `file://` protocol: Open Edge and enter `file://server/share/app/browser/index.html`
+- Check network connectivity to the share
+- Verify hash-based routing is enabled (it is by default)
+
+### Performance Issues
+
+**Problem**: Search is slow with many topics
+
+**Solutions**:
+- FlexSearch should handle 5,000+ topics easily
+- Check browser console for errors
+- Ensure search index is building correctly (check `getIndexSize()`)
+
+## Browser Compatibility
+
+- **Recommended**: Microsoft Edge (Chromium) on Windows 11
+- **Supported**: Google Chrome on Windows/Linux
+- **File System Access API**: Required for SMB file operations
+
+## Architecture Decisions
+
+### Backend Abstraction
+
+The application uses a clean separation between frontend components and backend storage:
+
+- **BackendService** (abstract): Interface defining all backend operations
+- **FileSystemBackendService**: Implementation using File System Access API
+- **RestBackendService**: Placeholder for future REST API implementation
+
+**Benefits**:
+- Components never directly access storage
+- Easy to switch backends by changing one line in app.config.ts
+- No component changes needed when switching backends
+- Testable with mock backends
+
+### Why FlexSearch?
+
+FlexSearch was chosen for its:
+- Excellent performance with large datasets (5000+ topics)
+- Flexible ranking and scoring
+- Support for custom text normalization (German umlauts)
+- Small bundle size
+- Active maintenance
+
+## License
+
+This project is for internal organizational use.
+
+## Support
+
+For questions or issues, contact your IT department or the application maintainer.
