@@ -190,12 +190,12 @@ import { TeamMember, Topic } from '../../core/models';
 
     .search-header h1 {
       margin: 0 0 0.5rem 0;
-      color: #333;
+      color: var(--text-color);
     }
 
     .search-header p {
       margin: 0;
-      color: #666;
+      color: var(--text-color-secondary);
     }
 
     .search-box {
@@ -204,7 +204,7 @@ import { TeamMember, Topic } from '../../core/models';
 
     .results-count {
       margin-bottom: 1rem;
-      color: #666;
+      color: var(--text-color-secondary);
       font-weight: 600;
     }
 
@@ -221,11 +221,11 @@ import { TeamMember, Topic } from '../../core/models';
 
     .result-list p-card:hover {
       transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+      box-shadow: var(--shadow-md);
     }
 
     .result-list p-card.selected {
-      border: 2px solid #007bff;
+      border: 2px solid var(--primary-color);
     }
 
     .result-header {
@@ -237,7 +237,7 @@ import { TeamMember, Topic } from '../../core/models';
 
     .result-header h3 {
       margin: 0;
-      color: #333;
+      color: var(--text-color);
       font-size: 1.25rem;
     }
 
@@ -250,22 +250,23 @@ import { TeamMember, Topic } from '../../core/models';
       gap: 2rem;
       margin-bottom: 1rem;
       padding: 0.5rem;
-      background: #f8f9fa;
+      background: var(--surface-hover);
       border-radius: 4px;
     }
 
     .raci-item {
       font-size: 0.875rem;
+      color: var(--text-color);
     }
 
     .raci-item strong {
-      color: #007bff;
+      color: var(--primary-color);
       margin-right: 0.25rem;
     }
 
     .description {
       margin: 1rem 0;
-      color: #666;
+      color: var(--text-color-secondary);
     }
 
     .tags {
@@ -282,7 +283,12 @@ import { TeamMember, Topic } from '../../core/models';
     .no-results, .empty-state {
       text-align: center;
       padding: 4rem 2rem;
-      color: #999;
+      color: var(--text-color-muted);
+    }
+
+    .no-results i, .empty-state i {
+      font-size: 3rem;
+      color: var(--text-color-muted);
     }
 
     .no-results p, .empty-state p {

@@ -191,7 +191,7 @@ interface MemberOption {
         <ng-template pTemplate="emptymessage">
           <tr>
             <td colspan="6" class="text-center">
-              <i class="pi pi-inbox" style="font-size: 2rem; color: #ccc;"></i>
+              <i class="pi pi-inbox" style="font-size: 2rem; color: var(--text-color-muted);"></i>
               <p>Keine Themen gefunden</p>
             </td>
           </tr>

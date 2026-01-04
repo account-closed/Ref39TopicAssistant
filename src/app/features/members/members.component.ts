@@ -192,7 +192,7 @@ interface TopicAssignment {
         <ng-template pTemplate="emptymessage">
           <tr>
             <td colspan="7" class="text-center">
-              <i class="pi pi-users" style="font-size: 2rem; color: #ccc;"></i>
+              <i class="pi pi-users" style="font-size: 2rem; color: var(--text-color-muted);"></i>
               <p>Keine Teammitglieder gefunden</p>
             </td>
           </tr>
