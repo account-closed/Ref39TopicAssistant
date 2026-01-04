@@ -1,5 +1,6 @@
 import { TeamMember } from './team-member.model';
 import { Topic } from './topic.model';
+import { Tag } from './tag.model';
 
 export interface Datastore {
   schemaVersion: number;
@@ -7,4 +8,5 @@ export interface Datastore {
   revisionId: number;
   members: TeamMember[];
   topics: Topic[];
+  tags?: Tag[]; // Managed tags
 }

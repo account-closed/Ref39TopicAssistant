@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { Datastore, Topic, TeamMember, LockPurpose } from '../models';
+import { Datastore, Topic, TeamMember, Tag, LockPurpose } from '../models';
 import { FileConnectionService } from './file-connection.service';
 import { LockService } from './lock.service';
 import { RefreshService } from './refresh.service';
@@ -44,25 +44,64 @@ export class DatastoreService {
           generatedAt: new Date().toISOString(),
           revisionId: 0,
           members: [],
-          topics: []
+          topics: [],
+          tags: []
         };
         this.datastoreSubject.next(emptyDatastore);
         await this.fileConnection.writeDatastore(JSON.stringify(emptyDatastore, null, 2));
         return;
       }
 
-      const datastore = JSON.parse(content) as Datastore;
+      let datastore = JSON.parse(content) as Datastore;
       
       // Validate schema
       if (!this.validateDatastore(datastore)) {
         throw new Error('Invalid datastore schema');
       }
 
+      // Initialize tags array if it doesn't exist (migration)
+      if (!datastore.tags) {
+        datastore.tags = [];
+      }
+
+      // Clean up non-existing tags from topics
+      datastore = this.cleanupInvalidTagReferences(datastore);
+
       this.datastoreSubject.next(datastore);
     } catch (error) {
       console.error('Failed to load datastore:', error);
       throw error;
     }
+  }
+
+  /**
+   * Remove tag references from topics that don't exist in the managed tags list.
+   */
+  private cleanupInvalidTagReferences(datastore: Datastore): Datastore {
+    const validTagNames = new Set((datastore.tags || []).map(t => t.name));
+    
+    // If no managed tags exist, keep all topic tags (backward compatibility)
+    if (validTagNames.size === 0) {
+      return datastore;
+    }
+
+    let hasChanges = false;
+    datastore.topics = datastore.topics.map(topic => {
+      if (topic.tags && topic.tags.length > 0) {
+        const filteredTags = topic.tags.filter(tagName => validTagNames.has(tagName));
+        if (filteredTags.length !== topic.tags.length) {
+          hasChanges = true;
+          return { ...topic, tags: filteredTags };
+        }
+      }
+      return topic;
+    });
+
+    if (hasChanges) {
+      console.log('Cleaned up invalid tag references from topics');
+    }
+
+    return datastore;
   }
 
   async commitChanges(
@@ -88,6 +127,11 @@ export class DatastoreService {
         // Step 3: Validate
         if (!this.validateDatastore(datastore)) {
           throw new Error('Invalid datastore schema');
+        }
+
+        // Initialize tags array if it doesn't exist
+        if (!datastore.tags) {
+          datastore.tags = [];
         }
 
         // Step 4: Apply changes
@@ -193,6 +237,78 @@ export class DatastoreService {
         return datastore;
       },
       'member-save'
+    );
+  }
+
+  async addTag(tag: Tag): Promise<boolean> {
+    return this.commitChanges(
+      (datastore) => {
+        if (!datastore.tags) {
+          datastore.tags = [];
+        }
+        datastore.tags.push(tag);
+        return datastore;
+      },
+      'tag-save'
+    );
+  }
+
+  async updateTag(tagId: string, updates: Partial<Tag>): Promise<boolean> {
+    return this.commitChanges(
+      (datastore) => {
+        if (!datastore.tags) {
+          datastore.tags = [];
+          return datastore;
+        }
+        const index = datastore.tags.findIndex(t => t.id === tagId);
+        if (index !== -1) {
+          const oldName = datastore.tags[index].name;
+          datastore.tags[index] = { ...datastore.tags[index], ...updates, modifiedAt: new Date().toISOString() };
+          const newName = datastore.tags[index].name;
+          
+          // Update tag references in topics if name changed
+          if (oldName !== newName) {
+            datastore.topics = datastore.topics.map(topic => {
+              if (topic.tags && topic.tags.includes(oldName)) {
+                return {
+                  ...topic,
+                  tags: topic.tags.map(t => t === oldName ? newName : t)
+                };
+              }
+              return topic;
+            });
+          }
+        }
+        return datastore;
+      },
+      'tag-save'
+    );
+  }
+
+  async deleteTag(tagId: string): Promise<boolean> {
+    return this.commitChanges(
+      (datastore) => {
+        if (!datastore.tags) {
+          return datastore;
+        }
+        const tagToDelete = datastore.tags.find(t => t.id === tagId);
+        if (tagToDelete) {
+          // Remove tag from all topics
+          datastore.topics = datastore.topics.map(topic => {
+            if (topic.tags && topic.tags.includes(tagToDelete.name)) {
+              return {
+                ...topic,
+                tags: topic.tags.filter(t => t !== tagToDelete.name)
+              };
+            }
+            return topic;
+          });
+          // Remove the tag itself
+          datastore.tags = datastore.tags.filter(t => t.id !== tagId);
+        }
+        return datastore;
+      },
+      'tag-save'
     );
   }
 

@@ -3,7 +3,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 import { FileConnectionService, FileConnectionError } from './file-connection.service';
 import { LockService, LockAcquireResult } from './lock.service';
 import { RefreshService } from './refresh.service';
-import { Datastore, Topic, TeamMember, LockPurpose } from '../models';
+import { Datastore, Topic, TeamMember, Tag, LockPurpose } from '../models';
 
 export interface CommitResult {
   success: boolean;
@@ -309,6 +309,82 @@ export class DatastoreCommitService {
     );
   }
 
+  async addTag(tag: Tag): Promise<CommitResult> {
+    return this.commitChanges(
+      (datastore) => {
+        if (!datastore.tags) {
+          datastore.tags = [];
+        }
+        datastore.tags.push(tag);
+        return datastore;
+      },
+      'tag-save'
+    );
+  }
+
+  async updateTag(tagId: string, updates: Partial<Tag>): Promise<CommitResult> {
+    return this.commitChanges(
+      (datastore) => {
+        if (!datastore.tags) {
+          datastore.tags = [];
+          return datastore;
+        }
+        const index = datastore.tags.findIndex(t => t.id === tagId);
+        if (index !== -1) {
+          const oldName = datastore.tags[index].name;
+          datastore.tags[index] = { 
+            ...datastore.tags[index], 
+            ...updates, 
+            modifiedAt: new Date().toISOString() 
+          };
+          const newName = datastore.tags[index].name;
+          
+          // Update tag references in topics if name changed
+          if (oldName !== newName) {
+            datastore.topics = datastore.topics.map(topic => {
+              if (topic.tags && topic.tags.includes(oldName)) {
+                return {
+                  ...topic,
+                  tags: topic.tags.map(t => t === oldName ? newName : t)
+                };
+              }
+              return topic;
+            });
+          }
+        }
+        return datastore;
+      },
+      'tag-save'
+    );
+  }
+
+  async deleteTag(tagId: string): Promise<CommitResult> {
+    return this.commitChanges(
+      (datastore) => {
+        if (!datastore.tags) {
+          return datastore;
+        }
+        const tagToDelete = datastore.tags.find(t => t.id === tagId);
+        if (tagToDelete) {
+          // Remove tag from all topics
+          datastore.topics = datastore.topics.map(topic => {
+            if (topic.tags && topic.tags.includes(tagToDelete.name)) {
+              return {
+                ...topic,
+                tags: topic.tags.filter(t => t !== tagToDelete.name)
+              };
+            }
+            return topic;
+          });
+          // Remove the tag itself
+          datastore.tags = datastore.tags.filter(t => t.id !== tagId);
+        }
+        return datastore;
+      },
+      'tag-save'
+    );
+  }
+
   async updateMultipleTopics(updates: Array<{ topicId: string; changes: Partial<Topic> }>): Promise<CommitResult> {
     return this.commitChanges(
       (datastore) => {
@@ -364,7 +440,8 @@ export class DatastoreCommitService {
       generatedAt: new Date().toISOString(),
       revisionId: 0,
       members: [],
-      topics: []
+      topics: [],
+      tags: []
     };
   }
 
