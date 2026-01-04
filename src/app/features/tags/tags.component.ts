@@ -142,7 +142,7 @@ import { Tag, TeamMember, Datastore } from '../../core/models';
             </td>
             <td>
               <span *ngIf="tag.hinweise" class="hinweise-cell" [pTooltip]="tag.hinweise" tooltipPosition="top">
-                {{ tag.hinweise | slice:0:50 }}{{ tag.hinweise.length > 50 ? '...' : '' }}
+                {{ tag.hinweise | slice:0:50 }}{{ (tag.hinweise?.length || 0) > 50 ? '...' : '' }}
               </span>
               <span *ngIf="!tag.hinweise" class="text-secondary">-</span>
             </td>
