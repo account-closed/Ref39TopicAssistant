@@ -49,11 +49,7 @@ export class FileSystemBackendService extends BackendService {
 
   async connect(): Promise<void> {
     await this.fileConnection.connectToFolder();
-    // Load datastore in background - don't block connection
-    // The UI will show loading state while data loads
-    this.loadDatastore().catch(err => 
-      console.error('Failed to load datastore in background:', err)
-    );
+    await this.loadDatastore();
   }
 
   isConnected(): boolean {
