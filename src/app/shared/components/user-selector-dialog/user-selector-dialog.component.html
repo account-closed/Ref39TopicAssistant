@@ -1,0 +1,29 @@
+<p-dialog 
+  [(visible)]="visible" 
+  [modal]="true" 
+  [closable]="false" 
+  [closeOnEscape]="false"
+  header="Willkommen"
+  [style]="{width: '450px'}">
+  <div class="dialog-content">
+    <p>Bitte wählen Sie Ihre Identität aus:</p>
+    <p-select 
+      [(ngModel)]="selectedMemberId" 
+      [options]="activeMembers" 
+      optionLabel="displayName" 
+      optionValue="id"
+      placeholder="Ich bin..."
+      [style]="{width: '100%'}"
+      [filter]="true"
+      filterBy="displayName">
+    </p-select>
+  </div>
+  <ng-template pTemplate="footer">
+    <p-button 
+      label="Bestätigen" 
+      icon="pi pi-check" 
+      (onClick)="confirm()"
+      [disabled]="!selectedMemberId">
+    </p-button>
+  </ng-template>
+</p-dialog>

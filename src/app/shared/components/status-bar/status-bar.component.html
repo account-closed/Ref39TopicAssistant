@@ -1,0 +1,35 @@
+<p-toolbar class="status-bar">
+  <ng-template pTemplate="start">
+    <div class="status-items">
+      <span class="status-item">
+        <i class="pi pi-folder"></i>
+        <strong>App:</strong> {{ appLocation }}
+      </span>
+      <span class="status-item">
+        <i class="pi pi-database"></i>
+        <strong>Datenstand:</strong> 
+        {{ revisionInfo }}
+      </span>
+      <span class="status-item">
+        <i class="pi pi-lock"></i>
+        <strong>Sperre:</strong> 
+        <span [class]="getLockStatusClass()">{{ lockStatusText }}</span>
+      </span>
+      <span class="status-item">
+        <i class="pi pi-wifi"></i>
+        <strong>Schreibzugriff:</strong> 
+        <span [class]="getConnectivityClass()">{{ connectivityText }}</span>
+      </span>
+    </div>
+  </ng-template>
+  <ng-template pTemplate="end">
+    <p-button 
+      label="Dateien verbinden" 
+      icon="pi pi-link" 
+      (onClick)="connectFiles()"
+      [disabled]="isConnected"
+      severity="info"
+      size="small">
+    </p-button>
+  </ng-template>
+</p-toolbar>

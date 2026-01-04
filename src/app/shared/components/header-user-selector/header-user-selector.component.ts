@@ -1,43 +1,17 @@
-import { Component, OnInit, OnDestroy, computed, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Select } from 'primeng/select';
-import { BackendService } from '../../core/services/backend.service';
-import { TeamMember } from '../../core/models';
+import { BackendService } from '../../../core/services/backend.service';
+import { TeamMember } from '../../../core/models';
 import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-header-user-selector',
   standalone: true,
   imports: [CommonModule, FormsModule, Select],
-  template: `
-    <div class="user-selector">
-      <i class="pi pi-user"></i>
-      <p-select 
-        [(ngModel)]="selectedMemberId" 
-        [options]="activeMembers()" 
-        optionLabel="displayName" 
-        optionValue="id"
-        placeholder="Ich bin..."
-        [style]="{minWidth: '180px'}"
-        [filter]="true"
-        filterBy="displayName"
-        (onChange)="onUserChange($event)">
-      </p-select>
-    </div>
-  `,
-  styles: [`
-    .user-selector {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-    }
-
-    .user-selector i {
-      color: var(--icon-color);
-      font-size: 1rem;
-    }
-  `]
+  templateUrl: './header-user-selector.component.html',
+  styleUrl: './header-user-selector.component.scss'
 })
 export class HeaderUserSelectorComponent implements OnInit, OnDestroy {
   selectedMemberId: string = '';

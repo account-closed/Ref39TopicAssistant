@@ -20,7 +20,7 @@ import { InputIcon } from 'primeng/inputicon';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
-import { Topic, TeamMember, TopicValidity, TopicRaci, Datastore, Tag as TagModel } from '../../core/models';
+import { Topic, TeamMember, Datastore, Tag as TagModel } from '../../core/models';
 
 interface MemberOption {
   id: string;
@@ -51,491 +51,8 @@ interface MemberOption {
     InputIcon
   ],
   providers: [MessageService, ConfirmationService],
-  template: `
-    <div class="page-container">
-      <p-toast></p-toast>
-      <p-confirmDialog></p-confirmDialog>
-
-      <div class="page-header">
-        <h1>Themen verwalten</h1>
-        <p>Erstellen, bearbeiten und löschen Sie Themen für die RACI-Zuordnung</p>
-      </div>
-
-      <p-toolbar styleClass="mb-4">
-        <ng-template #start>
-          <p-button 
-            label="Neues Thema" 
-            icon="pi pi-plus" 
-            severity="primary" 
-            (onClick)="openNewDialog()"
-            [disabled]="!isConnected">
-          </p-button>
-        </ng-template>
-        <ng-template #end>
-          <p-iconfield>
-            <p-inputicon styleClass="pi pi-search" />
-            <input 
-              pInputText 
-              type="text" 
-              [(ngModel)]="globalFilter" 
-              (input)="onGlobalFilter($event)" 
-              placeholder="Suche..." />
-          </p-iconfield>
-        </ng-template>
-      </p-toolbar>
-
-      <div class="card" *ngIf="!isConnected">
-        <p class="text-center text-secondary">
-          <i class="pi pi-info-circle"></i>
-          Bitte verbinden Sie zuerst ein Datenverzeichnis über die Einstellungen.
-        </p>
-      </div>
-
-      <p-table 
-        #dt
-        *ngIf="isConnected"
-        [value]="topics" 
-        [paginator]="true" 
-        [rows]="10"
-        [rowsPerPageOptions]="[10, 25, 50]"
-        [globalFilterFields]="['header', 'description', 'tagsString', 'r1Name']"
-        [sortField]="'updatedAt'"
-        [sortOrder]="-1"
-        styleClass="p-datatable-striped"
-        [tableStyle]="{'min-width': '60rem'}">
-        
-        <ng-template pTemplate="header">
-          <tr>
-            <th pSortableColumn="header" style="min-width:14rem">
-              Thema <p-sortIcon field="header"></p-sortIcon>
-            </th>
-            <th pSortableColumn="r1Name" style="min-width:10rem">
-              R1 <p-sortIcon field="r1Name"></p-sortIcon>
-            </th>
-            <th style="min-width:10rem">Tags</th>
-            <th style="min-width:8rem">Gültigkeit</th>
-            <th pSortableColumn="updatedAt" style="min-width:10rem">
-              Aktualisiert <p-sortIcon field="updatedAt"></p-sortIcon>
-            </th>
-            <th style="min-width:8rem">Aktionen</th>
-          </tr>
-          <tr>
-            <th>
-              <input 
-                pInputText 
-                type="text" 
-                [(ngModel)]="filterHeader"
-                (input)="dt.filter($any($event.target).value, 'header', 'contains')"
-                placeholder="Filter..." 
-                class="w-full" />
-            </th>
-            <th>
-              <p-select 
-                [options]="memberOptions" 
-                [(ngModel)]="filterR1"
-                (onChange)="dt.filter($event.value, 'r1MemberId', 'equals')"
-                optionLabel="displayName" 
-                optionValue="id"
-                placeholder="Alle"
-                [showClear]="true"
-                styleClass="w-full">
-              </p-select>
-            </th>
-            <th>
-              <p-multiSelect 
-                [options]="allTags" 
-                [(ngModel)]="filterTags"
-                (onChange)="filterByTags()"
-                placeholder="Filter Tags"
-                styleClass="w-full">
-              </p-multiSelect>
-            </th>
-            <th>
-              <p-select 
-                [options]="validityOptions" 
-                [(ngModel)]="filterValidity"
-                (onChange)="filterByValidity()"
-                placeholder="Alle"
-                [showClear]="true"
-                styleClass="w-full">
-              </p-select>
-            </th>
-            <th></th>
-            <th></th>
-          </tr>
-        </ng-template>
-        
-        <ng-template pTemplate="body" let-topic>
-          <tr>
-            <td>
-              <strong>{{ topic.header }}</strong>
-              <div class="text-secondary text-sm" *ngIf="topic.description">
-                {{ topic.description | slice:0:100 }}{{ topic.description.length > 100 ? '...' : '' }}
-              </div>
-            </td>
-            <td>{{ getMemberName(topic.raci.r1MemberId) }}</td>
-            <td>
-              <p-tag *ngFor="let tag of topic.tags" [value]="tag" severity="info" styleClass="mr-1 mb-1"></p-tag>
-            </td>
-            <td>
-              <p-tag [value]="getValidityBadge(topic)" [severity]="getValiditySeverity(topic)"></p-tag>
-            </td>
-            <td>{{ formatDate(topic.updatedAt) }}</td>
-            <td>
-              <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" (onClick)="editTopic(topic)"></p-button>
-              <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="confirmDelete(topic)"></p-button>
-            </td>
-          </tr>
-        </ng-template>
-
-        <ng-template pTemplate="emptymessage">
-          <tr>
-            <td colspan="6" class="text-center">
-              <i class="pi pi-inbox" style="font-size: 2rem; color: var(--text-color-muted);"></i>
-              <p>Keine Themen gefunden</p>
-            </td>
-          </tr>
-        </ng-template>
-      </p-table>
-
-      <!-- Create/Edit Dialog -->
-      <p-dialog 
-        [(visible)]="topicDialog" 
-        [style]="{width: '700px'}" 
-        [header]="editMode ? 'Thema bearbeiten' : 'Neues Thema'" 
-        [modal]="true"
-        [closable]="true"
-        styleClass="p-fluid">
-        
-        <ng-template pTemplate="content">
-          <div class="form-grid">
-            <!-- Header (required) -->
-            <div class="field">
-              <label for="header">Thema *</label>
-              <input 
-                pInputText 
-                id="header" 
-                [(ngModel)]="topic.header" 
-                required 
-                autofocus
-                [class.ng-invalid]="submitted && !topic.header"
-                [class.ng-dirty]="submitted && !topic.header" />
-              <small class="p-error" *ngIf="submitted && !topic.header">Thema ist erforderlich.</small>
-            </div>
-
-            <!-- Description -->
-            <div class="field">
-              <label for="description">Beschreibung</label>
-              <textarea 
-                pTextarea 
-                id="description" 
-                [(ngModel)]="topic.description" 
-                rows="3"
-                [autoResize]="true">
-              </textarea>
-            </div>
-
-            <!-- Tags -->
-            <div class="field">
-              <label for="tags">Tags</label>
-              <p-autoComplete 
-                id="tags" 
-                [(ngModel)]="topic.tags"
-                [multiple]="true"
-                [suggestions]="tagSuggestions"
-                (completeMethod)="searchTags($event)"
-                [dropdown]="true"
-                [forceSelection]="managedTagsExist"
-                placeholder="Tags auswählen...">
-                <ng-template let-tag pTemplate="item">
-                  <div class="tag-suggestion-item">
-                    <span class="tag-name">{{ tag }}</span>
-                    <span class="tag-hinweise" *ngIf="getTagHinweise(tag)">{{ getTagHinweise(tag) }}</span>
-                  </div>
-                </ng-template>
-              </p-autoComplete>
-              <small class="hint" *ngIf="managedTagsExist">Nur verwaltete Tags können zugewiesen werden</small>
-              <small class="hint" *ngIf="!managedTagsExist">Erstellen Sie Tags unter "Tags verwalten"</small>
-            </div>
-
-            <!-- Search Keywords -->
-            <div class="field">
-              <label for="searchKeywords">Suchbegriffe</label>
-              <p-autoComplete 
-                id="searchKeywords" 
-                [(ngModel)]="topic.searchKeywords"
-                [multiple]="true"
-                [suggestions]="keywordSuggestions"
-                (completeMethod)="searchKeywords($event)"
-                placeholder="Suchbegriffe hinzufügen...">
-              </p-autoComplete>
-            </div>
-
-            <!-- Notes -->
-            <div class="field">
-              <label for="notes">Notizen</label>
-              <textarea 
-                pTextarea 
-                id="notes" 
-                [(ngModel)]="topic.notes" 
-                rows="2"
-                [autoResize]="true">
-              </textarea>
-            </div>
-
-            <!-- Validity Section -->
-            <div class="field-group">
-              <h4>Gültigkeit</h4>
-              
-              <div class="field-checkbox">
-                <p-toggleswitch 
-                  [(ngModel)]="topic.validity.alwaysValid" 
-                  inputId="alwaysValid"
-                  (onChange)="onAlwaysValidChange()">
-                </p-toggleswitch>
-                <label for="alwaysValid" class="ml-2">Immer gültig</label>
-              </div>
-
-              <div class="validity-dates" *ngIf="!topic.validity.alwaysValid">
-                <div class="field">
-                  <label for="validFrom">Gültig ab *</label>
-                  <p-datepicker 
-                    id="validFrom" 
-                    [(ngModel)]="validFromDate"
-                    dateFormat="dd.mm.yy"
-                    [showIcon]="true"
-                    [required]="!topic.validity.alwaysValid"
-                    [class.ng-invalid]="submitted && !topic.validity.alwaysValid && !validFromDate"
-                    [class.ng-dirty]="submitted && !topic.validity.alwaysValid && !validFromDate">
-                  </p-datepicker>
-                  <small class="p-error" *ngIf="submitted && !topic.validity.alwaysValid && !validFromDate">
-                    Gültig ab ist erforderlich.
-                  </small>
-                </div>
-
-                <div class="field">
-                  <label for="validTo">Gültig bis (optional)</label>
-                  <p-datepicker 
-                    id="validTo" 
-                    [(ngModel)]="validToDate"
-                    dateFormat="dd.mm.yy"
-                    [showIcon]="true">
-                  </p-datepicker>
-                </div>
-              </div>
-            </div>
-
-            <!-- RACI Section -->
-            <div class="field-group">
-              <h4>Verantwortliche</h4>
-
-              <div class="field">
-                <label for="r1">R1 (Hauptverantwortlich) *</label>
-                <p-select 
-                  id="r1"
-                  [options]="activeMembers" 
-                  [(ngModel)]="topic.raci.r1MemberId"
-                  optionLabel="displayName" 
-                  optionValue="id"
-                  placeholder="R1 auswählen..."
-                  [filter]="true"
-                  filterBy="displayName"
-                  [required]="true"
-                  [class.ng-invalid]="submitted && !topic.raci.r1MemberId"
-                  [class.ng-dirty]="submitted && !topic.raci.r1MemberId">
-                </p-select>
-                <small class="p-error" *ngIf="submitted && !topic.raci.r1MemberId">R1 ist erforderlich.</small>
-              </div>
-
-              <div class="field">
-                <label for="r2">R2 (Stellvertretung)</label>
-                <p-select 
-                  id="r2"
-                  [options]="activeMembers" 
-                  [(ngModel)]="topic.raci.r2MemberId"
-                  optionLabel="displayName" 
-                  optionValue="id"
-                  placeholder="R2 auswählen..."
-                  [filter]="true"
-                  filterBy="displayName"
-                  [showClear]="true">
-                </p-select>
-              </div>
-
-              <div class="field">
-                <label for="r3">R3 (Weitere Stellvertretung)</label>
-                <p-select 
-                  id="r3"
-                  [options]="activeMembers" 
-                  [(ngModel)]="topic.raci.r3MemberId"
-                  optionLabel="displayName" 
-                  optionValue="id"
-                  placeholder="R3 auswählen..."
-                  [filter]="true"
-                  filterBy="displayName"
-                  [showClear]="true">
-                </p-select>
-              </div>
-
-              <div class="field">
-                <label for="consulted">Consulted (C)</label>
-                <p-multiSelect 
-                  id="consulted"
-                  [options]="activeMembers" 
-                  [(ngModel)]="topic.raci.cMemberIds"
-                  optionLabel="displayName" 
-                  optionValue="id"
-                  placeholder="Consulted auswählen..."
-                  [filter]="true"
-                  filterBy="displayName">
-                </p-multiSelect>
-              </div>
-
-              <div class="field">
-                <label for="informed">Informed (I)</label>
-                <p-multiSelect 
-                  id="informed"
-                  [options]="activeMembers" 
-                  [(ngModel)]="topic.raci.iMemberIds"
-                  optionLabel="displayName" 
-                  optionValue="id"
-                  placeholder="Informed auswählen..."
-                  [filter]="true"
-                  filterBy="displayName">
-                </p-multiSelect>
-              </div>
-            </div>
-          </div>
-        </ng-template>
-
-        <ng-template pTemplate="footer">
-          <p-button label="Abbrechen" icon="pi pi-times" [text]="true" (onClick)="hideDialog()"></p-button>
-          <p-button label="Speichern" icon="pi pi-check" (onClick)="saveTopic()" [loading]="saving"></p-button>
-        </ng-template>
-      </p-dialog>
-    </div>
-  `,
-  styles: [`
-    .page-container {
-      padding: 2rem;
-      max-width: 1400px;
-      margin: 0 auto;
-    }
-
-    .page-header {
-      margin-bottom: 1.5rem;
-    }
-
-    .page-header h1 {
-      margin: 0 0 0.5rem 0;
-    }
-
-    .page-header p {
-      margin: 0;
-      color: var(--p-text-muted-color);
-    }
-
-    .mb-4 {
-      margin-bottom: 1.5rem;
-    }
-
-    .mr-1 {
-      margin-right: 0.25rem;
-    }
-
-    .mb-1 {
-      margin-bottom: 0.25rem;
-    }
-
-    .ml-2 {
-      margin-left: 0.5rem;
-    }
-
-    .card {
-      background: var(--p-surface-0);
-      padding: 2rem;
-      border-radius: var(--p-border-radius);
-    }
-
-    .text-center {
-      text-align: center;
-    }
-
-    .text-secondary {
-      color: var(--p-text-muted-color);
-    }
-
-    .text-sm {
-      font-size: 0.875rem;
-    }
-
-    .w-full {
-      width: 100%;
-    }
-
-    .form-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .field label {
-      font-weight: 600;
-    }
-
-    .field-group {
-      border: 1px solid var(--p-surface-200);
-      border-radius: var(--p-border-radius);
-      padding: 1rem;
-      margin-top: 0.5rem;
-    }
-
-    .field-group h4 {
-      margin: 0 0 1rem 0;
-    }
-
-    .field-checkbox {
-      display: flex;
-      align-items: center;
-      margin-bottom: 1rem;
-    }
-
-    .validity-dates {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1rem;
-    }
-
-    .hint {
-      color: var(--text-color-secondary);
-      font-size: 0.875rem;
-    }
-
-    .tag-suggestion-item {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-
-    .tag-name {
-      font-weight: 500;
-    }
-
-    .tag-hinweise {
-      font-size: 0.8rem;
-      color: var(--text-color-secondary);
-    }
-
-    :host ::ng-deep .p-datatable .p-datatable-header {
-      padding: 1rem;
-    }
-  `]
+  templateUrl: './topics.component.html',
+  styleUrl: './topics.component.scss'
 })
 export class TopicsComponent implements OnInit, OnDestroy {
   @ViewChild('dt') table!: Table;
@@ -552,18 +69,15 @@ export class TopicsComponent implements OnInit, OnDestroy {
   saving: boolean = false;
   isConnected: boolean = false;
 
-  // Filter values
   globalFilter: string = '';
   filterHeader: string = '';
   filterR1: string = '';
   filterTags: string[] = [];
   filterValidity: string = '';
 
-  // Date helpers for form
   validFromDate: Date | null = null;
   validToDate: Date | null = null;
 
-  // Filter options
   allTags: string[] = [];
   allKeywords: string[] = [];
   tagSuggestions: string[] = [];
@@ -575,7 +89,6 @@ export class TopicsComponent implements OnInit, OnDestroy {
     { label: 'Abgelaufen', value: 'expired' }
   ];
 
-  // Managed tags
   managedTags: TagModel[] = [];
   managedTagsExist: boolean = false;
 
@@ -588,14 +101,12 @@ export class TopicsComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Subscribe to connection status
     this.subscriptions.push(
       this.backend.connectionStatus$.subscribe(connected => {
         this.isConnected = connected;
       })
     );
 
-    // Subscribe to datastore
     this.subscriptions.push(
       this.backend.datastore$.subscribe(datastore => {
         if (datastore) {
@@ -616,11 +127,9 @@ export class TopicsComponent implements OnInit, OnDestroy {
       .map(m => ({ id: m.id, displayName: m.displayName }));
     this.memberOptions = datastore.members.map(m => ({ id: m.id, displayName: m.displayName }));
 
-    // Load managed tags
     this.managedTags = datastore.tags || [];
     this.managedTagsExist = this.managedTags.length > 0;
 
-    // Process topics with additional fields for filtering/sorting
     this.topics = datastore.topics.map(topic => ({
       ...topic,
       r1Name: this.getMemberName(topic.raci.r1MemberId),
@@ -628,10 +137,8 @@ export class TopicsComponent implements OnInit, OnDestroy {
       tagsString: topic.tags?.join(' ') || ''
     }));
 
-    // Collect all unique tags from managed tags for filters
     this.allTags = this.managedTags.map(t => t.name).sort();
 
-    // Collect all unique keywords
     const keywordSet = new Set<string>();
     datastore.topics.forEach(t => t.searchKeywords?.forEach(kw => keywordSet.add(kw)));
     this.allKeywords = Array.from(keywordSet).sort();
@@ -640,12 +147,9 @@ export class TopicsComponent implements OnInit, OnDestroy {
   searchTags(event: { query: string }): void {
     const query = event.query.toLowerCase();
     
-    // Filter from managed tags
     this.tagSuggestions = this.managedTags
       .filter(tag => {
-        // Search by name
         if (tag.name.toLowerCase().includes(query)) return true;
-        // Search by keywords
         if (tag.searchKeywords?.some(kw => kw.toLowerCase().includes(query))) return true;
         return false;
       })
@@ -662,7 +166,6 @@ export class TopicsComponent implements OnInit, OnDestroy {
     this.keywordSuggestions = this.allKeywords.filter(kw => 
       kw.toLowerCase().includes(query)
     );
-    // Allow adding new keywords
     if (query && !this.keywordSuggestions.includes(query)) {
       this.keywordSuggestions.unshift(query);
     }
@@ -712,7 +215,6 @@ export class TopicsComponent implements OnInit, OnDestroy {
       }
     };
     
-    // Convert date strings to Date objects
     this.validFromDate = topic.validity.validFrom ? new Date(topic.validity.validFrom) : null;
     this.validToDate = topic.validity.validTo ? new Date(topic.validity.validTo) : null;
     
@@ -729,7 +231,6 @@ export class TopicsComponent implements OnInit, OnDestroy {
   async saveTopic(): Promise<void> {
     this.submitted = true;
 
-    // Validate required fields
     if (!this.topic.header?.trim()) {
       return;
     }
@@ -745,7 +246,6 @@ export class TopicsComponent implements OnInit, OnDestroy {
     this.saving = true;
 
     try {
-      // Convert dates to ISO strings
       if (!this.topic.validity.alwaysValid) {
         this.topic.validity.validFrom = this.toDateString(this.validFromDate);
         this.topic.validity.validTo = this.toDateString(this.validToDate);
@@ -835,8 +335,6 @@ export class TopicsComponent implements OnInit, OnDestroy {
     if (this.filterTags.length === 0) {
       this.table?.filter(null, 'tagsString', 'contains');
     } else {
-      // Custom filter - topics must have at least one of the selected tags
-      // Escape special regex characters to prevent ReDoS
       const escapedTags = this.filterTags.map(tag => 
         tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       );
@@ -845,8 +343,6 @@ export class TopicsComponent implements OnInit, OnDestroy {
   }
 
   filterByValidity(): void {
-    // Note: This requires custom filtering logic since it's not a direct field match
-    // For now, we'll apply it as a simple filter
     if (this.filterValidity) {
       const now = new Date();
       const filtered = this.topics.filter(topic => {
@@ -869,7 +365,6 @@ export class TopicsComponent implements OnInit, OnDestroy {
       });
       this.table.filteredValue = filtered;
     } else {
-      // Clear filter - PrimeNG expects undefined or empty array to clear filteredValue
       this.table.filteredValue = undefined as unknown as typeof this.topics;
     }
   }
@@ -959,9 +454,6 @@ export class TopicsComponent implements OnInit, OnDestroy {
     return date.toLocaleDateString('de-DE');
   }
 
-  /**
-   * Convert a Date object to ISO date string (YYYY-MM-DD) or undefined
-   */
   private toDateString(date: Date | null): string | undefined {
     return date ? date.toISOString().split('T')[0] : undefined;
   }

@@ -1,0 +1,10 @@
+.user-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.user-selector i {
+  color: var(--p-text-color);
+  font-size: 1rem;
+}
