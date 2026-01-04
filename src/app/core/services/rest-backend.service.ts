@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { BackendService } from './backend.service';
-import { Datastore, Topic, TeamMember, LockPurpose } from '../models';
+import { Datastore, Topic, TeamMember, Tag, LockPurpose } from '../models';
 
 /**
  * REST API implementation of the backend (placeholder).
@@ -153,6 +153,36 @@ export class RestBackendService extends BackendService {
       return false;
     } catch (error) {
       console.error('Failed to delete member via API:', error);
+      return false;
+    }
+  }
+
+  async addTag(tag: Tag): Promise<boolean> {
+    try {
+      console.log('REST: Adding tag via API', tag);
+      return false;
+    } catch (error) {
+      console.error('Failed to add tag via API:', error);
+      return false;
+    }
+  }
+
+  async updateTag(tagId: string, updates: Partial<Tag>): Promise<boolean> {
+    try {
+      console.log('REST: Updating tag via API', tagId, updates);
+      return false;
+    } catch (error) {
+      console.error('Failed to update tag via API:', error);
+      return false;
+    }
+  }
+
+  async deleteTag(tagId: string): Promise<boolean> {
+    try {
+      console.log('REST: Deleting tag via API', tagId);
+      return false;
+    } catch (error) {
+      console.error('Failed to delete tag via API:', error);
       return false;
     }
   }

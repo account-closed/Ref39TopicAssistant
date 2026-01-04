@@ -3,7 +3,7 @@ export interface LockHolder {
   displayName: string;
 }
 
-export type LockPurpose = 'topic-save' | 'member-save' | 'assignment-save';
+export type LockPurpose = 'topic-save' | 'member-save' | 'assignment-save' | 'tag-save';
 
 export interface Lock {
   lockedAt: string; // ISO timestamp (UTC)

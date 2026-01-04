@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { BackendService } from './backend.service';
-import { Datastore, Topic, TeamMember, LockPurpose } from '../models';
+import { Datastore, Topic, TeamMember, Tag, LockPurpose } from '../models';
 import { FileConnectionService } from './file-connection.service';
 import { DatastoreCommitService } from './datastore-commit.service';
 import { RefreshService } from './refresh.service';
@@ -117,6 +117,21 @@ export class FileSystemBackendService extends BackendService {
     if (!result.success) {
       console.error('Failed to delete member:', result.germanMessage);
     }
+    return result.success;
+  }
+
+  async addTag(tag: Tag): Promise<boolean> {
+    const result = await this.datastoreCommit.addTag(tag);
+    return result.success;
+  }
+
+  async updateTag(tagId: string, updates: Partial<Tag>): Promise<boolean> {
+    const result = await this.datastoreCommit.updateTag(tagId, updates);
+    return result.success;
+  }
+
+  async deleteTag(tagId: string): Promise<boolean> {
+    const result = await this.datastoreCommit.deleteTag(tagId);
     return result.success;
   }
 

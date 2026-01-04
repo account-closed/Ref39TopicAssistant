@@ -69,6 +69,11 @@ export class App implements OnInit {
         command: () => this.router.navigate(['/topics-by-member'])
       },
       {
+        label: 'Tags verwalten',
+        icon: 'pi pi-tags',
+        command: () => this.router.navigate(['/tags'])
+      },
+      {
         label: 'Einstellungen',
         icon: 'pi pi-cog',
         command: () => this.router.navigate(['/settings'])

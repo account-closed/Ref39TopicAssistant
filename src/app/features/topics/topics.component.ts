@@ -20,7 +20,7 @@ import { InputIcon } from 'primeng/inputicon';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
-import { Topic, TeamMember, TopicValidity, TopicRaci, Datastore } from '../../core/models';
+import { Topic, TeamMember, TopicValidity, TopicRaci, Datastore, Tag as TagModel } from '../../core/models';
 
 interface MemberOption {
   id: string;
@@ -244,8 +244,18 @@ interface MemberOption {
                 [multiple]="true"
                 [suggestions]="tagSuggestions"
                 (completeMethod)="searchTags($event)"
-                placeholder="Tags hinzufügen...">
+                [dropdown]="true"
+                [forceSelection]="managedTagsExist"
+                placeholder="Tags auswählen...">
+                <ng-template let-tag pTemplate="item">
+                  <div class="tag-suggestion-item">
+                    <span class="tag-name">{{ tag }}</span>
+                    <span class="tag-hinweise" *ngIf="getTagHinweise(tag)">{{ getTagHinweise(tag) }}</span>
+                  </div>
+                </ng-template>
               </p-autoComplete>
+              <small class="hint" *ngIf="managedTagsExist">Nur verwaltete Tags können zugewiesen werden</small>
+              <small class="hint" *ngIf="!managedTagsExist">Erstellen Sie Tags unter "Tags verwalten"</small>
             </div>
 
             <!-- Search Keywords -->
@@ -502,6 +512,26 @@ interface MemberOption {
       gap: 1rem;
     }
 
+    .hint {
+      color: var(--text-color-secondary);
+      font-size: 0.875rem;
+    }
+
+    .tag-suggestion-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .tag-name {
+      font-weight: 500;
+    }
+
+    .tag-hinweise {
+      font-size: 0.8rem;
+      color: var(--text-color-secondary);
+    }
+
     :host ::ng-deep .p-datatable .p-datatable-header {
       padding: 1rem;
     }
@@ -545,6 +575,10 @@ export class TopicsComponent implements OnInit, OnDestroy {
     { label: 'Abgelaufen', value: 'expired' }
   ];
 
+  // Managed tags
+  managedTags: TagModel[] = [];
+  managedTagsExist: boolean = false;
+
   private subscriptions: Subscription[] = [];
 
   constructor(
@@ -582,6 +616,10 @@ export class TopicsComponent implements OnInit, OnDestroy {
       .map(m => ({ id: m.id, displayName: m.displayName }));
     this.memberOptions = datastore.members.map(m => ({ id: m.id, displayName: m.displayName }));
 
+    // Load managed tags
+    this.managedTags = datastore.tags || [];
+    this.managedTagsExist = this.managedTags.length > 0;
+
     // Process topics with additional fields for filtering/sorting
     this.topics = datastore.topics.map(topic => ({
       ...topic,
@@ -590,10 +628,8 @@ export class TopicsComponent implements OnInit, OnDestroy {
       tagsString: topic.tags?.join(' ') || ''
     }));
 
-    // Collect all unique tags
-    const tagSet = new Set<string>();
-    datastore.topics.forEach(t => t.tags?.forEach(tag => tagSet.add(tag)));
-    this.allTags = Array.from(tagSet).sort();
+    // Collect all unique tags from managed tags for filters
+    this.allTags = this.managedTags.map(t => t.name).sort();
 
     // Collect all unique keywords
     const keywordSet = new Set<string>();
@@ -603,13 +639,22 @@ export class TopicsComponent implements OnInit, OnDestroy {
 
   searchTags(event: { query: string }): void {
     const query = event.query.toLowerCase();
-    this.tagSuggestions = this.allTags.filter(tag => 
-      tag.toLowerCase().includes(query)
-    );
-    // Allow adding new tags
-    if (query && !this.tagSuggestions.includes(query)) {
-      this.tagSuggestions.unshift(query);
-    }
+    
+    // Filter from managed tags
+    this.tagSuggestions = this.managedTags
+      .filter(tag => {
+        // Search by name
+        if (tag.name.toLowerCase().includes(query)) return true;
+        // Search by keywords
+        if (tag.searchKeywords?.some(kw => kw.toLowerCase().includes(query))) return true;
+        return false;
+      })
+      .map(tag => tag.name);
+  }
+
+  getTagHinweise(tagName: string): string {
+    const tag = this.managedTags.find(t => t.name === tagName);
+    return tag?.hinweise || '';
   }
 
   searchKeywords(event: { query: string }): void {

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
-import { Datastore, Topic, TeamMember, LockPurpose } from '../models';
+import { Datastore, Topic, TeamMember, Tag, LockPurpose } from '../models';
 
 /**
  * Abstract backend interface.
@@ -56,6 +56,11 @@ export abstract class BackendService {
   abstract addMember(member: TeamMember): Promise<boolean>;
   abstract updateMember(memberId: string, updates: Partial<TeamMember>): Promise<boolean>;
   abstract deleteMember(memberId: string): Promise<boolean>;
+
+  // Tag operations
+  abstract addTag(tag: Tag): Promise<boolean>;
+  abstract updateTag(tagId: string, updates: Partial<Tag>): Promise<boolean>;
+  abstract deleteTag(tagId: string): Promise<boolean>;
 
   // Batch operations for quick assignment
   abstract updateMultipleTopics(updates: Array<{ topicId: string; changes: Partial<Topic> }>): Promise<boolean>;
