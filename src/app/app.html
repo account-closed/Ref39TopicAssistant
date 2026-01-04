@@ -1,0 +1,24 @@
+<div class="app-container">
+  <div class="app-header">
+    <p-button type="button" icon="pi pi-bars" (click)="toggleSidebar()" [text]="true"></p-button>
+    <h2>{{ title() }}</h2>
+  </div>
+
+  <p-drawer [(visible)]="sidebarVisible" [style]="{width:'280px'}">
+    <ng-template pTemplate="header">
+      <h3>Navigation</h3>
+    </ng-template>
+    
+    <p-menu [model]="menuItems" [style]="{width:'100%', border: 'none'}"></p-menu>
+  </p-drawer>
+
+  <div class="app-content">
+    <router-outlet></router-outlet>
+  </div>
+
+  <app-status-bar></app-status-bar>
+  <app-user-selector-dialog></app-user-selector-dialog>
+  
+  <p-toast></p-toast>
+  <p-confirmDialog></p-confirmDialog>
+</div>
