@@ -2,7 +2,9 @@
   <div class="app-header">
     <p-button type="button" icon="pi pi-bars" (click)="toggleSidebar()" [text]="true"></p-button>
     <h2>{{ title() }}</h2>
+    <div class="header-spacer"></div>
     <app-header-user-selector></app-header-user-selector>
+    <app-theme-toggle></app-theme-toggle>
   </div>
 
   <p-drawer [(visible)]="sidebarVisible" [style]="{width:'280px'}">

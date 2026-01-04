@@ -50,9 +50,10 @@ import { LockStatus } from '../../core/services/lock.service';
   styles: [`
     .status-bar {
       border-radius: 0;
-      background: #f8f9fa;
-      border-top: 1px solid #dee2e6;
+      background: var(--surface-card);
+      border-top: 1px solid var(--surface-border);
       padding: 0.5rem 1rem;
+      transition: background-color 0.3s ease, border-color 0.3s ease;
     }
 
     .status-items {
@@ -65,35 +66,37 @@ import { LockStatus } from '../../core/services/lock.service';
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      font-size: 0.875rem;
+      font-size: 0.8rem;
+      color: var(--text-color-secondary);
     }
 
     .status-item i {
-      color: #6c757d;
+      color: var(--text-color-muted);
     }
 
     .status-item strong {
       font-weight: 600;
+      color: var(--text-color);
     }
 
     .lock-free {
-      color: #28a745;
+      color: var(--success-color);
     }
 
     .lock-held {
-      color: #dc3545;
+      color: var(--danger-color);
     }
 
     .lock-own {
-      color: #007bff;
+      color: var(--primary-color);
     }
 
     .connected {
-      color: #28a745;
+      color: var(--success-color);
     }
 
     .disconnected {
-      color: #dc3545;
+      color: var(--danger-color);
     }
   `]
 })

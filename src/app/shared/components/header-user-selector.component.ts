@@ -19,7 +19,7 @@ import { Subscription } from 'rxjs';
         optionLabel="displayName" 
         optionValue="id"
         placeholder="Ich bin..."
-        [style]="{minWidth: '200px'}"
+        [style]="{minWidth: '180px'}"
         [filter]="true"
         filterBy="displayName"
         (onChange)="onUserChange($event)">
@@ -31,11 +31,11 @@ import { Subscription } from 'rxjs';
       display: flex;
       align-items: center;
       gap: 0.5rem;
-      margin-left: auto;
     }
 
     .user-selector i {
-      color: #6c757d;
+      color: var(--primary-color);
+      font-size: 1rem;
     }
   `]
 })
