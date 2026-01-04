@@ -59,10 +59,12 @@ export class FileConnectionService {
         startIn: 'documents'
       });
 
-      // Get file handles for the three data files (create if missing)
-      const datastoreHandle = await directoryHandle.getFileHandle('datastore.json', { create: true });
-      const lockHandle = await directoryHandle.getFileHandle('lock.json', { create: true });
-      const refreshHandle = await directoryHandle.getFileHandle('refresh.json', { create: true });
+      // Get file handles for the three data files in parallel (create if missing)
+      const [datastoreHandle, lockHandle, refreshHandle] = await Promise.all([
+        directoryHandle.getFileHandle('datastore.json', { create: true }),
+        directoryHandle.getFileHandle('lock.json', { create: true }),
+        directoryHandle.getFileHandle('refresh.json', { create: true })
+      ]);
 
       const connection: FileConnection = {
         datastoreHandle,
@@ -73,7 +75,10 @@ export class FileConnectionService {
       };
 
       this.connectionSubject.next(connection);
-      await this.saveToIndexedDB(directoryHandle);
+      // Save to IndexedDB in background - don't block connection
+      this.saveToIndexedDB(directoryHandle).catch(err => 
+        console.warn('Failed to save directory handle to IndexedDB:', err)
+      );
     } catch (error: any) {
       if (error instanceof FileConnectionError) {
         throw error;
@@ -113,10 +118,12 @@ export class FileConnectionService {
         return false;
       }
 
-      // Get file handles
-      const datastoreHandle = await directoryHandle.getFileHandle('datastore.json', { create: true });
-      const lockHandle = await directoryHandle.getFileHandle('lock.json', { create: true });
-      const refreshHandle = await directoryHandle.getFileHandle('refresh.json', { create: true });
+      // Get file handles in parallel
+      const [datastoreHandle, lockHandle, refreshHandle] = await Promise.all([
+        directoryHandle.getFileHandle('datastore.json', { create: true }),
+        directoryHandle.getFileHandle('lock.json', { create: true }),
+        directoryHandle.getFileHandle('refresh.json', { create: true })
+      ]);
 
       const connection: FileConnection = {
         datastoreHandle,
