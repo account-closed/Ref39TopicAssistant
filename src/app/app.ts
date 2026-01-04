@@ -9,6 +9,7 @@ import { Toast } from 'primeng/toast';
 import { ConfirmDialog } from 'primeng/confirmdialog';
 import { StatusBarComponent } from './shared/components/status-bar.component';
 import { UserSelectorDialogComponent } from './shared/components/user-selector-dialog.component';
+import { HeaderUserSelectorComponent } from './shared/components/header-user-selector.component';
 import { BackendService } from './core/services/backend.service';
 
 @Component({
@@ -23,7 +24,8 @@ import { BackendService } from './core/services/backend.service';
     Toast,
     ConfirmDialog,
     StatusBarComponent,
-    UserSelectorDialogComponent
+    UserSelectorDialogComponent,
+    HeaderUserSelectorComponent
   ],
   templateUrl: './app.html',
   styleUrl: './app.css'
