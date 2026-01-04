@@ -192,7 +192,7 @@ interface TopicAssignment {
         <ng-template pTemplate="emptymessage">
           <tr>
             <td colspan="7" class="text-center">
-              <i class="pi pi-users" style="font-size: 2rem; color: #ccc;"></i>
+              <i class="pi pi-users" style="font-size: 2rem; color: var(--text-color-muted);"></i>
               <p>Keine Teammitglieder gefunden</p>
             </td>
           </tr>
@@ -391,12 +391,11 @@ interface TopicAssignment {
 
     .page-header h1 {
       margin: 0 0 0.5rem 0;
-      color: var(--text-color);
     }
 
     .page-header p {
       margin: 0;
-      color: var(--text-color-secondary);
+      color: var(--p-text-muted-color);
     }
 
     .mb-4 {
@@ -416,10 +415,9 @@ interface TopicAssignment {
     }
 
     .card {
-      background: var(--surface-card);
+      background: var(--p-surface-0);
       padding: 2rem;
-      border-radius: var(--border-radius);
-      box-shadow: var(--card-shadow);
+      border-radius: var(--p-border-radius);
     }
 
     .text-center {
@@ -427,7 +425,7 @@ interface TopicAssignment {
     }
 
     .text-secondary {
-      color: var(--text-color-secondary);
+      color: var(--p-text-muted-color);
     }
 
     .w-full {
@@ -448,7 +446,6 @@ interface TopicAssignment {
 
     .field label {
       font-weight: 600;
-      color: var(--text-color);
     }
 
     .field-checkbox {
@@ -472,17 +469,6 @@ interface TopicAssignment {
 
     :host ::ng-deep .p-datatable .p-datatable-header {
       padding: 1rem;
-      background: var(--surface-ground);
-    }
-
-    :host ::ng-deep .p-datatable .p-datatable-thead > tr > th {
-      background: var(--surface-ground);
-    }
-
-    :host ::ng-deep .p-toolbar {
-      background: var(--surface-card);
-      border: 1px solid var(--surface-border);
-      border-radius: var(--border-radius);
     }
   `]
 })

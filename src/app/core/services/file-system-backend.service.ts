@@ -74,31 +74,49 @@ export class FileSystemBackendService extends BackendService {
 
   async addTopic(topic: Topic): Promise<boolean> {
     const result = await this.datastoreCommit.addTopic(topic);
+    if (!result.success) {
+      console.error('Failed to add topic:', result.germanMessage);
+    }
     return result.success;
   }
 
   async updateTopic(topicId: string, updates: Partial<Topic>): Promise<boolean> {
     const result = await this.datastoreCommit.updateTopic(topicId, updates);
+    if (!result.success) {
+      console.error('Failed to update topic:', result.germanMessage);
+    }
     return result.success;
   }
 
   async deleteTopic(topicId: string): Promise<boolean> {
     const result = await this.datastoreCommit.deleteTopic(topicId);
+    if (!result.success) {
+      console.error('Failed to delete topic:', result.germanMessage);
+    }
     return result.success;
   }
 
   async addMember(member: TeamMember): Promise<boolean> {
     const result = await this.datastoreCommit.addMember(member);
+    if (!result.success) {
+      console.error('Failed to add member:', result.germanMessage);
+    }
     return result.success;
   }
 
   async updateMember(memberId: string, updates: Partial<TeamMember>): Promise<boolean> {
     const result = await this.datastoreCommit.updateMember(memberId, updates);
+    if (!result.success) {
+      console.error('Failed to update member:', result.germanMessage);
+    }
     return result.success;
   }
 
   async deleteMember(memberId: string): Promise<boolean> {
     const result = await this.datastoreCommit.deleteMember(memberId);
+    if (!result.success) {
+      console.error('Failed to delete member:', result.germanMessage);
+    }
     return result.success;
   }
 
@@ -119,6 +137,9 @@ export class FileSystemBackendService extends BackendService {
 
   async updateMultipleTopics(updates: Array<{ topicId: string; changes: Partial<Topic> }>): Promise<boolean> {
     const result = await this.datastoreCommit.updateMultipleTopics(updates);
+    if (!result.success) {
+      console.error('Failed to update multiple topics:', result.germanMessage);
+    }
     return result.success;
   }
 

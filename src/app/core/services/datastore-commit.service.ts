@@ -68,13 +68,24 @@ export class DatastoreCommitService {
       const currentState = this.datastoreStateSubject.value;
       
       if (!content || content.trim() === '') {
-        // Initialize empty datastore
-        const emptyDatastore = this.createEmptyDatastore();
-        this.updateState(emptyDatastore, true, null);
+        // Initialize datastore with default admin
+        const initialDatastore = this.createEmptyDatastore();
+        
+        // Write the initial datastore to file
+        try {
+          const newContent = JSON.stringify(initialDatastore, null, 2);
+          await this.fileConnection.writeDatastore(newContent);
+          console.log('Created new datastore with default admin user');
+        } catch (writeError) {
+          console.warn('Could not write initial datastore to file:', writeError);
+          // Continue anyway - the datastore will be in memory
+        }
+        
+        this.updateState(initialDatastore, true, null);
         return {
           success: true,
-          germanMessage: 'Leerer Datenspeicher erstellt.',
-          datastore: emptyDatastore
+          germanMessage: 'Neuer Datenspeicher mit Standard-Admin erstellt.',
+          datastore: initialDatastore
         };
       }
 
@@ -144,6 +155,7 @@ export class DatastoreCommitService {
     // Step 1: Acquire lock
     const lockResult = await this.lockService.acquireLock(purpose);
     if (!lockResult.success) {
+      console.error('Failed to acquire lock:', lockResult.germanMessage);
       return {
         success: false,
         germanMessage: lockResult.germanMessage
@@ -222,6 +234,8 @@ export class DatastoreCommitService {
       const errorMsg = error instanceof FileConnectionError 
         ? error.germanMessage 
         : 'Fehler beim Speichern: ' + (error as Error).message;
+      
+      console.error('Error during commit:', error);
       
       return {
         success: false,
@@ -435,13 +449,24 @@ export class DatastoreCommitService {
   }
 
   private createEmptyDatastore(): Datastore {
+    const adminId = this.generateUUID();
     return {
       schemaVersion: 1,
       generatedAt: new Date().toISOString(),
       revisionId: 0,
-      members: [],
-      topics: [],
-      tags: []
+
+      members: [
+        {
+          id: adminId,
+          displayName: 'Admin',
+          email: '',
+          active: true,
+          tags: ['admin'],
+          updatedAt: new Date().toISOString()
+        }
+      ],
+      topics: []
+
     };
   }
 
