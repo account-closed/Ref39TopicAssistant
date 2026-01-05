@@ -1,0 +1,6 @@
+<div class="sync-indicator" [class]="getStatusClass()" [pTooltip]="getTooltipText()" tooltipPosition="bottom">
+  <i [class]="isConnected ? 'pi pi-sync' : 'pi pi-exclamation-circle'"></i>
+  @if (isConnected && revisionId !== null) {
+    <span class="revision-badge">v{{ revisionId }}</span>
+  }
+</div>
