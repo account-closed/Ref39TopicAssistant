@@ -1,0 +1,377 @@
+{
+  "schemaVersion": 1,
+  "generatedAt": "2026-01-05T10:15:30.000Z",
+  "revisionId": 9,
+  "members": [
+    {
+      "id": "b774c13a-5139-4463-9e19-778415197fba",
+      "displayName": "Admin",
+      "email": "",
+      "active": true,
+      "tags": ["admin"],
+      "updatedAt": "2026-01-05T09:58:12.120Z"
+    },
+    {
+      "id": "d3bf84af-1198-420f-8648-c039de293a2b",
+      "displayName": "asdf",
+      "email": "",
+      "active": true,
+      "tags": [],
+      "updatedAt": "2026-01-05T09:57:44.002Z"
+    },
+    {
+      "id": "8c0c8a8a-55db-4d38-a6a0-81f7d0f0a2f3",
+      "displayName": "Maria Beispiel",
+      "email": "maria.beispiel@example.org",
+      "active": true,
+      "tags": ["hr"],
+      "updatedAt": "2026-01-05T09:55:10.400Z"
+    },
+    {
+      "id": "2a9084fd-84d2-4f70-b3b3-0cfa8d4f2f12",
+      "displayName": "Max Mustermann",
+      "email": "max.mustermann@example.org",
+      "active": true,
+      "tags": ["it", "oncall"],
+      "updatedAt": "2026-01-05T09:52:02.900Z"
+    },
+    {
+      "id": "6f46e4aa-7d38-4d55-85a0-0b37b5dbb77e",
+      "displayName": "Sven Ops",
+      "email": "sven.ops@example.org",
+      "active": true,
+      "tags": ["ops"],
+      "updatedAt": "2026-01-05T09:49:33.777Z"
+    },
+    {
+      "id": "1e30b1f1-79c3-4de8-9db0-2c7e08a2a30f",
+      "displayName": "Lea QA",
+      "email": "lea.qa@example.org",
+      "active": true,
+      "tags": ["qa"],
+      "updatedAt": "2026-01-05T09:48:11.111Z"
+    },
+    {
+      "id": "3c9d4d63-b7c0-40f1-a5b6-0f8e7b0a9fb8",
+      "displayName": "Tobias Produkt",
+      "email": "tobias.produkt@example.org",
+      "active": true,
+      "tags": ["product"],
+      "updatedAt": "2026-01-05T09:46:45.320Z"
+    },
+    {
+      "id": "b2b77b0b-67a6-4af2-b64a-1e05b9a9c590",
+      "displayName": "Nina Security",
+      "email": "nina.security@example.org",
+      "active": true,
+      "tags": ["security"],
+      "updatedAt": "2026-01-05T09:44:05.050Z"
+    },
+    {
+      "id": "d8f50a8b-8d0e-4e14-9ed2-6b5a5ed3f8d1",
+      "displayName": "Jens Finance",
+      "email": "jens.finance@example.org",
+      "active": false,
+      "tags": ["finance"],
+      "updatedAt": "2026-01-05T09:41:09.009Z"
+    },
+    {
+      "id": "f0c2e10e-5e3f-4a1d-9c8d-1d2e3f4a5b6c",
+      "displayName": "Paula Support",
+      "email": "paula.support@example.org",
+      "active": true,
+      "tags": ["support"],
+      "updatedAt": "2026-01-05T09:39:20.200Z"
+    }
+  ],
+  "topics": [
+    {
+      "id": "a253fcaa-75b4-4c47-96e2-617e17778dc9",
+      "header": "blub",
+      "description": "geheim",
+      "tags": [],
+      "searchKeywords": [],
+      "validity": { "alwaysValid": true },
+      "notes": "",
+      "raci": {
+        "r1MemberId": "d3bf84af-1198-420f-8648-c039de293a2b",
+        "cMemberIds": [],
+        "iMemberIds": [],
+        "r3MemberId": "b774c13a-5139-4463-9e19-778415197fba"
+      },
+      "updatedAt": "2026-01-05T09:20:15.851Z",
+      "r1Name": "asdf",
+      "r1MemberId": "d3bf84af-1198-420f-8648-c039de293a2b",
+      "tagsString": ""
+    },
+    {
+      "id": "5085c0af-59fe-40d3-8af2-a4bfb3e012a7",
+      "header": "Ente",
+      "description": "Eine Ente ist ein Vogel",
+      "tags": ["FAQ"],
+      "searchKeywords": ["ente", "vogel", "tier"],
+      "validity": { "alwaysValid": true },
+      "notes": "",
+      "raci": {
+        "r1MemberId": "d3bf84af-1198-420f-8648-c039de293a2b",
+        "cMemberIds": ["1e30b1f1-79c3-4de8-9db0-2c7e08a2a30f"],
+        "iMemberIds": ["f0c2e10e-5e3f-4a1d-9c8d-1d2e3f4a5b6c"]
+      },
+      "updatedAt": "2026-01-05T09:22:06.680Z",
+      "tagsString": "FAQ"
+    },
+    {
+      "id": "90f82893-de9a-4447-9899-19dfe2b906a5",
+      "header": "Hase",
+      "description": "ein Hase hat ein Fell",
+      "tags": ["Wichtig"],
+      "searchKeywords": ["hase", "fell", "tier"],
+      "validity": { "alwaysValid": true },
+      "notes": "",
+      "raci": {
+        "r1MemberId": "b774c13a-5139-4463-9e19-778415197fba",
+        "cMemberIds": ["1e30b1f1-79c3-4de8-9db0-2c7e08a2a30f"],
+        "iMemberIds": ["3c9d4d63-b7c0-40f1-a5b6-0f8e7b0a9fb8"]
+      },
+      "updatedAt": "2026-01-05T09:25:52.194Z",
+      "r1Name": "Admin",
+      "r1MemberId": "b774c13a-5139-4463-9e19-778415197fba",
+      "tagsString": "Wichtig"
+    },
+    {
+      "id": "c3b1e56d-3d40-41d8-9d5d-7c2a1f41b7c8",
+      "header": "Passwort-Reset",
+      "description": "Vorgehen zum Zurücksetzen eines Benutzerpassworts.",
+      "tags": ["Prozess", "Wichtig"],
+      "searchKeywords": ["passwort", "reset", "konto"],
+      "validity": { "alwaysValid": true },
+      "notes": "Nur für interne Nutzung.",
+      "raci": {
+        "r1MemberId": "6f46e4aa-7d38-4d55-85a0-0b37b5dbb77e",
+        "cMemberIds": ["b2b77b0b-67a6-4af2-b64a-1e05b9a9c590"],
+        "iMemberIds": ["f0c2e10e-5e3f-4a1d-9c8d-1d2e3f4a5b6c"],
+        "r3MemberId": "b774c13a-5139-4463-9e19-778415197fba"
+      },
+      "updatedAt": "2026-01-05T09:28:10.010Z",
+      "tagsString": "Prozess, Wichtig"
+    },
+    {
+      "id": "b7a8f4ab-0d6b-46d4-92b5-9e2d9d9b4a21",
+      "header": "Onboarding IT",
+      "description": "Checkliste für neue Mitarbeitende (Accounts, Zugänge, Geräte).",
+      "tags": ["Prozess"],
+      "searchKeywords": ["onboarding", "it", "checkliste"],
+      "validity": { "alwaysValid": true },
+      "notes": "",
+      "raci": {
+        "r1MemberId": "2a9084fd-84d2-4f70-b3b3-0cfa8d4f2f12",
+        "cMemberIds": ["8c0c8a8a-55db-4d38-a6a0-81f7d0f0a2f3"],
+        "iMemberIds": ["3c9d4d63-b7c0-40f1-a5b6-0f8e7b0a9fb8"]
+      },
+      "updatedAt": "2026-01-05T09:30:05.500Z",
+      "tagsString": "Prozess"
+    },
+    {
+      "id": "2c47e0c4-1d3d-4b5e-a8e8-5a7d26c5a0d1",
+      "header": "Incident Severity",
+      "description": "Definitionen für SEV1–SEV4 inkl. Reaktionszeiten.",
+      "tags": ["Ops", "Wichtig"],
+      "searchKeywords": ["incident", "severity", "sev1", "sev2"],
+      "validity": { "alwaysValid": true },
+      "notes": "Orientiert an Bereitschaft/On-Call.",
+      "raci": {
+        "r1MemberId": "6f46e4aa-7d38-4d55-85a0-0b37b5dbb77e",
+        "cMemberIds": ["2a9084fd-84d2-4f70-b3b3-0cfa8d4f2f12"],
+        "iMemberIds": ["b774c13a-5139-4463-9e19-778415197fba", "f0c2e10e-5e3f-4a1d-9c8d-1d2e3f4a5b6c"],
+        "r3MemberId": "b2b77b0b-67a6-4af2-b64a-1e05b9a9c590"
+      },
+      "updatedAt": "2026-01-05T09:32:44.440Z",
+      "tagsString": "Ops, Wichtig"
+    },
+    {
+      "id": "f4bb3d08-6db2-4c1e-8b9e-0d2dbb77e1a9",
+      "header": "Security Patch Policy",
+      "description": "Zeitfenster und Verantwortlichkeiten für Security Updates.",
+      "tags": ["Security", "Wichtig"],
+      "searchKeywords": ["patch", "policy", "security", "updates"],
+      "validity": { "alwaysValid": true },
+      "notes": "",
+      "raci": {
+        "r1MemberId": "b2b77b0b-67a6-4af2-b64a-1e05b9a9c590",
+        "cMemberIds": ["6f46e4aa-7d38-4d55-85a0-0b37b5dbb77e"],
+        "iMemberIds": ["b774c13a-5139-4463-9e19-778415197fba"],
+        "r3MemberId": "b774c13a-5139-4463-9e19-778415197fba"
+      },
+      "updatedAt": "2026-01-05T09:35:00.000Z",
+      "r1Name": "Nina Security",
+      "r1MemberId": "b2b77b0b-67a6-4af2-b64a-1e05b9a9c590",
+      "tagsString": "Security, Wichtig"
+    },
+    {
+      "id": "a19d2a6c-8b11-4f1a-9c3d-8c7b2f6c0a11",
+      "header": "Release Ablauf",
+      "description": "Standardablauf für Releases inkl. QA-Gates.",
+      "tags": ["Prozess"],
+      "searchKeywords": ["release", "deployment", "qa"],
+      "validity": { "alwaysValid": true },
+      "notes": "",
+      "raci": {
+        "r1MemberId": "1e30b1f1-79c3-4de8-9db0-2c7e08a2a30f",
+        "cMemberIds": ["6f46e4aa-7d38-4d55-85a0-0b37b5dbb77e"],
+        "iMemberIds": ["3c9d4d63-b7c0-40f1-a5b6-0f8e7b0a9fb8", "f0c2e10e-5e3f-4a1d-9c8d-1d2e3f4a5b6c"]
+      },
+      "updatedAt": "2026-01-05T09:37:12.012Z",
+      "tagsString": "Prozess"
+    },
+    {
+      "id": "3b9c7d4c-54d7-4a8b-9a6e-9c0c2f2d3e4f",
+      "header": "Datenaufbewahrung",
+      "description": "Grundsätze zur Aufbewahrung und Löschung von Daten.",
+      "tags": ["Security", "Prozess"],
+      "searchKeywords": ["retention", "löschung", "aufbewahrung", "daten"],
+      "validity": { "alwaysValid": true },
+      "notes": "Abstimmung mit Legal erforderlich.",
+      "raci": {
+        "r1MemberId": "b2b77b0b-67a6-4af2-b64a-1e05b9a9c590",
+        "cMemberIds": ["8c0c8a8a-55db-4d38-a6a0-81f7d0f0a2f3"],
+        "iMemberIds": ["b774c13a-5139-4463-9e19-778415197fba"]
+      },
+      "updatedAt": "2026-01-05T09:39:59.999Z",
+      "tagsString": "Security, Prozess"
+    },
+    {
+      "id": "4db2a0b1-0a88-4e0b-9b03-6a8b7c9d0e1f",
+      "header": "Kostenstelle anlegen",
+      "description": "Prozess zur Anlage einer neuen Kostenstelle inkl. Freigaben.",
+      "tags": ["Finance", "Prozess"],
+      "searchKeywords": ["kostenstelle", "finance", "freigabe"],
+      "validity": { "alwaysValid": true },
+      "notes": "",
+      "raci": {
+        "r1MemberId": "d8f50a8b-8d0e-4e14-9ed2-6b5a5ed3f8d1",
+        "cMemberIds": ["8c0c8a8a-55db-4d38-a6a0-81f7d0f0a2f3"],
+        "iMemberIds": ["b774c13a-5139-4463-9e19-778415197fba"],
+        "r3MemberId": "b774c13a-5139-4463-9e19-778415197fba"
+      },
+      "updatedAt": "2026-01-05T09:41:30.100Z",
+      "tagsString": "Finance, Prozess"
+    },
+    {
+      "id": "0c1f2a3b-4d5e-6f70-8123-456789abcdef",
+      "header": "Support Eskalation",
+      "description": "Wann und wie Supportfälle eskaliert werden.",
+      "tags": ["Support", "FAQ"],
+      "searchKeywords": ["support", "eskalation", "sla"],
+      "validity": { "alwaysValid": true },
+      "notes": "",
+      "raci": {
+        "r1MemberId": "f0c2e10e-5e3f-4a1d-9c8d-1d2e3f4a5b6c",
+        "cMemberIds": ["6f46e4aa-7d38-4d55-85a0-0b37b5dbb77e"],
+        "iMemberIds": ["3c9d4d63-b7c0-40f1-a5b6-0f8e7b0a9fb8"]
+      },
+      "updatedAt": "2026-01-05T09:44:44.444Z",
+      "tagsString": "Support, FAQ"
+    },
+    {
+      "id": "9a8b7c6d-5e4f-3a2b-1c0d-ffeeddccbbaa",
+      "header": "Alt: Legacy VPN Zugang",
+      "description": "Veraltete Anleitung, nur für Referenzzwecke.",
+      "tags": ["Deprecated"],
+      "searchKeywords": ["legacy", "vpn", "alt", "deprecated"],
+      "validity": { "alwaysValid": true },
+      "notes": "Nicht mehr aktiv nutzen.",
+      "raci": {
+        "r1MemberId": "2a9084fd-84d2-4f70-b3b3-0cfa8d4f2f12",
+        "cMemberIds": ["b2b77b0b-67a6-4af2-b64a-1e05b9a9c590"],
+        "iMemberIds": ["b774c13a-5139-4463-9e19-778415197fba"]
+      },
+      "updatedAt": "2026-01-05T09:47:47.470Z",
+      "tagsString": "Deprecated"
+    },
+    {
+      "id": "7e6d5c4b-3a29-1f0e-dcba-9876543210ff",
+      "header": "Produkt-Roadmap",
+      "description": "Kurzüberblick über die nächsten Quartalsziele.",
+      "tags": ["Product"],
+      "searchKeywords": ["roadmap", "quartal", "ziele"],
+      "validity": { "alwaysValid": true },
+      "notes": "",
+      "raci": {
+        "r1MemberId": "3c9d4d63-b7c0-40f1-a5b6-0f8e7b0a9fb8",
+        "cMemberIds": ["b774c13a-5139-4463-9e19-778415197fba"],
+        "iMemberIds": ["f0c2e10e-5e3f-4a1d-9c8d-1d2e3f4a5b6c"]
+      },
+      "updatedAt": "2026-01-05T09:50:00.001Z",
+      "tagsString": "Product"
+    },
+    {
+      "id": "11112222-3333-4444-5555-666677778888",
+      "header": "FAQ: Zugang zu System X",
+      "description": "Typische Fragen und Antworten zum Zugriff auf System X.",
+      "tags": ["FAQ"],
+      "searchKeywords": ["zugang", "system x", "faq"],
+      "validity": { "alwaysValid": true },
+      "notes": "",
+      "raci": {
+        "r1MemberId": "f0c2e10e-5e3f-4a1d-9c8d-1d2e3f4a5b6c",
+        "cMemberIds": ["2a9084fd-84d2-4f70-b3b3-0cfa8d4f2f12"],
+        "iMemberIds": ["8c0c8a8a-55db-4d38-a6a0-81f7d0f0a2f3"]
+      },
+      "updatedAt": "2026-01-05T09:52:22.222Z",
+      "tagsString": "FAQ"
+    }
+  ],
+  "tags": [
+    {
+      "id": "d67af835-89aa-4926-b8ed-39c37ce2131e",
+      "name": "Wichtig",
+      "searchKeywords": ["kritisch", "prio1"],
+      "hinweise": "",
+      "copyPasteText": "",
+      "createdAt": "2026-01-04T21:08:39.993Z",
+      "modifiedAt": "2026-01-05T09:10:00.000Z",
+      "createdBy": "d3bf84af-1198-420f-8648-c039de293a2b"
+    },
+    {
+      "id": "2b6f6d5c-2df0-4d0c-9a61-7c3c83a9a21b",
+      "name": "FAQ",
+      "searchKeywords": ["hilfe", "fragen", "antworten"],
+      "hinweise": "Für wiederkehrende Fragen.",
+      "copyPasteText": "",
+      "createdAt": "2026-01-05T09:05:00.000Z",
+      "modifiedAt": "2026-01-05T09:05:00.000Z",
+      "createdBy": "b774c13a-5139-4463-9e19-778415197fba"
+    },
+    {
+      "id": "7a1d9d2a-8c7f-4d6a-9b2b-0a1b2c3d4e5f",
+      "name": "Prozess",
+      "searchKeywords": ["ablauf", "workflow", "vorgehen"],
+      "hinweise": "Kennzeichnet standardisierte Abläufe.",
+      "copyPasteText": "",
+      "createdAt": "2026-01-05T09:06:00.000Z",
+      "modifiedAt": "2026-01-05T09:06:00.000Z",
+      "createdBy": "d3bf84af-1198-420f-8648-c039de293a2b"
+    },
+    {
+      "id": "8f3e2c1d-4b5a-4c6d-9e7f-0a1b2c3d4e5a",
+      "name": "Security",
+      "searchKeywords": ["sicherheit", "hardening", "patch"],
+      "hinweise": "Sicherheitsrelevante Inhalte.",
+      "copyPasteText": "",
+      "createdAt": "2026-01-05T09:07:00.000Z",
+      "modifiedAt": "2026-01-05T09:07:00.000Z",
+      "createdBy": "b2b77b0b-67a6-4af2-b64a-1e05b9a9c590"
+    },
+    {
+      "id": "0a9b8c7d-6e5f-4d3c-2b1a-0f9e8d7c6b5a",
+      "name": "Deprecated",
+      "searchKeywords": ["alt", "legacy", "veraltet"],
+      "hinweise": "Nicht mehr verwenden.",
+      "copyPasteText": "",
+      "createdAt": "2026-01-05T09:08:00.000Z",
+      "modifiedAt": "2026-01-05T09:08:00.000Z",
+      "createdBy": "b774c13a-5139-4463-9e19-778415197fba"
+    }
+  ]
+}
+
