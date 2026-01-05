@@ -1,5 +1,100 @@
 <div class="page-container">
-  <h1>Themen nach Teammitglied</h1>
-  <p>View topics filtered by team member assignments</p>
-  <p><em>Coming soon...</em></p>
+  <div class="page-header">
+    <h1>Themen nach Teammitglied</h1>
+    <p>RACI-Matrix: Übersicht aller Themen und Zuständigkeiten</p>
+  </div>
+
+  <div class="legend">
+    <span class="legend-title">Legende:</span>
+    <p-tag value="R1" severity="success" pTooltip="Hauptverantwortlich"></p-tag>
+    <p-tag value="R2" severity="info" pTooltip="Stellvertretung"></p-tag>
+    <p-tag value="R3" severity="secondary" pTooltip="Weitere Stellvertretung"></p-tag>
+    <p-tag value="C" severity="warn" pTooltip="Consulted (wird konsultiert)"></p-tag>
+    <p-tag value="I" severity="contrast" pTooltip="Informed (wird informiert)"></p-tag>
+    <p-tag value="Verwaist" severity="danger" pTooltip="Keine Zuordnung"></p-tag>
+  </div>
+
+  @if (orphanCount() > 0) {
+    <div class="orphan-warning">
+      <i class="pi pi-exclamation-triangle"></i>
+      <span>{{ orphanCount() }} Thema(en) ohne Zuordnung gefunden</span>
+    </div>
+  }
+
+  <div class="toolbar">
+    <p-iconfield>
+      <p-inputicon styleClass="pi pi-search" />
+      <input 
+        pInputText 
+        type="text" 
+        [value]="globalFilter()" 
+        (input)="onGlobalFilter($event)" 
+        placeholder="Themen filtern..." />
+    </p-iconfield>
+  </div>
+
+  @if (!isConnected()) {
+    <div class="card">
+      <p class="text-center text-secondary">
+        <i class="pi pi-info-circle"></i>
+        Bitte verbinden Sie zuerst ein Datenverzeichnis über die Einstellungen.
+      </p>
+    </div>
+  }
+
+  @if (isConnected()) {
+    <div class="matrix-container">
+      <table class="raci-matrix">
+        <thead>
+          <tr>
+            <th class="topic-header">Thema</th>
+            @for (member of activeMembers(); track trackByMember($index, member)) {
+              <th class="member-header" [pTooltip]="member.email || ''">
+                {{ member.displayName }}
+              </th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of matrixRows(); track trackByTopic($index, row)) {
+            <tr [class.orphan-row]="row.isOrphan">
+              <td class="topic-cell">
+                <div class="topic-name">{{ row.topic.header }}</div>
+                @if (row.isOrphan) {
+                  <p-tag value="Verwaist" severity="danger" styleClass="orphan-tag"></p-tag>
+                }
+                @if (row.topic.tags && row.topic.tags.length > 0) {
+                  <div class="topic-tags">
+                    @for (tag of row.topic.tags; track tag) {
+                      <span class="mini-tag">{{ tag }}</span>
+                    }
+                  </div>
+                }
+              </td>
+              @for (member of activeMembers(); track trackByMember($index, member)) {
+                <td class="role-cell">
+                  @for (role of getRoles(row, member.id); track role) {
+                    <p-tag 
+                      [value]="role" 
+                      [severity]="getRoleSeverity(role)"
+                      [pTooltip]="getRoleTooltip(role)"
+                      styleClass="role-tag">
+                    </p-tag>
+                  }
+                </td>
+              }
+            </tr>
+          }
+          @if (matrixRows().length === 0) {
+            <tr>
+              <td [attr.colspan]="activeMembers().length + 1" class="empty-message">
+                <i class="pi pi-inbox empty-icon"></i>
+                <p>Keine Themen gefunden</p>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
 </div>
