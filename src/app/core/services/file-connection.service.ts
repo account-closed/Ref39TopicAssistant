@@ -255,8 +255,9 @@ export class FileConnectionService {
       });
 
       // Generate backup filename with timestamp
+      // Format: YYYY-MM-DDTHH-MM-SS (19 chars from ISO string with colons replaced by dashes)
       const now = new Date();
-      const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19); // e.g., "2024-01-15T14-30-45"
       const backupFileName = `datastore_${timestamp}.json`;
 
       // Create backup file

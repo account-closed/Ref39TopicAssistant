@@ -80,7 +80,8 @@ export function removeInvalidMemberReferences(datastore: Datastore): {
     let hasChanges = false;
 
     // Check r1MemberId (required field - skip removal as it would break validation)
-    // We only log if r1MemberId is invalid - it should be handled differently
+    // NOTE: r1MemberId is mandatory per schema. Invalid r1MemberId indicates data corruption
+    // that requires manual intervention. We log it but don't auto-fix to avoid breaking topics.
     if (!validMemberIds.has(updatedRaci.r1MemberId)) {
       changes.push(`r1MemberId "${updatedRaci.r1MemberId}" is invalid (keeping as required field)`);
     }
