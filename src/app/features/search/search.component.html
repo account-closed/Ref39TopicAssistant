@@ -36,6 +36,26 @@
       <p>Finden Sie schnell das richtige Thema (sucht auch in zugehörigen Tags)</p>
     </div>
 
+    <!-- Index Status Indicator -->
+    <div class="index-status">
+      <div class="index-status-indicator" *ngIf="isIndexBuilding">
+        <p-progressSpinner 
+          styleClass="index-spinner" 
+          strokeWidth="4" 
+          [style]="{'width': '20px', 'height': '20px'}">
+        </p-progressSpinner>
+        <span class="index-status-text">Suchindex wird erstellt...</span>
+      </div>
+      <div class="index-status-indicator ready" *ngIf="!isIndexBuilding && isIndexReady">
+        <i class="pi pi-check-circle"></i>
+        <span class="index-status-text">Suchindex bereit ({{ indexDocumentCount }} Themen)</span>
+      </div>
+      <div class="index-status-indicator waiting" *ngIf="!isIndexBuilding && !isIndexReady">
+        <i class="pi pi-clock"></i>
+        <span class="index-status-text">Warten auf Daten...</span>
+      </div>
+    </div>
+
     <div class="search-box">
       <span class="p-input-icon-left" style="width: 100%">
         <i class="pi pi-search"></i>
@@ -47,6 +67,7 @@
           placeholder="Thema suchen..."
           style="width: 100%"
           #searchInput
+          [disabled]="!isIndexReady"
           autofocus />
       </span>
     </div>
@@ -125,12 +146,12 @@
       </div>
     </div>
 
-    <div class="no-results" *ngIf="searchQuery && searchResults.length === 0">
+    <div class="no-results" *ngIf="searchQuery && searchResults.length === 0 && isIndexReady">
       <i class="pi pi-search"></i>
       <p>Keine Themen gefunden</p>
     </div>
 
-    <div class="empty-state" *ngIf="!searchQuery">
+    <div class="empty-state" *ngIf="!searchQuery && isIndexReady">
       <i class="pi pi-search"></i>
       <p>Geben Sie einen Suchbegriff ein, um Themen zu finden</p>
     </div>

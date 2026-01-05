@@ -5,7 +5,7 @@
  * by comparing checksums. Triggers a rebuild when changes are detected.
  */
 
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, signal, computed } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { BackendService } from './backend.service';
 import { SearchEngineService } from './search-engine.service';
@@ -15,6 +15,22 @@ import { Datastore } from '../models';
 export interface IndexMonitorOptions {
   /** Interval in milliseconds between checks (default: 5000ms) */
   intervalMs?: number;
+}
+
+/**
+ * Index status information
+ */
+export interface IndexStatus {
+  /** Whether the index is currently being built */
+  isBuilding: boolean;
+  /** Whether the index is ready for searching */
+  isReady: boolean;
+  /** Number of documents in the index */
+  documentCount: number;
+  /** Timestamp when the index was last built */
+  lastBuiltAt: string | null;
+  /** Current checksum of the indexed data */
+  checksum: string | null;
 }
 
 const DEFAULT_INTERVAL_MS = 5000;
@@ -29,10 +45,44 @@ export class IndexMonitorService implements OnDestroy {
   private currentDatastore: Datastore | null = null;
   private lastChecksum: string | null = null;
 
+  // Signals for index status
+  private isBuildingSignal = signal(false);
+  private isReadySignal = signal(false);
+  private lastBuiltAtSignal = signal<string | null>(null);
+  private checksumSignal = signal<string | null>(null);
+
+  /** Signal indicating if the index is currently being built */
+  public readonly isBuilding = computed(() => this.isBuildingSignal());
+  
+  /** Signal indicating if the index is ready for searching */
+  public readonly isReady = computed(() => this.isReadySignal());
+  
+  /** Signal with the timestamp of when the index was last built */
+  public readonly lastBuiltAt = computed(() => this.lastBuiltAtSignal());
+  
+  /** Signal with the current checksum */
+  public readonly checksum = computed(() => this.checksumSignal());
+
+  /** Computed signal with full index status */
+  public readonly indexStatus = computed<IndexStatus>(() => ({
+    isBuilding: this.isBuildingSignal(),
+    isReady: this.isReadySignal(),
+    documentCount: this.searchEngine.getIndexSize(),
+    lastBuiltAt: this.lastBuiltAtSignal(),
+    checksum: this.checksumSignal()
+  }));
+
   constructor(
     private backend: BackendService,
     private searchEngine: SearchEngineService
-  ) {}
+  ) {
+    // Initialize from localStorage if available
+    const storedMeta = this.searchEngine.getIndexMeta();
+    if (storedMeta) {
+      this.checksumSignal.set(storedMeta.checksum);
+      this.lastBuiltAtSignal.set(storedMeta.builtAt);
+    }
+  }
 
   /**
    * Starts the index monitor with periodic checksum validation.
@@ -92,6 +142,7 @@ export class IndexMonitorService implements OnDestroy {
 
     try {
       this.isRebuilding = true;
+      this.isBuildingSignal.set(true);
 
       // Compute current checksum
       const currentChecksum = await computeDatastoreChecksum(this.currentDatastore);
@@ -103,11 +154,16 @@ export class IndexMonitorService implements OnDestroy {
       if (currentChecksum !== storedChecksum) {
         // Rebuild index
         await this.rebuildIndex(currentChecksum);
+      } else {
+        // Index is up to date, mark as ready
+        this.isReadySignal.set(true);
       }
 
       this.lastChecksum = currentChecksum;
+      this.checksumSignal.set(currentChecksum);
     } finally {
       this.isRebuilding = false;
+      this.isBuildingSignal.set(false);
     }
   }
 
@@ -125,11 +181,13 @@ export class IndexMonitorService implements OnDestroy {
     }
 
     this.isRebuilding = true;
+    this.isBuildingSignal.set(true);
     try {
       const checksum = await computeDatastoreChecksum(this.currentDatastore);
       await this.rebuildIndex(checksum);
     } finally {
       this.isRebuilding = false;
+      this.isBuildingSignal.set(false);
     }
   }
 
@@ -145,6 +203,12 @@ export class IndexMonitorService implements OnDestroy {
     // For now, we do a direct async rebuild since it's fast enough
     await this.searchEngine.buildIndex(this.currentDatastore);
     this.searchEngine.setIndexMeta(checksum);
+
+    // Update signals
+    const now = new Date().toISOString();
+    this.lastBuiltAtSignal.set(now);
+    this.checksumSignal.set(checksum);
+    this.isReadySignal.set(true);
 
     console.debug('[IndexMonitor] Index rebuilt. Checksum:', checksum.substring(0, 16) + '...');
   }

@@ -6,9 +6,11 @@ import { Card } from 'primeng/card';
 import { Tag } from 'primeng/tag';
 import { Button } from 'primeng/button';
 import { Message } from 'primeng/message';
+import { ProgressSpinner } from 'primeng/progressspinner';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
 import { SearchEngineService, SearchHit } from '../../core/services/search-engine.service';
+import { IndexMonitorService } from '../../core/services/index-monitor.service';
 import { Datastore, Topic } from '../../core/models';
 
 /**
@@ -22,7 +24,7 @@ interface DisplaySearchResult {
 @Component({
   selector: 'app-search',
   standalone: true,
-  imports: [CommonModule, FormsModule, InputText, Card, Tag, Button, Message],
+  imports: [CommonModule, FormsModule, InputText, Card, Tag, Button, Message, ProgressSpinner],
   templateUrl: './search.component.html',
   styleUrl: './search.component.scss'
 })
@@ -34,12 +36,19 @@ export class SearchComponent implements OnInit, OnDestroy {
   isConnecting = false;
   hasFileSystemAPI = false;
   connectError = '';
+  
+  // Index status
+  isIndexBuilding = false;
+  isIndexReady = false;
+  indexDocumentCount = 0;
+  
   private subscriptions: Subscription[] = [];
   private currentDatastore: Datastore | null = null;
 
   constructor(
     private backend: BackendService,
     private searchEngine: SearchEngineService,
+    private indexMonitor: IndexMonitorService,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone
   ) {
@@ -58,6 +67,20 @@ export class SearchComponent implements OnInit, OnDestroy {
           });
         });
       }
+    }, { allowSignalWrites: true });
+
+    // React to index status changes
+    effect(() => {
+      const status = this.indexMonitor.indexStatus();
+      // Schedule outside Angular to avoid NG0100, then run inside
+      queueMicrotask(() => {
+        this.ngZone.run(() => {
+          this.isIndexBuilding = status.isBuilding;
+          this.isIndexReady = status.isReady;
+          this.indexDocumentCount = status.documentCount;
+          this.cdr.detectChanges();
+        });
+      });
     }, { allowSignalWrites: true });
   }
 
