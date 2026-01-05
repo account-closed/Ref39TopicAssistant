@@ -256,6 +256,61 @@ describe('SearchEngineService', () => {
       }
     });
 
+    it('should weight topic name higher than keywords, description, notes, and tag content', async () => {
+      const ds = createDatastore({
+        topics: [
+          // Topic with "unicorn" in title - should rank highest
+          createTopic('t1', 'Unicorn Topic'),
+          // Topic with "unicorn" in keywords - should rank second
+          createTopic('t2', 'Alpha Topic', { searchKeywords: ['unicorn', 'rainbow'] }),
+          // Topic with "unicorn" in description - should rank third
+          createTopic('t3', 'Beta Topic', { description: 'Contains unicorn mention' }),
+          // Topic with "unicorn" in notes - should rank fourth
+          createTopic('t4', 'Gamma Topic', { notes: 'See unicorn documentation' }),
+          // Topic with "unicorn" in tag name - should rank fifth
+          createTopic('t5', 'Delta Topic', { tags: ['tag1'] }),
+          // Topic with "unicorn" in tag keywords - should rank sixth
+          createTopic('t6', 'Epsilon Topic', { tags: ['tag2'] }),
+          // Topic with "unicorn" in tag notes - should rank lowest
+          createTopic('t7', 'Zeta Topic', { tags: ['tag3'] })
+        ],
+        tags: [
+          createTag('tag1', 'Unicorn Tag'),
+          createTag('tag2', 'Normal Tag', { searchKeywords: ['unicorn'] }),
+          createTag('tag3', 'Basic Tag', { hinweise: 'unicorn info' })
+        ]
+      });
+      await service.buildIndex(ds);
+      
+      const results = service.search('unicorn');
+      expect(results.length).toBeGreaterThanOrEqual(5);
+      
+      // Get scores by entity ID
+      const scoreByEntity = new Map<string, number>();
+      for (const r of results) {
+        scoreByEntity.set(r.entityId, r.score);
+      }
+      
+      // Verify field weighting priority
+      const titleScore = scoreByEntity.get('t1') || 0;       // title (weight: 100)
+      const keywordScore = scoreByEntity.get('t2') || 0;     // topicKeywords (weight: 85)
+      const descScore = scoreByEntity.get('t3') || 0;        // topicDescription (weight: 70)
+      const notesScore = scoreByEntity.get('t4') || 0;       // topicNotes (weight: 55)
+      const tagNameScore = scoreByEntity.get('t5') || 0;     // tagNames (weight: 40)
+      const tagKeywordScore = scoreByEntity.get('t6') || 0;  // tagKeywords (weight: 25)
+      const tagNotesScore = scoreByEntity.get('t7') || 0;    // tagNotes (weight: 10)
+      
+      // Title should score highest
+      expect(titleScore).toBeGreaterThan(keywordScore);
+      expect(titleScore).toBeGreaterThan(descScore);
+      
+      // Keywords should score higher than description
+      expect(keywordScore).toBeGreaterThan(descScore);
+      
+      // Tag content should score lower than topic content
+      expect(descScore).toBeGreaterThan(tagNameScore);
+    });
+
     it('should handle fuzzy/partial matches', async () => {
       const ds = createDatastore({
         topics: [createTopic('t1', 'Urlaubsantrag')]

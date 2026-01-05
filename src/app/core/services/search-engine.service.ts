@@ -4,7 +4,14 @@
  * Features:
  * - Document index covering topics with tag content included
  * - Fuzzy matching with forward tokenization
- * - Field boosting (title weighted higher than text)
+ * - Multi-field weighting with priority:
+ *   1. Topic name (highest weight: 100)
+ *   2. Topic search keywords (weight: 85)
+ *   3. Topic description (weight: 70)
+ *   4. Topic notes (weight: 55)
+ *   5. Tag name (weight: 40)
+ *   6. Tag search keywords (weight: 25)
+ *   7. Tag notes/hinweise (weight: 10, lowest)
  * - Returns top N results sorted by relevance
  */
 
@@ -19,19 +26,44 @@ export type SearchableKind = 'topic';
 
 /**
  * Internal document structure for FlexSearch indexing.
+ * Each field has a different weight in search results.
  */
 export interface SearchDocument {
-  /** Unique ID: `topic:<uuid>`, `tag:<uuid>`, `member:<uuid>` */
+  /** Unique ID: `topic:<uuid>` */
   id: string;
   /** Entity type */
   kind: SearchableKind;
-  /** Primary display label */
+  /** Topic name/header - highest weight */
   title: string;
-  /** Concatenated searchable text (includes title for boosting) */
-  text: string;
+  /** Topic search keywords - very high weight */
+  topicKeywords: string;
+  /** Topic description - high weight */
+  topicDescription: string;
+  /** Topic notes - medium weight */
+  topicNotes: string;
+  /** Tag names - medium-low weight */
+  tagNames: string;
+  /** Tag search keywords - low weight */
+  tagKeywords: string;
+  /** Tag notes/hinweise - lowest weight */
+  tagNotes: string;
   /** Index signature for FlexSearch compatibility */
   [key: string]: string;
 }
+
+/**
+ * Field weights for search scoring.
+ * Higher weight = more important in ranking.
+ */
+const FIELD_WEIGHTS: Record<string, number> = {
+  title: 100,           // Topic name - highest priority
+  topicKeywords: 85,    // Topic search keywords
+  topicDescription: 70, // Topic description
+  topicNotes: 55,       // Topic notes
+  tagNames: 40,         // Tag names
+  tagKeywords: 25,      // Tag search keywords
+  tagNotes: 10          // Tag notes/hinweise - lowest priority
+};
 
 /**
  * Search result returned from queries.
@@ -85,13 +117,6 @@ export function parseDocumentId(id: string): { kind: SearchableKind; entityId: s
   };
 }
 
-/**
- * Number of times to repeat title in the text field for boosting.
- * FlexSearch doesn't have native field weighting, so we boost title relevance
- * by duplicating it in the concatenated text field.
- */
-const TITLE_BOOST_REPETITIONS = 2;
-
 @Injectable({
   providedIn: 'root'
 })
@@ -138,11 +163,11 @@ export class SearchEngineService {
       this.tagsById.set(tag.id, tag.name);
     }
     
-    // Create new FlexSearch Document index
+    // Create new FlexSearch Document index with multiple weighted fields
     this.index = new Document({
       document: {
         id: 'id',
-        index: ['title', 'text'],
+        index: ['title', 'topicKeywords', 'topicDescription', 'topicNotes', 'tagNames', 'tagKeywords', 'tagNotes'],
         store: ['id', 'kind', 'title']
       },
       tokenize: 'forward',
@@ -169,6 +194,14 @@ export class SearchEngineService {
 
   /**
    * Searches the index and returns matching results.
+   * Uses field weighting to prioritize matches:
+   *   1. Topic name (weight: 100)
+   *   2. Topic search keywords (weight: 85)
+   *   3. Topic description (weight: 70)
+   *   4. Topic notes (weight: 55)
+   *   5. Tag name (weight: 40)
+   *   6. Tag search keywords (weight: 25)
+   *   7. Tag notes/hinweise (weight: 10)
    * 
    * @param query - Search query string
    * @param limit - Maximum number of results to return (default: 10)
@@ -188,12 +221,13 @@ export class SearchEngineService {
       enrich: true
     }) as Array<{ field: string; result: Array<{ id: string }> }>;
 
-    // Merge results from different fields and compute scores
+    // Merge results from different fields and compute scores based on field weights
     const scoreMap = new Map<string, { score: number; doc: SearchDocument }>();
 
     for (const fieldResult of results) {
       const field = fieldResult.field;
-      const baseScore = field === 'title' ? 100 : 50; // Boost title matches
+      // Use field weight from FIELD_WEIGHTS, default to 10 if not found
+      const fieldWeight = FIELD_WEIGHTS[field] || 10;
 
       for (let i = 0; i < fieldResult.result.length; i++) {
         const item = fieldResult.result[i];
@@ -202,14 +236,15 @@ export class SearchEngineService {
         
         if (!doc) continue;
 
-        // Score based on position in results and field importance
+        // Score based on position in results and field weight
         const positionScore = (fieldResult.result.length - i) / fieldResult.result.length;
-        const fieldScore = baseScore * positionScore;
+        const fieldScore = fieldWeight * positionScore;
 
         const existing = scoreMap.get(id);
         if (existing) {
           // Combine scores from multiple field matches
-          existing.score = Math.max(existing.score, fieldScore) + fieldScore * 0.2;
+          // Use max to prioritize the best match, add a bonus for matching multiple fields
+          existing.score = Math.max(existing.score, fieldScore) + fieldScore * 0.3;
         } else {
           scoreMap.set(id, { score: fieldScore, doc });
         }
@@ -286,33 +321,46 @@ export class SearchEngineService {
   }
 
   /**
-   * Creates a SearchDocument from a Topic.
-   * Includes tag content (name, hinweise, keywords, copyPasteText) in the searchable text.
+   * Creates a SearchDocument from a Topic with separate weighted fields.
+   * Fields are organized by search priority:
+   *   1. title - Topic name/header (highest weight)
+   *   2. topicKeywords - Topic search keywords
+   *   3. topicDescription - Topic description
+   *   4. topicNotes - Topic notes
+   *   5. tagNames - Names of linked tags
+   *   6. tagKeywords - Search keywords from linked tags
+   *   7. tagNotes - Notes/hinweise from linked tags (lowest weight)
    */
   private createTopicDocument(topic: Topic, datastore: Datastore): SearchDocument {
     const title = topic.header;
     
-    // Concatenate all searchable fields
-    // Title is repeated TITLE_BOOST_REPETITIONS times to boost its relevance
-    const textParts = [
-      ...Array(TITLE_BOOST_REPETITIONS).fill(title),
-      topic.description || '',
-      topic.notes || '',
-      ...(topic.searchKeywords || [])
-    ];
+    // Topic fields (separate for weighting)
+    const topicKeywords = (topic.searchKeywords || []).join(' ');
+    const topicDescription = topic.description || '';
+    const topicNotes = topic.notes || '';
     
-    // Include tag content in searchable text (name, hinweise, keywords, copyPasteText)
+    // Tag fields (collected from all linked tags)
+    const tagNameParts: string[] = [];
+    const tagKeywordParts: string[] = [];
+    const tagNoteParts: string[] = [];
+    
     for (const tagRef of topic.tags || []) {
       // Try to find the full tag object
       const tag = (datastore.tags || []).find(t => t.id === tagRef || t.name === tagRef);
       if (tag) {
-        textParts.push(tag.name);
-        if (tag.hinweise) textParts.push(tag.hinweise);
-        if (tag.copyPasteText) textParts.push(tag.copyPasteText);
-        if (tag.searchKeywords) textParts.push(...tag.searchKeywords);
+        tagNameParts.push(tag.name);
+        if (tag.searchKeywords) {
+          tagKeywordParts.push(...tag.searchKeywords);
+        }
+        if (tag.hinweise) {
+          tagNoteParts.push(tag.hinweise);
+        }
+        if (tag.copyPasteText) {
+          tagNoteParts.push(tag.copyPasteText);
+        }
       } else {
-        // Fallback to just the tag reference
-        textParts.push(tagRef);
+        // Fallback to just the tag reference as a name
+        tagNameParts.push(tagRef);
       }
     }
 
@@ -320,7 +368,12 @@ export class SearchEngineService {
       id: createDocumentId('topic', topic.id),
       kind: 'topic',
       title,
-      text: textParts.filter(Boolean).join(' ')
+      topicKeywords,
+      topicDescription,
+      topicNotes,
+      tagNames: tagNameParts.join(' '),
+      tagKeywords: tagKeywordParts.join(' '),
+      tagNotes: tagNoteParts.join(' ')
     };
   }
 }
