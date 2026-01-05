@@ -85,11 +85,26 @@ export function parseDocumentId(id: string): { kind: SearchableKind; entityId: s
   };
 }
 
+/**
+ * Number of times to repeat title in the text field for boosting.
+ * FlexSearch doesn't have native field weighting, so we boost title relevance
+ * by duplicating it in the concatenated text field.
+ */
+const TITLE_BOOST_REPETITIONS = 2;
+
 @Injectable({
   providedIn: 'root'
 })
 export class SearchEngineService {
-  /** FlexSearch Document index instance - using 'any' due to complex generics */
+  /**
+   * FlexSearch Document index instance.
+   * 
+   * Note: Using 'any' type because FlexSearch's generic types (Document<D, W, S>)
+   * have complex constraints that don't work well with our SearchDocument interface.
+   * The SearchDocument interface has an index signature for FlexSearch compatibility,
+   * but the generics still cause TypeScript errors. This is a known limitation
+   * when using FlexSearch with TypeScript strict mode.
+   */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private index: any = null;
   
@@ -285,9 +300,9 @@ export class SearchEngineService {
     const title = topic.header;
     
     // Concatenate all searchable fields
+    // Title is repeated TITLE_BOOST_REPETITIONS times to boost its relevance
     const textParts = [
-      title,              // Include title in text for extra weight
-      title,              // Duplicate title for boosting
+      ...Array(TITLE_BOOST_REPETITIONS).fill(title),
       topic.description || '',
       topic.notes || '',
       ...(topic.searchKeywords || []),
@@ -309,9 +324,9 @@ export class SearchEngineService {
   private createTagDocument(tag: Tag): SearchDocument {
     const title = tag.name;
 
+    // Title is repeated TITLE_BOOST_REPETITIONS times to boost its relevance
     const textParts = [
-      title,              // Include title in text
-      title,              // Duplicate for boosting
+      ...Array(TITLE_BOOST_REPETITIONS).fill(title),
       tag.hinweise || '',
       tag.copyPasteText || '',
       ...(tag.searchKeywords || [])
@@ -331,9 +346,9 @@ export class SearchEngineService {
   private createMemberDocument(member: TeamMember): SearchDocument {
     const title = member.displayName;
 
+    // Title is repeated TITLE_BOOST_REPETITIONS times to boost its relevance
     const textParts = [
-      title,              // Include title in text
-      title,              // Duplicate for boosting
+      ...Array(TITLE_BOOST_REPETITIONS).fill(title),
       member.email || '',
       // Resolve tag names from IDs/names
       ...(member.tags || []).map(t => this.resolveTagName(t))
