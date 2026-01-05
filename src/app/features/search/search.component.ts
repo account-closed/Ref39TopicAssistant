@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InputText } from 'primeng/inputtext';
@@ -42,7 +42,24 @@ export class SearchComponent implements OnInit, OnDestroy {
     private searchEngine: SearchEngineService,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone
-  ) {}
+  ) {
+    // React to index version changes (triggers when index is rebuilt)
+    // Use allowSignalWrites to prevent NG0100 error
+    effect(() => {
+      const version = this.searchEngine.indexVersion();
+      console.debug('[SearchComponent] Index version changed:', version);
+      // Re-run search when index is rebuilt and we have a query
+      if (version > 0 && this.searchQuery) {
+        // Schedule outside Angular to avoid NG0100, then run inside
+        queueMicrotask(() => {
+          this.ngZone.run(() => {
+            this.performSearch();
+            this.cdr.detectChanges();
+          });
+        });
+      }
+    }, { allowSignalWrites: true });
+  }
 
   ngOnInit(): void {
     // Check File System API support
@@ -60,18 +77,6 @@ export class SearchComponent implements OnInit, OnDestroy {
       this.backend.datastore$.subscribe(datastore => {
         if (datastore) {
           this.currentDatastore = datastore;
-          // Re-run search if there's a query (index was rebuilt)
-          if (this.searchQuery) {
-            // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
-            this.ngZone.runOutsideAngular(() => {
-              setTimeout(() => {
-                this.ngZone.run(() => {
-                  this.performSearch();
-                  this.cdr.detectChanges();
-                });
-              }, 0);
-            });
-          }
         }
       })
     );
@@ -116,6 +121,7 @@ export class SearchComponent implements OnInit, OnDestroy {
 
     // Search and get top 10 results
     const hits = this.searchEngine.search(this.searchQuery, 10);
+    console.debug('[SearchComponent] Search results for', this.searchQuery, ':', hits.length, 'hits');
     
     // Resolve topics for display
     this.searchResults = hits.map(hit => this.resolveSearchHit(hit));
