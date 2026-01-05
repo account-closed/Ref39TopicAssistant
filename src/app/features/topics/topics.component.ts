@@ -207,15 +207,15 @@ export class TopicsComponent implements OnInit, OnDestroy {
    * Called from the onAdd event of the autocomplete.
    */
   onKeywordAdd(event: { value: string }): void {
-    if (!event.value) return;
+    if (!event.value || !this.topic.searchKeywords) return;
     
     const sanitized = sanitizeKeyword(event.value);
     
     if (!isValidKeyword(sanitized)) {
-      // Remove the invalid keyword
-      const index = this.topic.searchKeywords?.indexOf(event.value);
-      if (index !== undefined && index > -1) {
-        this.topic.searchKeywords?.splice(index, 1);
+      // Remove the invalid keyword if it was added
+      const index = this.topic.searchKeywords.indexOf(event.value);
+      if (index > -1) {
+        this.topic.searchKeywords.splice(index, 1);
       }
       this.messageService.add({
         severity: 'warn',
@@ -228,8 +228,8 @@ export class TopicsComponent implements OnInit, OnDestroy {
     
     // Replace with sanitized version if different
     if (sanitized !== event.value) {
-      const index = this.topic.searchKeywords?.indexOf(event.value);
-      if (index !== undefined && index > -1 && this.topic.searchKeywords) {
+      const index = this.topic.searchKeywords.indexOf(event.value);
+      if (index > -1) {
         this.topic.searchKeywords[index] = sanitized;
       }
     }

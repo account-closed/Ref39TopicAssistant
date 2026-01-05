@@ -144,15 +144,15 @@ export class TagsComponent implements OnInit, OnDestroy {
    * Called from the onAdd event of the autocomplete.
    */
   onKeywordAdd(event: { value: string }): void {
-    if (!event.value) return;
+    if (!event.value || !this.tag.searchKeywords) return;
     
     const sanitized = sanitizeKeyword(event.value);
     
     if (!isValidKeyword(sanitized)) {
-      // Remove the invalid keyword
-      const index = this.tag.searchKeywords?.indexOf(event.value);
-      if (index !== undefined && index > -1) {
-        this.tag.searchKeywords?.splice(index, 1);
+      // Remove the invalid keyword if it was added
+      const index = this.tag.searchKeywords.indexOf(event.value);
+      if (index > -1) {
+        this.tag.searchKeywords.splice(index, 1);
       }
       this.messageService.add({
         severity: 'warn',
@@ -165,8 +165,8 @@ export class TagsComponent implements OnInit, OnDestroy {
     
     // Replace with sanitized version if different
     if (sanitized !== event.value) {
-      const index = this.tag.searchKeywords?.indexOf(event.value);
-      if (index !== undefined && index > -1 && this.tag.searchKeywords) {
+      const index = this.tag.searchKeywords.indexOf(event.value);
+      if (index > -1) {
         this.tag.searchKeywords[index] = sanitized;
       }
     }

@@ -3,8 +3,9 @@
  * Allows alphanumeric characters (including Unicode letters), 
  * and explicitly allows: _ - .
  * No spaces or other special characters.
+ * Note: Hyphen is placed at the end of the character class to avoid escaping issues.
  */
-const VALID_KEYWORD_REGEX = /^[\p{L}\p{N}_\-\.]+$/u;
+const VALID_KEYWORD_REGEX = /^[\p{L}\p{N}_.-]+$/u;
 
 /**
  * Validates a keyword or tag name.
@@ -36,7 +37,7 @@ export function sanitizeKeyword(value: string): string {
   }
   // Replace spaces with underscores
   let sanitized = value.replace(/\s+/g, '_');
-  // Remove all characters except allowed ones
-  sanitized = sanitized.replace(/[^\p{L}\p{N}_\-\.]/gu, '');
+  // Remove all characters except allowed ones (hyphen at end of character class)
+  sanitized = sanitized.replace(/[^\p{L}\p{N}_.-]/gu, '');
   return sanitized;
 }
