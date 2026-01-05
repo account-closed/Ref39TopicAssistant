@@ -2,103 +2,16 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Button } from 'primeng/button';
 import { Toolbar } from 'primeng/toolbar';
-import { BackendService } from '../../core/services/backend.service';
-import { LockService } from '../../core/services/lock.service';
-import { LockStatus } from '../../core/services/lock.service';
+import { BackendService } from '../../../core/services/backend.service';
+import { LockService } from '../../../core/services/lock.service';
+import { LockStatus } from '../../../core/services/lock.service';
 
 @Component({
   selector: 'app-status-bar',
   standalone: true,
   imports: [CommonModule, Button, Toolbar],
-  template: `
-    <p-toolbar class="status-bar">
-      <ng-template pTemplate="start">
-        <div class="status-items">
-          <span class="status-item">
-            <i class="pi pi-folder"></i>
-            <strong>App:</strong> {{ appLocation }}
-          </span>
-          <span class="status-item">
-            <i class="pi pi-database"></i>
-            <strong>Datenstand:</strong> 
-            {{ revisionInfo }}
-          </span>
-          <span class="status-item">
-            <i class="pi pi-lock"></i>
-            <strong>Sperre:</strong> 
-            <span [class]="getLockStatusClass()">{{ lockStatusText }}</span>
-          </span>
-          <span class="status-item">
-            <i class="pi pi-wifi"></i>
-            <strong>Schreibzugriff:</strong> 
-            <span [class]="getConnectivityClass()">{{ connectivityText }}</span>
-          </span>
-        </div>
-      </ng-template>
-      <ng-template pTemplate="end">
-        <p-button 
-          label="Dateien verbinden" 
-          icon="pi pi-link" 
-          (onClick)="connectFiles()"
-          [disabled]="isConnected"
-          severity="info"
-          size="small">
-        </p-button>
-      </ng-template>
-    </p-toolbar>
-  `,
-  styles: [`
-    .status-bar {
-      border-radius: 0;
-      background: var(--surface-card);
-      border-top: 1px solid var(--surface-border);
-      padding: 0.5rem 1rem;
-      transition: background-color 0.3s ease, border-color 0.3s ease;
-    }
-
-    .status-items {
-      display: flex;
-      gap: 2rem;
-      flex-wrap: wrap;
-    }
-
-    .status-item {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.8rem;
-      color: var(--text-color-secondary);
-    }
-
-    .status-item i {
-      color: var(--icon-color-secondary);
-    }
-
-    .status-item strong {
-      font-weight: 600;
-      color: var(--text-color);
-    }
-
-    .lock-free {
-      color: var(--success-color);
-    }
-
-    .lock-held {
-      color: var(--danger-color);
-    }
-
-    .lock-own {
-      color: var(--primary-color);
-    }
-
-    .connected {
-      color: var(--success-color);
-    }
-
-    .disconnected {
-      color: var(--danger-color);
-    }
-  `]
+  templateUrl: './status-bar.component.html',
+  styleUrl: './status-bar.component.scss'
 })
 export class StatusBarComponent implements OnInit {
   appLocation: string = '';

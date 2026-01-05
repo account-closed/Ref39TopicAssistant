@@ -5,17 +5,7 @@ import { CommonModule } from '@angular/common';
   selector: 'app-topics-by-member',
   standalone: true,
   imports: [CommonModule],
-  template: `
-    <div class="page-container">
-      <h1>Themen nach Teammitglied</h1>
-      <p>View topics filtered by team member assignments</p>
-      <p><em>Coming soon...</em></p>
-    </div>
-  `,
-  styles: [`
-    .page-container {
-      padding: 2rem;
-    }
-  `]
+  templateUrl: './topics-by-member.component.html',
+  styleUrl: './topics-by-member.component.scss'
 })
 export class TopicsByMemberComponent {}

@@ -1,0 +1,76 @@
+.page-container {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-header {
+  margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+  margin: 0 0 0.5rem 0;
+  color: var(--p-text-color);
+}
+
+.page-header p {
+  margin: 0;
+  color: var(--p-text-muted-color);
+}
+
+.mb-4 {
+  margin-bottom: 1.5rem;
+}
+
+.card {
+  background: var(--p-surface-0);
+  padding: 2rem;
+  border-radius: var(--p-border-radius);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-secondary {
+  color: var(--p-text-muted-color);
+}
+
+.w-full {
+  width: 100%;
+}
+
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.field label {
+  font-weight: 600;
+  color: var(--p-text-color);
+}
+
+.hint {
+  color: var(--p-text-muted-color);
+  font-size: 0.875rem;
+}
+
+.hinweise-cell {
+  cursor: help;
+}
+
+.empty-icon {
+  font-size: 2rem;
+  color: var(--p-text-muted-color);
+}
+
+:host ::ng-deep .p-datatable .p-datatable-header {
+  padding: 1rem;
+}

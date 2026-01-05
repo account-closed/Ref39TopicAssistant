@@ -1,4 +1,4 @@
-import { Component, signal, OnInit, inject } from '@angular/core';
+import { Component, signal, OnInit } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Button } from 'primeng/button';
@@ -6,12 +6,11 @@ import { Menu } from 'primeng/menu';
 import { MenuItem } from 'primeng/api';
 import { Toast } from 'primeng/toast';
 import { ConfirmDialog } from 'primeng/confirmdialog';
-import { StatusBarComponent } from './shared/components/status-bar.component';
-import { UserSelectorDialogComponent } from './shared/components/user-selector-dialog.component';
-import { HeaderUserSelectorComponent } from './shared/components/header-user-selector.component';
-import { ThemeToggleComponent } from './shared/components/theme-toggle.component';
+import { StatusBarComponent } from './shared/components/status-bar/status-bar.component';
+import { UserSelectorDialogComponent } from './shared/components/user-selector-dialog/user-selector-dialog.component';
+import { HeaderUserSelectorComponent } from './shared/components/header-user-selector/header-user-selector.component';
+import { ThemeToggleComponent } from './shared/components/theme-toggle/theme-toggle.component';
 import { BackendService } from './core/services/backend.service';
-import { ThemeService } from './core/services/theme.service';
 
 @Component({
   selector: 'app-root',
@@ -28,8 +27,8 @@ import { ThemeService } from './core/services/theme.service';
     HeaderUserSelectorComponent,
     ThemeToggleComponent
   ],
-  templateUrl: './app.html',
-  styleUrl: './app.scss'
+  templateUrl: './app.component.html',
+  styleUrl: './app.component.scss'
 })
 export class App implements OnInit {
   protected readonly title = signal('RACI Topic Finder');

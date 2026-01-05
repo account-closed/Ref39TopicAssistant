@@ -1,0 +1,159 @@
+.search-page {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.quick-connect-panel {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 60vh;
+}
+
+.connect-card {
+  max-width: 600px;
+  text-align: center;
+}
+
+.connect-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+.connect-icon {
+  font-size: 4rem;
+  color: var(--p-primary-color);
+}
+
+.connect-content h2 {
+  margin: 0;
+}
+
+.connect-content p {
+  margin: 0;
+  color: var(--p-text-muted-color);
+}
+
+.connect-hint {
+  font-size: 0.875rem;
+  max-width: 450px;
+}
+
+.mt-3 {
+  margin-top: 1rem;
+}
+
+.search-header {
+  margin-bottom: 2rem;
+}
+
+.search-header h1 {
+  margin: 0 0 0.5rem 0;
+}
+
+.search-header p {
+  margin: 0;
+  color: var(--p-text-muted-color);
+}
+
+.search-box {
+  margin-bottom: 2rem;
+}
+
+.results-count {
+  margin-bottom: 1rem;
+  color: var(--p-text-muted-color);
+  font-weight: 600;
+}
+
+.result-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.result-list p-card {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.result-list p-card:hover {
+  transform: translateY(-2px);
+}
+
+.result-list p-card.selected {
+  border: 2px solid var(--p-primary-color);
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+}
+
+.result-header h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.result-body {
+  padding: 0 1rem 1rem 1rem;
+}
+
+.raci-info {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+  background: var(--p-surface-100);
+  border-radius: 4px;
+}
+
+.raci-item {
+  font-size: 0.875rem;
+}
+
+.raci-item strong {
+  color: var(--p-primary-color);
+  margin-right: 0.25rem;
+}
+
+.description {
+  margin: 1rem 0;
+  color: var(--p-text-muted-color);
+}
+
+.tags {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.result-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.no-results,
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--p-text-muted-color);
+}
+
+.no-results i,
+.empty-state i {
+  font-size: 3rem;
+  color: var(--p-text-muted-color);
+}
+
+.no-results p,
+.empty-state p {
+  margin-top: 1rem;
+  font-size: 1.125rem;
+}

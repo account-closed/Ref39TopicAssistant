@@ -4,54 +4,16 @@ import { FormsModule } from '@angular/forms';
 import { Dialog } from 'primeng/dialog';
 import { Select } from 'primeng/select';
 import { Button } from 'primeng/button';
-import { BackendService } from '../../core/services/backend.service';
-import { TeamMember } from '../../core/models';
+import { BackendService } from '../../../core/services/backend.service';
+import { TeamMember } from '../../../core/models';
 import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-user-selector-dialog',
   standalone: true,
   imports: [CommonModule, FormsModule, Dialog, Select, Button],
-  template: `
-    <p-dialog 
-      [(visible)]="visible" 
-      [modal]="true" 
-      [closable]="false" 
-      [closeOnEscape]="false"
-      header="Willkommen"
-      [style]="{width: '450px'}">
-      <div class="dialog-content">
-        <p>Bitte wählen Sie Ihre Identität aus:</p>
-        <p-select 
-          [(ngModel)]="selectedMemberId" 
-          [options]="activeMembers" 
-          optionLabel="displayName" 
-          optionValue="id"
-          placeholder="Ich bin..."
-          [style]="{width: '100%'}"
-          [filter]="true"
-          filterBy="displayName">
-        </p-select>
-      </div>
-      <ng-template pTemplate="footer">
-        <p-button 
-          label="Bestätigen" 
-          icon="pi pi-check" 
-          (onClick)="confirm()"
-          [disabled]="!selectedMemberId">
-        </p-button>
-      </ng-template>
-    </p-dialog>
-  `,
-  styles: [`
-    .dialog-content {
-      padding: 1rem 0;
-    }
-
-    .dialog-content p {
-      margin-bottom: 1rem;
-    }
-  `]
+  templateUrl: './user-selector-dialog.component.html',
+  styleUrl: './user-selector-dialog.component.scss'
 })
 export class UserSelectorDialogComponent implements OnInit {
   visible: boolean = false;

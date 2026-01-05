@@ -1,0 +1,14 @@
+<div class="user-selector">
+  <i class="pi pi-user"></i>
+  <p-select 
+    [(ngModel)]="selectedMemberId" 
+    [options]="activeMembers()" 
+    optionLabel="displayName" 
+    optionValue="id"
+    placeholder="Ich bin..."
+    [style]="{minWidth: '180px'}"
+    [filter]="true"
+    filterBy="displayName"
+    (onChange)="onUserChange($event)">
+  </p-select>
+</div>
