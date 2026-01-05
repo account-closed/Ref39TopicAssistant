@@ -12,6 +12,8 @@ export interface TopicRaci {
   iMemberIds: string[];
 }
 
+export type TShirtSize = 'XXS' | 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL';
+
 export interface Topic {
   id: string; // UUID
   header: string;
@@ -22,4 +24,10 @@ export interface Topic {
   notes?: string;
   raci: TopicRaci;
   updatedAt: string; // ISO timestamp
+  priority?: number; // Star rating from 1 to 10
+  hasFileNumber?: boolean; // "hat Aktenzeichen"
+  fileNumber?: string; // File number, shown when hasFileNumber is true
+  hasSharedFilePath?: boolean; // "hat Ablageort"
+  sharedFilePath?: string; // Shared file path, shown when hasSharedFilePath is true
+  size?: TShirtSize; // T-shirt size classification (XXS to XXL)
 }

@@ -2,9 +2,10 @@ import { describe, it, expect } from 'vitest';
 import {
   removeInvalidTagReferences,
   removeInvalidMemberReferences,
+  validateTopicFields,
   runPlausibilityChecks,
 } from './datastore-plausibility';
-import { Datastore, Topic, TeamMember, Tag } from '../models';
+import { Datastore, Topic, TeamMember, Tag, TShirtSize } from '../models';
 
 const createMember = (id: string, name: string): TeamMember => ({
   id,
@@ -326,6 +327,7 @@ describe('runPlausibilityChecks', () => {
     expect(result.hasChanges).toBe(false);
     expect(result.removedTagReferences).toBe(0);
     expect(result.removedMemberReferences).toBe(0);
+    expect(result.correctedTopicFields).toBe(0);
     expect(result.changeLog).toHaveLength(0);
   });
 
@@ -341,5 +343,179 @@ describe('runPlausibilityChecks', () => {
     expect(result.hasChanges).toBe(false);
     expect(result.removedTagReferences).toBe(0);
     expect(result.removedMemberReferences).toBe(0);
+    expect(result.correctedTopicFields).toBe(0);
+  });
+});
+
+describe('validateTopicFields', () => {
+  it('should not modify topics with valid priority and size', () => {
+    const datastore = createDatastore({
+      topics: [
+        createTopic('topic-1', 'Test Topic', 'member-1', {
+          priority: 5,
+          size: 'M' as TShirtSize,
+        }),
+      ],
+    });
+
+    const result = validateTopicFields(datastore);
+
+    expect(result.correctedCount).toBe(0);
+    expect(result.datastore.topics[0].priority).toBe(5);
+    expect(result.datastore.topics[0].size).toBe('M');
+    expect(result.changeLog).toHaveLength(0);
+  });
+
+  it('should remove invalid priority values', () => {
+    const datastore = createDatastore({
+      topics: [
+        createTopic('topic-1', 'Test Topic', 'member-1', {
+          priority: 15, // Invalid: > 10
+        }),
+      ],
+    });
+
+    const result = validateTopicFields(datastore);
+
+    expect(result.correctedCount).toBe(1);
+    expect(result.datastore.topics[0].priority).toBeUndefined();
+    expect(result.changeLog).toHaveLength(1);
+    expect(result.changeLog[0]).toContain('priority');
+  });
+
+  it('should remove priority values less than 1', () => {
+    const datastore = createDatastore({
+      topics: [
+        createTopic('topic-1', 'Test Topic', 'member-1', {
+          priority: 0, // Invalid: < 1
+        }),
+      ],
+    });
+
+    const result = validateTopicFields(datastore);
+
+    expect(result.correctedCount).toBe(1);
+    expect(result.datastore.topics[0].priority).toBeUndefined();
+  });
+
+  it('should remove invalid size values', () => {
+    const datastore = createDatastore({
+      topics: [
+        createTopic('topic-1', 'Test Topic', 'member-1', {
+          size: 'XXXL' as TShirtSize, // Invalid size
+        }),
+      ],
+    });
+
+    const result = validateTopicFields(datastore);
+
+    expect(result.correctedCount).toBe(1);
+    expect(result.datastore.topics[0].size).toBeUndefined();
+    expect(result.changeLog).toHaveLength(1);
+    expect(result.changeLog[0]).toContain('size');
+  });
+
+  it('should accept all valid T-shirt sizes', () => {
+    const validSizes: TShirtSize[] = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL'];
+    
+    validSizes.forEach((size) => {
+      const datastore = createDatastore({
+        topics: [
+          createTopic('topic-1', 'Test Topic', 'member-1', { size }),
+        ],
+      });
+
+      const result = validateTopicFields(datastore);
+      expect(result.correctedCount).toBe(0);
+      expect(result.datastore.topics[0].size).toBe(size);
+    });
+  });
+
+  it('should clear fileNumber when hasFileNumber is false', () => {
+    const datastore = createDatastore({
+      topics: [
+        createTopic('topic-1', 'Test Topic', 'member-1', {
+          hasFileNumber: false,
+          fileNumber: 'AZ-123-456', // Should be cleared
+        }),
+      ],
+    });
+
+    const result = validateTopicFields(datastore);
+
+    expect(result.correctedCount).toBe(1);
+    expect(result.datastore.topics[0].fileNumber).toBe('');
+    expect(result.changeLog).toHaveLength(1);
+    expect(result.changeLog[0]).toContain('fileNumber');
+  });
+
+  it('should clear sharedFilePath when hasSharedFilePath is false', () => {
+    const datastore = createDatastore({
+      topics: [
+        createTopic('topic-1', 'Test Topic', 'member-1', {
+          hasSharedFilePath: false,
+          sharedFilePath: '\\\\server\\share', // Should be cleared
+        }),
+      ],
+    });
+
+    const result = validateTopicFields(datastore);
+
+    expect(result.correctedCount).toBe(1);
+    expect(result.datastore.topics[0].sharedFilePath).toBe('');
+    expect(result.changeLog).toHaveLength(1);
+    expect(result.changeLog[0]).toContain('sharedFilePath');
+  });
+
+  it('should keep fileNumber when hasFileNumber is true', () => {
+    const datastore = createDatastore({
+      topics: [
+        createTopic('topic-1', 'Test Topic', 'member-1', {
+          hasFileNumber: true,
+          fileNumber: 'AZ-123-456',
+        }),
+      ],
+    });
+
+    const result = validateTopicFields(datastore);
+
+    expect(result.correctedCount).toBe(0);
+    expect(result.datastore.topics[0].fileNumber).toBe('AZ-123-456');
+  });
+
+  it('should keep sharedFilePath when hasSharedFilePath is true', () => {
+    const datastore = createDatastore({
+      topics: [
+        createTopic('topic-1', 'Test Topic', 'member-1', {
+          hasSharedFilePath: true,
+          sharedFilePath: '\\\\server\\share',
+        }),
+      ],
+    });
+
+    const result = validateTopicFields(datastore);
+
+    expect(result.correctedCount).toBe(0);
+    expect(result.datastore.topics[0].sharedFilePath).toBe('\\\\server\\share');
+  });
+
+  it('should handle multiple corrections in one topic', () => {
+    const datastore = createDatastore({
+      topics: [
+        createTopic('topic-1', 'Test Topic', 'member-1', {
+          priority: 100, // Invalid
+          size: 'MEGA' as TShirtSize, // Invalid
+          hasFileNumber: false,
+          fileNumber: 'should-clear',
+        }),
+      ],
+    });
+
+    const result = validateTopicFields(datastore);
+
+    expect(result.correctedCount).toBe(3);
+    expect(result.datastore.topics[0].priority).toBeUndefined();
+    expect(result.datastore.topics[0].size).toBeUndefined();
+    expect(result.datastore.topics[0].fileNumber).toBe('');
   });
 });

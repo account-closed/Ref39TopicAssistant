@@ -16,7 +16,7 @@ import { HotkeysService } from '@ngneat/hotkeys';
 import { BackendService } from '../../core/services/backend.service';
 import { SearchEngineService, SearchHit } from '../../core/services/search-engine.service';
 import { IndexMonitorService } from '../../core/services/index-monitor.service';
-import { Datastore, Topic, Tag as TagModel } from '../../core/models';
+import { Datastore, Topic, Tag as TagModel, TShirtSize } from '../../core/models';
 
 /**
  * Extended search result with resolved topic data.
@@ -591,6 +591,30 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     }
 
+    // Classification (Priority & Size)
+    if (topic.priority || topic.size) {
+      text += `\nKLASSIFIZIERUNG:\n`;
+      text += `───────────────────────────────────────\n`;
+      if (topic.priority) {
+        text += `Priorität: ${topic.priority}/10 ${'★'.repeat(topic.priority)}${'☆'.repeat(10 - topic.priority)}\n`;
+      }
+      if (topic.size) {
+        text += `Größe: ${topic.size}\n`;
+      }
+    }
+
+    // File references
+    if ((topic.hasFileNumber && topic.fileNumber) || (topic.hasSharedFilePath && topic.sharedFilePath)) {
+      text += `\nREFERENZEN:\n`;
+      text += `───────────────────────────────────────\n`;
+      if (topic.hasFileNumber && topic.fileNumber) {
+        text += `Aktenzeichen: ${topic.fileNumber}\n`;
+      }
+      if (topic.hasSharedFilePath && topic.sharedFilePath) {
+        text += `Ablageort: ${topic.sharedFilePath}\n`;
+      }
+    }
+
     // Notes
     if (topic.notes) {
       text += `\nNOTIZEN:\n`;
@@ -602,5 +626,28 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
     text += `\nGÜLTIGKEIT: ${this.getValidityBadge(topic)}\n`;
 
     return text;
+  }
+
+  getPriorityStars(priority: number | undefined): string {
+    if (!priority) return '';
+    return '★'.repeat(priority) + '☆'.repeat(10 - priority);
+  }
+
+  getSizeSeverity(size: TShirtSize | undefined): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
+    switch (size) {
+      case 'XXS':
+      case 'XS':
+        return 'success';
+      case 'S':
+      case 'M':
+        return 'info';
+      case 'L':
+      case 'XL':
+        return 'warn';
+      case 'XXL':
+        return 'danger';
+      default:
+        return 'secondary';
+    }
   }
 }

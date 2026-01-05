@@ -59,6 +59,12 @@
           R1 <p-sortIcon field="r1Name"></p-sortIcon>
         </th>
         <th style="min-width:10rem">Tags</th>
+        <th pSortableColumn="priority" style="min-width:6rem">
+          Priorität <p-sortIcon field="priority"></p-sortIcon>
+        </th>
+        <th pSortableColumn="size" style="min-width:5rem">
+          Größe <p-sortIcon field="size"></p-sortIcon>
+        </th>
         <th style="min-width:8rem">Gültigkeit</th>
         <th pSortableColumn="updatedAt" style="min-width:10rem">
           Aktualisiert <p-sortIcon field="updatedAt"></p-sortIcon>
@@ -96,6 +102,8 @@
             styleClass="w-full">
           </p-multiSelect>
         </th>
+        <th></th>
+        <th></th>
         <th>
           <p-select 
             [options]="validityOptions" 
@@ -118,10 +126,26 @@
           <div class="text-secondary text-sm" *ngIf="topic.description">
             {{ topic.description | slice:0:100 }}{{ topic.description.length > 100 ? '...' : '' }}
           </div>
+          <div class="topic-meta" *ngIf="topic.hasFileNumber || topic.hasSharedFilePath">
+            <span class="meta-item" *ngIf="topic.hasFileNumber && topic.fileNumber">
+              <i class="pi pi-file"></i> {{ topic.fileNumber }}
+            </span>
+            <span class="meta-item" *ngIf="topic.hasSharedFilePath && topic.sharedFilePath">
+              <i class="pi pi-folder"></i> {{ topic.sharedFilePath }}
+            </span>
+          </div>
         </td>
         <td>{{ getMemberName(topic.raci.r1MemberId) }}</td>
         <td>
           <p-tag *ngFor="let tag of topic.tags" [value]="tag" severity="info" styleClass="mr-1 mb-1"></p-tag>
+        </td>
+        <td>
+          <span class="priority-stars" *ngIf="topic.priority">{{ getPriorityStars(topic.priority) }}</span>
+          <span class="text-secondary" *ngIf="!topic.priority">–</span>
+        </td>
+        <td>
+          <p-tag *ngIf="topic.size" [value]="topic.size" [severity]="getSizeSeverity(topic.size)"></p-tag>
+          <span class="text-secondary" *ngIf="!topic.size">–</span>
         </td>
         <td>
           <p-tag [value]="getValidityBadge(topic)" [severity]="getValiditySeverity(topic)"></p-tag>
@@ -136,7 +160,7 @@
 
     <ng-template pTemplate="emptymessage">
       <tr>
-        <td colspan="6" class="text-center">
+        <td colspan="8" class="text-center">
           <i class="pi pi-inbox empty-icon"></i>
           <p>Keine Themen gefunden</p>
         </td>
@@ -227,6 +251,82 @@
             rows="2"
             [autoResize]="true">
           </textarea>
+        </div>
+
+        <!-- Classification Section -->
+        <div class="field-group">
+          <h4>Klassifizierung</h4>
+          
+          <div class="classification-row">
+            <div class="field">
+              <label for="priority">Priorität (1-10)</label>
+              <p-select 
+                id="priority"
+                [options]="priorityOptions" 
+                [(ngModel)]="topic.priority"
+                optionLabel="label" 
+                optionValue="value"
+                placeholder="Priorität wählen..."
+                [showClear]="true">
+              </p-select>
+              <small class="hint">Sternbewertung von 1 (niedrig) bis 10 (hoch)</small>
+            </div>
+
+            <div class="field">
+              <label for="size">Größe (T-Shirt)</label>
+              <p-select 
+                id="size"
+                [options]="sizeOptions" 
+                [(ngModel)]="topic.size"
+                optionLabel="label" 
+                optionValue="value"
+                placeholder="Größe wählen..."
+                [showClear]="true">
+              </p-select>
+              <small class="hint">Klassifizierung nach Aufwand (XXS bis XXL)</small>
+            </div>
+          </div>
+        </div>
+
+        <!-- File Reference Section -->
+        <div class="field-group">
+          <h4>Referenzen</h4>
+          
+          <div class="field-checkbox">
+            <p-toggleswitch 
+              [(ngModel)]="topic.hasFileNumber" 
+              inputId="hasFileNumber"
+              (onChange)="onHasFileNumberChange()">
+            </p-toggleswitch>
+            <label for="hasFileNumber" class="ml-2">Hat Aktenzeichen</label>
+          </div>
+
+          <div class="field" *ngIf="topic.hasFileNumber">
+            <label for="fileNumber">Aktenzeichen</label>
+            <input 
+              pInputText 
+              id="fileNumber" 
+              [(ngModel)]="topic.fileNumber" 
+              placeholder="Aktenzeichen eingeben..." />
+          </div>
+
+          <div class="field-checkbox">
+            <p-toggleswitch 
+              [(ngModel)]="topic.hasSharedFilePath" 
+              inputId="hasSharedFilePath"
+              (onChange)="onHasSharedFilePathChange()">
+            </p-toggleswitch>
+            <label for="hasSharedFilePath" class="ml-2">Hat Ablageort</label>
+          </div>
+
+          <div class="field" *ngIf="topic.hasSharedFilePath">
+            <label for="sharedFilePath">Ablageort (Dateipfad)</label>
+            <input 
+              pInputText 
+              id="sharedFilePath" 
+              [(ngModel)]="topic.sharedFilePath" 
+              placeholder="z.B. \\server\share\ordner" />
+          </div>
         </div>
 
         <!-- Validity Section -->
