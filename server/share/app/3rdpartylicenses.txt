@@ -604,6 +604,11 @@ License: "Apache-2.0"
    limitations under the License.
 
 --------------------------------------------------------------------------------
+Package: @ngneat/hotkeys
+License: "MIT"
+
+
+--------------------------------------------------------------------------------
 Package: @angular/animations
 License: "MIT"
 

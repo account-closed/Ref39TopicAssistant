@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone, effect, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InputText } from 'primeng/inputtext';
@@ -7,11 +7,16 @@ import { Tag } from 'primeng/tag';
 import { Button } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { ProgressSpinner } from 'primeng/progressspinner';
+import { Dialog } from 'primeng/dialog';
+import { Toast } from 'primeng/toast';
+import { Divider } from 'primeng/divider';
+import { MessageService } from 'primeng/api';
 import { Subscription } from 'rxjs';
+import { HotkeysService } from '@ngneat/hotkeys';
 import { BackendService } from '../../core/services/backend.service';
 import { SearchEngineService, SearchHit } from '../../core/services/search-engine.service';
 import { IndexMonitorService } from '../../core/services/index-monitor.service';
-import { Datastore, Topic } from '../../core/models';
+import { Datastore, Topic, Tag as TagModel } from '../../core/models';
 
 /**
  * Extended search result with resolved topic data.
@@ -24,11 +29,14 @@ interface DisplaySearchResult {
 @Component({
   selector: 'app-search',
   standalone: true,
-  imports: [CommonModule, FormsModule, InputText, Card, Tag, Button, Message, ProgressSpinner],
+  imports: [CommonModule, FormsModule, InputText, Card, Tag, Button, Message, ProgressSpinner, Dialog, Toast, Divider],
+  providers: [MessageService],
   templateUrl: './search.component.html',
   styleUrl: './search.component.scss'
 })
-export class SearchComponent implements OnInit, OnDestroy {
+export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild('searchInput') searchInputRef!: ElementRef<HTMLInputElement>;
+
   searchQuery: string = '';
   searchResults: DisplaySearchResult[] = [];
   selectedIndex: number = -1;
@@ -41,6 +49,11 @@ export class SearchComponent implements OnInit, OnDestroy {
   isIndexBuilding = false;
   isIndexReady = false;
   indexDocumentCount = 0;
+
+  // Detail dialog
+  detailDialogVisible = false;
+  selectedTopic: Topic | null = null;
+  selectedTopicTags: TagModel[] = [];
   
   private subscriptions: Subscription[] = [];
   private currentDatastore: Datastore | null = null;
@@ -50,7 +63,9 @@ export class SearchComponent implements OnInit, OnDestroy {
     private searchEngine: SearchEngineService,
     private indexMonitor: IndexMonitorService,
     private cdr: ChangeDetectorRef,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private hotkeys: HotkeysService,
+    private messageService: MessageService
   ) {
     // React to index version changes (triggers when index is rebuilt)
     // Use allowSignalWrites to prevent NG0100 error
@@ -103,10 +118,52 @@ export class SearchComponent implements OnInit, OnDestroy {
         }
       })
     );
+
+    // Register hotkeys for quick selection (ctrl+1 to ctrl+5)
+    this.registerHotkeys();
+  }
+
+  ngAfterViewInit(): void {
+    // Focus on search input when the component is ready
+    this.focusSearchInput();
   }
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
+  }
+
+  /**
+   * Register keyboard shortcuts for fast workflow
+   */
+  private registerHotkeys(): void {
+    // Ctrl+1 to Ctrl+5 for selecting first 5 results
+    for (let i = 1; i <= 5; i++) {
+      this.subscriptions.push(
+        this.hotkeys.addShortcut({ keys: `control.${i}`, preventDefault: true })
+          .subscribe(() => this.selectAndOpenResult(i - 1))
+      );
+    }
+
+    // Escape to close dialog and refocus search
+    this.subscriptions.push(
+      this.hotkeys.addShortcut({ keys: 'escape', preventDefault: false })
+        .subscribe(() => {
+          if (this.detailDialogVisible) {
+            this.closeDetailDialog();
+          }
+        })
+    );
+  }
+
+  /**
+   * Focus on the search input field
+   */
+  focusSearchInput(): void {
+    setTimeout(() => {
+      if (this.searchInputRef?.nativeElement) {
+        this.searchInputRef.nativeElement.focus();
+      }
+    }, 100);
   }
 
   async quickConnect(): Promise<void> {
@@ -165,8 +222,52 @@ export class SearchComponent implements OnInit, OnDestroy {
     return result;
   }
 
+  /**
+   * Select a result and open detail dialog
+   */
+  selectAndOpenResult(index: number): void {
+    if (index >= 0 && index < this.searchResults.length) {
+      this.selectedIndex = index;
+      const result = this.searchResults[index];
+      if (result.topic) {
+        this.openDetailDialog(result.topic);
+      }
+    }
+  }
+
   selectResult(index: number): void {
     this.selectedIndex = index;
+  }
+
+  /**
+   * Open the detail dialog for a topic
+   */
+  openDetailDialog(topic: Topic): void {
+    this.selectedTopic = topic;
+    this.selectedTopicTags = this.resolveTopicTags(topic);
+    this.detailDialogVisible = true;
+  }
+
+  /**
+   * Close the detail dialog and refocus search
+   */
+  closeDetailDialog(): void {
+    this.detailDialogVisible = false;
+    this.selectedTopic = null;
+    this.selectedTopicTags = [];
+    this.focusSearchInput();
+  }
+
+  /**
+   * Resolve tag objects for a topic
+   */
+  private resolveTopicTags(topic: Topic): TagModel[] {
+    if (!this.currentDatastore?.tags || !topic.tags) {
+      return [];
+    }
+    return topic.tags
+      .map(tagRef => this.currentDatastore!.tags!.find(t => t.id === tagRef || t.name === tagRef))
+      .filter((tag): tag is TagModel => tag !== undefined);
   }
 
   getMemberName(memberId: string): string {
@@ -175,6 +276,14 @@ export class SearchComponent implements OnInit, OnDestroy {
     }
     const member = this.currentDatastore.members.find(m => m.id === memberId);
     return member?.displayName || 'Unbekannt';
+  }
+
+  getMemberEmail(memberId: string): string {
+    if (!this.currentDatastore) {
+      return '';
+    }
+    const member = this.currentDatastore.members.find(m => m.id === memberId);
+    return member?.email || '';
   }
 
   getValidityBadge(topic: Topic): string {
@@ -225,13 +334,52 @@ export class SearchComponent implements OnInit, OnDestroy {
     return 'info';
   }
 
+  /**
+   * Copy a single field to clipboard with toast notification
+   */
+  copyField(fieldName: string, value: string): void {
+    navigator.clipboard.writeText(value).then(() => {
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Kopiert',
+        detail: `${fieldName} wurde in die Zwischenablage kopiert`,
+        life: 2000
+      });
+    });
+  }
+
+  /**
+   * Copy topic from result card
+   */
   copyToClipboard(result: DisplaySearchResult): void {
     if (result.topic) {
       const text = this.formatTopicForClipboard(result.topic);
       navigator.clipboard.writeText(text).then(() => {
-        // Could add a toast notification here
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Kopiert',
+          detail: 'Thema wurde in die Zwischenablage kopiert',
+          life: 2000
+        });
       });
     }
+  }
+
+  /**
+   * Copy all topic information for email use (master copy)
+   */
+  copyAllForEmail(): void {
+    if (!this.selectedTopic) return;
+    
+    const text = this.formatTopicForEmail(this.selectedTopic);
+    navigator.clipboard.writeText(text).then(() => {
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Kopiert',
+        detail: 'Alle Informationen wurden für E-Mail kopiert',
+        life: 2000
+      });
+    });
   }
 
   private formatTopicForClipboard(topic: Topic): string {
@@ -261,5 +409,99 @@ export class SearchComponent implements OnInit, OnDestroy {
     }
 
     return text;
+  }
+
+  /**
+   * Format topic with all details for email (master copy)
+   */
+  private formatTopicForEmail(topic: Topic): string {
+    let text = `═══════════════════════════════════════\n`;
+    text += `THEMA: ${topic.header}\n`;
+    text += `═══════════════════════════════════════\n\n`;
+    
+    if (topic.description) {
+      text += `BESCHREIBUNG:\n${topic.description}\n\n`;
+    }
+
+    text += `VERANTWORTLICHE (RACI):\n`;
+    text += `───────────────────────────────────────\n`;
+    
+    const r1Name = this.getMemberName(topic.raci.r1MemberId);
+    const r1Email = this.getMemberEmail(topic.raci.r1MemberId);
+    text += `R1 (Hauptverantwortlich): ${r1Name}${r1Email ? ` <${r1Email}>` : ''}\n`;
+    
+    if (topic.raci.r2MemberId) {
+      const r2Name = this.getMemberName(topic.raci.r2MemberId);
+      const r2Email = this.getMemberEmail(topic.raci.r2MemberId);
+      text += `R2 (Stellvertretung): ${r2Name}${r2Email ? ` <${r2Email}>` : ''}\n`;
+    }
+    
+    if (topic.raci.r3MemberId) {
+      const r3Name = this.getMemberName(topic.raci.r3MemberId);
+      const r3Email = this.getMemberEmail(topic.raci.r3MemberId);
+      text += `R3 (Weitere Stellv.): ${r3Name}${r3Email ? ` <${r3Email}>` : ''}\n`;
+    }
+
+    if (topic.raci.cMemberIds && topic.raci.cMemberIds.length > 0) {
+      text += `\nC (Consulted):\n`;
+      for (const memberId of topic.raci.cMemberIds) {
+        const name = this.getMemberName(memberId);
+        const email = this.getMemberEmail(memberId);
+        text += `  • ${name}${email ? ` <${email}>` : ''}\n`;
+      }
+    }
+
+    if (topic.raci.iMemberIds && topic.raci.iMemberIds.length > 0) {
+      text += `\nI (Informed):\n`;
+      for (const memberId of topic.raci.iMemberIds) {
+        const name = this.getMemberName(memberId);
+        const email = this.getMemberEmail(memberId);
+        text += `  • ${name}${email ? ` <${email}>` : ''}\n`;
+      }
+    }
+
+    // Tags
+    if (topic.tags && topic.tags.length > 0) {
+      text += `\nTAGS:\n`;
+      text += `───────────────────────────────────────\n`;
+      
+      for (const tagRef of topic.tags) {
+        const tag = this.currentDatastore?.tags?.find(t => t.id === tagRef || t.name === tagRef);
+        if (tag) {
+          text += `• ${tag.name}`;
+          if (tag.hinweise) {
+            text += ` – ${tag.hinweise}`;
+          }
+          text += `\n`;
+          if (tag.copyPasteText) {
+            text += `  Textvorlage: ${tag.copyPasteText}\n`;
+          }
+        } else {
+          text += `• ${tagRef}\n`;
+        }
+      }
+    }
+
+    // Notes
+    if (topic.notes) {
+      text += `\nNOTIZEN:\n`;
+      text += `───────────────────────────────────────\n`;
+      text += `${topic.notes}\n`;
+    }
+
+    // Validity
+    text += `\nGÜLTIGKEIT: ${this.getValidityBadge(topic)}\n`;
+
+    return text;
+  }
+
+  /**
+   * Get shortcut hint for result index (1-5)
+   */
+  getShortcutHint(index: number): string {
+    if (index < 5) {
+      return `Ctrl+${index + 1}`;
+    }
+    return '';
   }
 }

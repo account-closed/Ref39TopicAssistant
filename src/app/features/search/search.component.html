@@ -1,4 +1,6 @@
 <div class="search-page">
+  <p-toast></p-toast>
+
   <!-- Quick Connect Panel - shown when not connected -->
   <div class="quick-connect-panel" *ngIf="!isConnected">
     <p-card styleClass="connect-card">
@@ -33,7 +35,7 @@
   <div *ngIf="isConnected">
     <div class="search-header">
       <h1>Schnellsuche</h1>
-      <p>Finden Sie schnell das richtige Thema (sucht auch in zugehörigen Tags)</p>
+      <p>Schnelle Themensuche mit Tastatursteuerung (Ctrl+1 bis Ctrl+5 für schnelle Auswahl)</p>
     </div>
 
     <!-- Index Status Indicator -->
@@ -64,25 +66,28 @@
           pInputText 
           [(ngModel)]="searchQuery"
           (ngModelChange)="onSearchChange($event)"
-          placeholder="Thema suchen..."
+          placeholder="Thema suchen... (Fokus: automatisch)"
           style="width: 100%"
           #searchInput
-          [disabled]="!isIndexReady"
-          autofocus />
+          [disabled]="!isIndexReady" />
       </span>
     </div>
 
     <div class="search-results" *ngIf="searchResults.length > 0">
-      <p class="results-count">{{ searchResults.length }} Thema(en) gefunden</p>
+      <p class="results-count">{{ searchResults.length }} Thema(en) gefunden – Klick oder Ctrl+1-5 zum Öffnen</p>
       
       <div class="result-list">
         <ng-container *ngFor="let result of searchResults; let i = index">
           <p-card *ngIf="result.topic"
                   [ngClass]="{'selected': i === selectedIndex}"
-                  (click)="selectResult(i)">
+                  (click)="selectAndOpenResult(i)"
+                  class="result-card">
             <ng-template pTemplate="header">
               <div class="result-header">
-                <h3 class="topic-title">{{ result.topic.header }}</h3>
+                <div class="result-header-left">
+                  <span class="shortcut-badge" *ngIf="i < 5">{{ getShortcutHint(i) }}</span>
+                  <h3 class="topic-title">{{ result.topic.header }}</h3>
+                </div>
                 <p-tag [value]="getValidityBadge(result.topic)" 
                        [severity]="getValiditySeverity(result.topic)">
                 </p-tag>
@@ -94,37 +99,34 @@
                 {{ result.topic.description }}
               </p>
 
-              <div class="raci-section" *ngIf="result.topic.raci">
-                <h4>Verantwortliche (RACI)</h4>
-                <div class="raci-grid">
-                  <div class="raci-row">
-                    <span class="raci-label r-label">R1</span>
-                    <span class="raci-value">{{ getMemberName(result.topic.raci.r1MemberId) }}</span>
-                  </div>
-                  <div class="raci-row" *ngIf="result.topic.raci.r2MemberId">
-                    <span class="raci-label r-label">R2</span>
-                    <span class="raci-value">{{ getMemberName(result.topic.raci.r2MemberId) }}</span>
-                  </div>
-                  <div class="raci-row" *ngIf="result.topic.raci.r3MemberId">
-                    <span class="raci-label r-label">R3</span>
-                    <span class="raci-value">{{ getMemberName(result.topic.raci.r3MemberId) }}</span>
-                  </div>
-                  <div class="raci-row" *ngIf="result.topic.raci.cMemberIds && result.topic.raci.cMemberIds.length > 0">
-                    <span class="raci-label c-label">C</span>
-                    <span class="raci-value">
-                      <span *ngFor="let memberId of result.topic.raci.cMemberIds; let last = last">
-                        {{ getMemberName(memberId) }}<span *ngIf="!last">, </span>
-                      </span>
+              <div class="raci-compact" *ngIf="result.topic.raci">
+                <div class="raci-row">
+                  <span class="raci-label r-label">R1</span>
+                  <span class="raci-value">{{ getMemberName(result.topic.raci.r1MemberId) }}</span>
+                </div>
+                <div class="raci-row" *ngIf="result.topic.raci.r2MemberId">
+                  <span class="raci-label r-label">R2</span>
+                  <span class="raci-value">{{ getMemberName(result.topic.raci.r2MemberId) }}</span>
+                </div>
+                <div class="raci-row" *ngIf="result.topic.raci.r3MemberId">
+                  <span class="raci-label r-label">R3</span>
+                  <span class="raci-value">{{ getMemberName(result.topic.raci.r3MemberId) }}</span>
+                </div>
+                <div class="raci-row" *ngIf="result.topic.raci.iMemberIds && result.topic.raci.iMemberIds.length > 0">
+                  <span class="raci-label i-label">I</span>
+                  <span class="raci-value">
+                    <span *ngFor="let memberId of result.topic.raci.iMemberIds; let last = last">
+                      {{ getMemberName(memberId) }}<span *ngIf="!last">, </span>
                     </span>
-                  </div>
-                  <div class="raci-row" *ngIf="result.topic.raci.iMemberIds && result.topic.raci.iMemberIds.length > 0">
-                    <span class="raci-label i-label">I</span>
-                    <span class="raci-value">
-                      <span *ngFor="let memberId of result.topic.raci.iMemberIds; let last = last">
-                        {{ getMemberName(memberId) }}<span *ngIf="!last">, </span>
-                      </span>
+                  </span>
+                </div>
+                <div class="raci-row" *ngIf="result.topic.raci.cMemberIds && result.topic.raci.cMemberIds.length > 0">
+                  <span class="raci-label c-label">C</span>
+                  <span class="raci-value">
+                    <span *ngFor="let memberId of result.topic.raci.cMemberIds; let last = last">
+                      {{ getMemberName(memberId) }}<span *ngIf="!last">, </span>
                     </span>
-                  </div>
+                  </span>
                 </div>
               </div>
 
@@ -135,12 +137,6 @@
                 </p-tag>
               </div>
             </div>
-
-            <ng-template pTemplate="footer">
-              <div class="result-actions">
-                <p-button label="Kopieren" icon="pi pi-copy" severity="secondary" size="small" (onClick)="copyToClipboard(result)"></p-button>
-              </div>
-            </ng-template>
           </p-card>
         </ng-container>
       </div>
@@ -154,6 +150,244 @@
     <div class="empty-state" *ngIf="!searchQuery && isIndexReady">
       <i class="pi pi-search"></i>
       <p>Geben Sie einen Suchbegriff ein, um Themen zu finden</p>
+      <p class="keyboard-hints">
+        <span class="hint"><strong>Ctrl+1-5:</strong> Ergebnis auswählen</span>
+        <span class="hint"><strong>Esc:</strong> Dialog schließen</span>
+      </p>
     </div>
   </div>
+
+  <!-- Detail Dialog -->
+  <p-dialog 
+    [(visible)]="detailDialogVisible" 
+    [header]="selectedTopic?.header || 'Thema Details'"
+    [modal]="true"
+    [closable]="true"
+    [dismissableMask]="true"
+    [style]="{width: '800px', maxWidth: '95vw'}"
+    (onHide)="closeDetailDialog()"
+    styleClass="detail-dialog">
+    
+    <div class="dialog-content" *ngIf="selectedTopic">
+      <!-- Master Copy Button at top -->
+      <div class="dialog-actions-top">
+        <p-button 
+          label="Alles für E-Mail kopieren" 
+          icon="pi pi-envelope" 
+          severity="primary"
+          (onClick)="copyAllForEmail()">
+        </p-button>
+      </div>
+
+      <!-- Description -->
+      <div class="detail-section" *ngIf="selectedTopic.description">
+        <div class="section-header">
+          <h4>Beschreibung</h4>
+          <p-button 
+            icon="pi pi-copy" 
+            [text]="true" 
+            size="small"
+            (onClick)="copyField('Beschreibung', selectedTopic.description || '')">
+          </p-button>
+        </div>
+        <p class="section-content">{{ selectedTopic.description }}</p>
+      </div>
+
+      <p-divider></p-divider>
+
+      <!-- RACI Section -->
+      <div class="detail-section">
+        <h4>Verantwortliche (RACI)</h4>
+        
+        <div class="raci-detail-grid">
+          <!-- R1 -->
+          <div class="raci-detail-row">
+            <div class="raci-detail-label">
+              <span class="raci-badge r-badge">R1</span>
+              <span class="raci-role">Hauptverantwortlich</span>
+            </div>
+            <div class="raci-detail-value">
+              <span class="member-name">{{ getMemberName(selectedTopic.raci.r1MemberId) }}</span>
+              <span class="member-email" *ngIf="getMemberEmail(selectedTopic.raci.r1MemberId)">
+                {{ getMemberEmail(selectedTopic.raci.r1MemberId) }}
+              </span>
+            </div>
+            <div class="raci-detail-actions">
+              <p-button 
+                icon="pi pi-copy" 
+                [text]="true" 
+                size="small"
+                pTooltip="Name kopieren"
+                (onClick)="copyField('R1', getMemberName(selectedTopic.raci.r1MemberId))">
+              </p-button>
+              <p-button 
+                *ngIf="getMemberEmail(selectedTopic.raci.r1MemberId)"
+                icon="pi pi-at" 
+                [text]="true" 
+                size="small"
+                pTooltip="E-Mail kopieren"
+                (onClick)="copyField('R1 E-Mail', getMemberEmail(selectedTopic.raci.r1MemberId))">
+              </p-button>
+            </div>
+          </div>
+
+          <!-- R2 -->
+          <div class="raci-detail-row" *ngIf="selectedTopic.raci.r2MemberId">
+            <div class="raci-detail-label">
+              <span class="raci-badge r-badge">R2</span>
+              <span class="raci-role">Stellvertretung</span>
+            </div>
+            <div class="raci-detail-value">
+              <span class="member-name">{{ getMemberName(selectedTopic.raci.r2MemberId) }}</span>
+              <span class="member-email" *ngIf="getMemberEmail(selectedTopic.raci.r2MemberId)">
+                {{ getMemberEmail(selectedTopic.raci.r2MemberId) }}
+              </span>
+            </div>
+            <div class="raci-detail-actions">
+              <p-button 
+                icon="pi pi-copy" 
+                [text]="true" 
+                size="small"
+                (onClick)="copyField('R2', getMemberName(selectedTopic.raci.r2MemberId!))">
+              </p-button>
+              <p-button 
+                *ngIf="getMemberEmail(selectedTopic.raci.r2MemberId!)"
+                icon="pi pi-at" 
+                [text]="true" 
+                size="small"
+                (onClick)="copyField('R2 E-Mail', getMemberEmail(selectedTopic.raci.r2MemberId!))">
+              </p-button>
+            </div>
+          </div>
+
+          <!-- R3 -->
+          <div class="raci-detail-row" *ngIf="selectedTopic.raci.r3MemberId">
+            <div class="raci-detail-label">
+              <span class="raci-badge r-badge">R3</span>
+              <span class="raci-role">Weitere Stellv.</span>
+            </div>
+            <div class="raci-detail-value">
+              <span class="member-name">{{ getMemberName(selectedTopic.raci.r3MemberId) }}</span>
+              <span class="member-email" *ngIf="getMemberEmail(selectedTopic.raci.r3MemberId)">
+                {{ getMemberEmail(selectedTopic.raci.r3MemberId) }}
+              </span>
+            </div>
+            <div class="raci-detail-actions">
+              <p-button 
+                icon="pi pi-copy" 
+                [text]="true" 
+                size="small"
+                (onClick)="copyField('R3', getMemberName(selectedTopic.raci.r3MemberId!))">
+              </p-button>
+              <p-button 
+                *ngIf="getMemberEmail(selectedTopic.raci.r3MemberId!)"
+                icon="pi pi-at" 
+                [text]="true" 
+                size="small"
+                (onClick)="copyField('R3 E-Mail', getMemberEmail(selectedTopic.raci.r3MemberId!))">
+              </p-button>
+            </div>
+          </div>
+
+          <!-- Informed (I) -->
+          <div class="raci-detail-row" *ngIf="selectedTopic.raci.iMemberIds && selectedTopic.raci.iMemberIds.length > 0">
+            <div class="raci-detail-label">
+              <span class="raci-badge i-badge">I</span>
+              <span class="raci-role">Informed</span>
+            </div>
+            <div class="raci-detail-value multi-value">
+              <div class="member-item" *ngFor="let memberId of selectedTopic.raci.iMemberIds">
+                <span class="member-name">{{ getMemberName(memberId) }}</span>
+                <span class="member-email" *ngIf="getMemberEmail(memberId)">{{ getMemberEmail(memberId) }}</span>
+                <p-button 
+                  icon="pi pi-copy" 
+                  [text]="true" 
+                  size="small"
+                  (onClick)="copyField('I', getMemberName(memberId))">
+                </p-button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Consulted (C) -->
+          <div class="raci-detail-row" *ngIf="selectedTopic.raci.cMemberIds && selectedTopic.raci.cMemberIds.length > 0">
+            <div class="raci-detail-label">
+              <span class="raci-badge c-badge">C</span>
+              <span class="raci-role">Consulted</span>
+            </div>
+            <div class="raci-detail-value multi-value">
+              <div class="member-item" *ngFor="let memberId of selectedTopic.raci.cMemberIds">
+                <span class="member-name">{{ getMemberName(memberId) }}</span>
+                <span class="member-email" *ngIf="getMemberEmail(memberId)">{{ getMemberEmail(memberId) }}</span>
+                <p-button 
+                  icon="pi pi-copy" 
+                  [text]="true" 
+                  size="small"
+                  (onClick)="copyField('C', getMemberName(memberId))">
+                </p-button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p-divider></p-divider>
+
+      <!-- Tags Section -->
+      <div class="detail-section" *ngIf="selectedTopicTags.length > 0">
+        <h4>Tags</h4>
+        <div class="tags-detail-grid">
+          <div class="tag-detail-item" *ngFor="let tag of selectedTopicTags">
+            <div class="tag-header">
+              <p-tag [value]="tag.name" severity="info"></p-tag>
+              <p-button 
+                *ngIf="tag.copyPasteText"
+                icon="pi pi-copy" 
+                [text]="true" 
+                size="small"
+                pTooltip="Textvorlage kopieren"
+                (onClick)="copyField('Tag ' + tag.name, tag.copyPasteText)">
+              </p-button>
+            </div>
+            <p class="tag-hinweise" *ngIf="tag.hinweise">{{ tag.hinweise }}</p>
+            <div class="tag-copy-text" *ngIf="tag.copyPasteText">
+              <span class="copy-text-label">Textvorlage:</span>
+              <span class="copy-text-content">{{ tag.copyPasteText }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes Section -->
+      <div class="detail-section" *ngIf="selectedTopic.notes">
+        <p-divider></p-divider>
+        <div class="section-header">
+          <h4>Notizen</h4>
+          <p-button 
+            icon="pi pi-copy" 
+            [text]="true" 
+            size="small"
+            (onClick)="copyField('Notizen', selectedTopic.notes || '')">
+          </p-button>
+        </div>
+        <p class="section-content notes-content">{{ selectedTopic.notes }}</p>
+      </div>
+
+      <!-- Validity -->
+      <div class="detail-section validity-section">
+        <p-divider></p-divider>
+        <div class="validity-info">
+          <span class="validity-label">Gültigkeit:</span>
+          <p-tag [value]="getValidityBadge(selectedTopic)" [severity]="getValiditySeverity(selectedTopic)"></p-tag>
+        </div>
+      </div>
+    </div>
+
+    <ng-template pTemplate="footer">
+      <div class="dialog-footer">
+        <span class="footer-hint">Drücken Sie <strong>Esc</strong> oder klicken Sie außerhalb zum Schließen</span>
+        <p-button label="Schließen" icon="pi pi-times" [text]="true" (onClick)="closeDetailDialog()"></p-button>
+      </div>
+    </ng-template>
+  </p-dialog>
 </div>
