@@ -80,6 +80,7 @@
           pInputText 
           [(ngModel)]="searchQuery"
           (ngModelChange)="onSearchChange($event)"
+          (keydown)="onSearchKeydown($event)"
           placeholder="Thema suchen... (Fokus: automatisch)"
           style="width: 100%"
           #searchInput

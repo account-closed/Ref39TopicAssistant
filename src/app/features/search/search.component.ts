@@ -136,8 +136,8 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
    * Register keyboard shortcuts for fast workflow
    * 
    * Search shortcuts:
-   * - ↓/↑: Navigate results
-   * - Enter: Open selected result
+   * - ↓/↑: Navigate results (handled via keydown on input)
+   * - Enter: Open selected result (handled via keydown on input)
    * - Alt+Q/W/E/R/T: Open result 1-5 directly
    * - F1-F5: Open result 1-5 directly
    * 
@@ -164,28 +164,6 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
           .subscribe(() => this.selectAndOpenResult(i - 1))
       );
     }
-
-    // Arrow down to navigate to next result
-    this.subscriptions.push(
-      this.hotkeys.addShortcut({ keys: 'arrowdown', preventDefault: true })
-        .subscribe(() => this.navigateResults(1))
-    );
-
-    // Arrow up to navigate to previous result
-    this.subscriptions.push(
-      this.hotkeys.addShortcut({ keys: 'arrowup', preventDefault: true })
-        .subscribe(() => this.navigateResults(-1))
-    );
-
-    // Enter to open selected result
-    this.subscriptions.push(
-      this.hotkeys.addShortcut({ keys: 'enter', preventDefault: false })
-        .subscribe(() => {
-          if (!this.detailDialogVisible && this.selectedIndex >= 0) {
-            this.selectAndOpenResult(this.selectedIndex);
-          }
-        })
-    );
 
     // Escape to close dialog and refocus search
     this.subscriptions.push(
@@ -232,7 +210,32 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
+   * Handle keydown events on search input for arrow navigation
+   */
+  onSearchKeydown(event: KeyboardEvent): void {
+    if (this.searchResults.length === 0) return;
+
+    switch (event.key) {
+      case 'ArrowDown':
+        event.preventDefault();
+        this.navigateResults(1);
+        break;
+      case 'ArrowUp':
+        event.preventDefault();
+        this.navigateResults(-1);
+        break;
+      case 'Enter':
+        if (this.selectedIndex >= 0 && !this.detailDialogVisible) {
+          event.preventDefault();
+          this.selectAndOpenResult(this.selectedIndex);
+        }
+        break;
+    }
+  }
+
+  /**
    * Navigate through search results with arrow keys
+   * @param direction 1 for down (next item), -1 for up (previous item)
    */
   navigateResults(direction: number): void {
     if (this.searchResults.length === 0) return;
