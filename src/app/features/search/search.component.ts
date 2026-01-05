@@ -163,7 +163,7 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
       if (this.searchInputRef?.nativeElement) {
         this.searchInputRef.nativeElement.focus();
       }
-    }, 100);
+    }, SearchComponent.FOCUS_DELAY_MS);
   }
 
   async quickConnect(): Promise<void> {
@@ -334,18 +334,32 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
     return 'info';
   }
 
+  /** Focus delay in ms after dialog close */
+  private static readonly FOCUS_DELAY_MS = 100;
+
   /**
    * Copy a single field to clipboard with toast notification
    */
   copyField(fieldName: string, value: string): void {
-    navigator.clipboard.writeText(value).then(() => {
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Kopiert',
-        detail: `${fieldName} wurde in die Zwischenablage kopiert`,
-        life: 2000
-      });
-    });
+    navigator.clipboard.writeText(value).then(
+      () => {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Kopiert',
+          detail: `${fieldName} wurde in die Zwischenablage kopiert`,
+          life: 2000
+        });
+      },
+      (error) => {
+        console.error('Clipboard write failed:', error);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Fehler',
+          detail: 'Kopieren fehlgeschlagen. Bitte versuchen Sie es erneut.',
+          life: 3000
+        });
+      }
+    );
   }
 
   /**
@@ -354,14 +368,25 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
   copyToClipboard(result: DisplaySearchResult): void {
     if (result.topic) {
       const text = this.formatTopicForClipboard(result.topic);
-      navigator.clipboard.writeText(text).then(() => {
-        this.messageService.add({
-          severity: 'success',
-          summary: 'Kopiert',
-          detail: 'Thema wurde in die Zwischenablage kopiert',
-          life: 2000
-        });
-      });
+      navigator.clipboard.writeText(text).then(
+        () => {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Kopiert',
+            detail: 'Thema wurde in die Zwischenablage kopiert',
+            life: 2000
+          });
+        },
+        (error) => {
+          console.error('Clipboard write failed:', error);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Fehler',
+            detail: 'Kopieren fehlgeschlagen. Bitte versuchen Sie es erneut.',
+            life: 3000
+          });
+        }
+      );
     }
   }
 
@@ -372,14 +397,25 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!this.selectedTopic) return;
     
     const text = this.formatTopicForEmail(this.selectedTopic);
-    navigator.clipboard.writeText(text).then(() => {
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Kopiert',
-        detail: 'Alle Informationen wurden für E-Mail kopiert',
-        life: 2000
-      });
-    });
+    navigator.clipboard.writeText(text).then(
+      () => {
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Kopiert',
+          detail: 'Alle Informationen wurden für E-Mail kopiert',
+          life: 2000
+        });
+      },
+      (error) => {
+        console.error('Clipboard write failed:', error);
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Fehler',
+          detail: 'Kopieren fehlgeschlagen. Bitte versuchen Sie es erneut.',
+          life: 3000
+        });
+      }
+    );
   }
 
   private formatTopicForClipboard(topic: Topic): string {

@@ -248,14 +248,14 @@
                 icon="pi pi-copy" 
                 [text]="true" 
                 size="small"
-                (onClick)="copyField('R2', getMemberName(selectedTopic.raci.r2MemberId!))">
+                (onClick)="copyField('R2', getMemberName(selectedTopic.raci.r2MemberId || ''))">
               </p-button>
               <p-button 
-                *ngIf="getMemberEmail(selectedTopic.raci.r2MemberId!)"
+                *ngIf="getMemberEmail(selectedTopic.raci.r2MemberId || '')"
                 icon="pi pi-at" 
                 [text]="true" 
                 size="small"
-                (onClick)="copyField('R2 E-Mail', getMemberEmail(selectedTopic.raci.r2MemberId!))">
+                (onClick)="copyField('R2 E-Mail', getMemberEmail(selectedTopic.raci.r2MemberId || ''))">
               </p-button>
             </div>
           </div>
@@ -277,14 +277,14 @@
                 icon="pi pi-copy" 
                 [text]="true" 
                 size="small"
-                (onClick)="copyField('R3', getMemberName(selectedTopic.raci.r3MemberId!))">
+                (onClick)="copyField('R3', getMemberName(selectedTopic.raci.r3MemberId || ''))">
               </p-button>
               <p-button 
-                *ngIf="getMemberEmail(selectedTopic.raci.r3MemberId!)"
+                *ngIf="getMemberEmail(selectedTopic.raci.r3MemberId || '')"
                 icon="pi pi-at" 
                 [text]="true" 
                 size="small"
-                (onClick)="copyField('R3 E-Mail', getMemberEmail(selectedTopic.raci.r3MemberId!))">
+                (onClick)="copyField('R3 E-Mail', getMemberEmail(selectedTopic.raci.r3MemberId || ''))">
               </p-button>
             </div>
           </div>
