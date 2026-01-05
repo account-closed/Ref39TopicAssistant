@@ -97,7 +97,7 @@
                 <div class="result-header-left">
                   <h3 class="topic-title">{{ result.topic.header }}</h3>
                   <div class="result-badges">
-                    <span class="priority-stars" *ngIf="result.topic.priority">{{ getPriorityStars(result.topic.priority) }}</span>
+                    <p-rating *ngIf="result.topic.priority" [(ngModel)]="result.topic.priority" [stars]="10" [readonly]="true" styleClass="compact-rating"></p-rating>
                     <p-tag *ngIf="result.topic.size" [value]="result.topic.size" [severity]="getSizeSeverity(result.topic.size)" styleClass="size-tag"></p-tag>
                   </div>
                 </div>
@@ -402,7 +402,7 @@
         <div class="classification-info">
           <div class="classification-item" *ngIf="selectedTopic.priority">
             <span class="classification-label">Priorität:</span>
-            <span class="priority-stars">{{ getPriorityStars(selectedTopic.priority) }}</span>
+            <p-rating [(ngModel)]="selectedTopic.priority" [stars]="10" [readonly]="true"></p-rating>
             <span class="priority-value">({{ selectedTopic.priority }}/10)</span>
           </div>
           <div class="classification-item" *ngIf="selectedTopic.size">

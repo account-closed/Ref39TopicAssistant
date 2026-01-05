@@ -17,6 +17,7 @@ import { Toast } from 'primeng/toast';
 import { Toolbar } from 'primeng/toolbar';
 import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
+import { Rating } from 'primeng/rating';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
@@ -49,7 +50,8 @@ interface MemberOption {
     Toast,
     Toolbar,
     IconField,
-    InputIcon
+    InputIcon,
+    Rating
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './topics.component.html',

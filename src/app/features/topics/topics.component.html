@@ -140,7 +140,7 @@
           <p-tag *ngFor="let tag of topic.tags" [value]="tag" severity="info" styleClass="mr-1 mb-1"></p-tag>
         </td>
         <td>
-          <span class="priority-stars" *ngIf="topic.priority">{{ getPriorityStars(topic.priority) }}</span>
+          <p-rating *ngIf="topic.priority" [(ngModel)]="topic.priority" [stars]="10" [readonly]="true"></p-rating>
           <span class="text-secondary" *ngIf="!topic.priority">–</span>
         </td>
         <td>
@@ -260,15 +260,11 @@
           <div class="classification-row">
             <div class="field">
               <label for="priority">Priorität (1-10)</label>
-              <p-select 
+              <p-rating 
                 id="priority"
-                [options]="priorityOptions" 
                 [(ngModel)]="topic.priority"
-                optionLabel="label" 
-                optionValue="value"
-                placeholder="Priorität wählen..."
-                [showClear]="true">
-              </p-select>
+                [stars]="10">
+              </p-rating>
               <small class="hint">Sternbewertung von 1 (niedrig) bis 10 (hoch)</small>
             </div>
 

@@ -133,6 +133,12 @@
   letter-spacing: -0.05em;
 }
 
+/* Compact Rating for table display */
+:host ::ng-deep .p-datatable .p-rating-icon {
+  font-size: 0.75rem;
+  width: 0.9rem;
+}
+
 .tag-suggestion-item {
   display: flex;
   flex-direction: column;

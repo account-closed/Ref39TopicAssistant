@@ -10,6 +10,7 @@ import { ProgressSpinner } from 'primeng/progressspinner';
 import { Dialog } from 'primeng/dialog';
 import { Toast } from 'primeng/toast';
 import { Divider } from 'primeng/divider';
+import { Rating } from 'primeng/rating';
 import { MessageService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { HotkeysService } from '@ngneat/hotkeys';
@@ -30,7 +31,7 @@ interface DisplaySearchResult {
 @Component({
   selector: 'app-search',
   standalone: true,
-  imports: [CommonModule, FormsModule, InputText, Card, Tag, Button, Message, ProgressSpinner, Dialog, Toast, Divider],
+  imports: [CommonModule, FormsModule, InputText, Card, Tag, Button, Message, ProgressSpinner, Dialog, Toast, Divider, Rating],
   providers: [MessageService],
   templateUrl: './search.component.html',
   styleUrl: './search.component.scss'

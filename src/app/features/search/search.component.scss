@@ -556,6 +556,14 @@ kbd {
   padding: 0.15rem 0.4rem;
 }
 
+/* Compact Rating for search results */
+:host ::ng-deep .compact-rating {
+  .p-rating-icon {
+    font-size: 0.75rem;
+    width: 0.9rem;
+  }
+}
+
 /* Topic References in Result Cards */
 .topic-references {
   display: flex;
