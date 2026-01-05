@@ -182,6 +182,19 @@ export class TagsComponent implements OnInit, OnDestroy {
     return isValidKeyword(this.tag.name.trim());
   }
 
+  /**
+   * Sanitizes the tag name input in real-time, removing invalid characters.
+   * Called on every input event to prevent invalid characters from being entered.
+   */
+  onTagNameInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const sanitized = sanitizeKeyword(input.value);
+    if (sanitized !== input.value) {
+      this.tag.name = sanitized;
+      input.value = sanitized;
+    }
+  }
+
   createEmptyTag(): Tag {
     const currentMemberId = localStorage.getItem('currentMemberId') || '';
     return {

@@ -156,12 +156,13 @@
             pInputText 
             id="name" 
             [(ngModel)]="tag.name" 
+            (input)="onTagNameInput($event)"
             required 
             autofocus
             [class.ng-invalid]="submitted && (!tag.name || !isValidTagName())"
             [class.ng-dirty]="submitted && (!tag.name || !isValidTagName())" />
+          <small class="hint">Keine Leerzeichen oder Sonderzeichen (erlaubt: _ - .)</small>
           <small class="p-error" *ngIf="submitted && !tag.name">Tag Name ist erforderlich.</small>
-          <small class="p-error" *ngIf="submitted && tag.name && !isValidTagName()">Tag Name darf keine Leerzeichen oder Sonderzeichen enthalten (erlaubt: _ - .)</small>
           <small class="p-error" *ngIf="submitted && tag.name && isValidTagName() && isDuplicateName()">Ein Tag mit diesem Namen existiert bereits.</small>
         </div>
 
