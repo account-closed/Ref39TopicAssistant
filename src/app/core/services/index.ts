@@ -3,6 +3,7 @@ export * from './lock.service';
 export * from './refresh.service';
 export * from './datastore.service';
 export * from './datastore-commit.service';
+export * from './datastore-plausibility';
 export * from './search-index.service';
 export * from './backend.service';
 export * from './file-system-backend.service';

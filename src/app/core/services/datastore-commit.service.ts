@@ -4,11 +4,13 @@ import { FileConnectionService, FileConnectionError } from './file-connection.se
 import { LockService, LockAcquireResult } from './lock.service';
 import { RefreshService } from './refresh.service';
 import { Datastore, Topic, TeamMember, Tag, LockPurpose } from '../models';
+import { runPlausibilityChecks, PlausibilityResult } from './datastore-plausibility';
 
 export interface CommitResult {
   success: boolean;
   germanMessage: string;
   datastore?: Datastore;
+  plausibilityResult?: PlausibilityResult;
 }
 
 export interface ValidationError {
@@ -145,8 +147,8 @@ export class DatastoreCommitService {
 
   /**
    * Commit changes to the datastore.
-   * Follows the specification: acquire lock, re-read, validate, apply, update metadata,
-   * write, verify, write refresh, release lock.
+   * Follows the specification: acquire lock, re-read, validate, apply, run plausibility checks,
+   * update metadata, write, verify, write refresh, release lock.
    */
   async commitChanges(
     modifyFn: (datastore: Datastore) => Datastore,
@@ -186,17 +188,22 @@ export class DatastoreCommitService {
       }
 
       // Step 4: Apply the change (pure function)
-      const modifiedDatastore = modifyFn(datastore);
+      let modifiedDatastore = modifyFn(datastore);
 
-      // Step 5: Update metadata
+      // Step 5: Run plausibility checks to ensure data consistency
+      const { datastore: cleanedDatastore, result: plausibilityResult } =
+        runPlausibilityChecks(modifiedDatastore);
+      modifiedDatastore = cleanedDatastore;
+
+      // Step 6: Update metadata
       modifiedDatastore.revisionId = datastore.revisionId + 1;
       modifiedDatastore.generatedAt = new Date().toISOString();
 
-      // Step 6: Write datastore.json
+      // Step 7: Write datastore.json (backup is created automatically)
       const newContent = JSON.stringify(modifiedDatastore, null, 2);
       await this.fileConnection.writeDatastore(newContent);
 
-      // Step 7: Verification step (mandatory)
+      // Step 8: Verification step (mandatory)
       const verifyContent = await this.fileConnection.readDatastore();
       let verifiedDatastore: Datastore;
       try {
@@ -215,7 +222,7 @@ export class DatastoreCommitService {
         };
       }
 
-      // Step 8: Write refresh.json signal
+      // Step 9: Write refresh.json signal
       await this.refreshService.writeRefreshSignal(
         modifiedDatastore.revisionId,
         this.currentMemberId,
@@ -228,7 +235,8 @@ export class DatastoreCommitService {
       return {
         success: true,
         germanMessage: 'Änderungen erfolgreich gespeichert.',
-        datastore: modifiedDatastore
+        datastore: modifiedDatastore,
+        plausibilityResult
       };
     } catch (error) {
       const errorMsg = error instanceof FileConnectionError 
@@ -242,7 +250,7 @@ export class DatastoreCommitService {
         germanMessage: errorMsg
       };
     } finally {
-      // Step 9: Release lock
+      // Step 10: Release lock
       await this.lockService.releaseLock();
     }
   }

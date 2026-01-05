@@ -225,7 +225,54 @@ export class FileConnectionService {
         'NOT_CONNECTED'
       );
     }
+
+    // Create backup before writing
+    await this.createBackup();
+
     return this.writeFile(connection.datastoreHandle, content);
+  }
+
+  /**
+   * Create a backup of the current datastore.
+   * Creates a 'backup' folder if it doesn't exist and saves a timestamped copy.
+   */
+  async createBackup(): Promise<void> {
+    const connection = this.connectionSubject.value;
+    if (!connection.directoryHandle || !connection.datastoreHandle) {
+      return; // Skip backup if not connected
+    }
+
+    try {
+      // Read current datastore content
+      const currentContent = await this.readFile(connection.datastoreHandle);
+      if (!currentContent || currentContent.trim() === '') {
+        return; // Skip backup if datastore is empty
+      }
+
+      // Get or create backup folder
+      const backupFolderHandle = await connection.directoryHandle.getDirectoryHandle('backup', {
+        create: true,
+      });
+
+      // Generate backup filename with timestamp
+      // Format: YYYY-MM-DDTHH-MM-SS (19 chars from ISO string with colons replaced by dashes)
+      const now = new Date();
+      const timestamp = now.toISOString().replace(/[:.]/g, '-').slice(0, 19); // e.g., "2024-01-15T14-30-45"
+      const backupFileName = `datastore_${timestamp}.json`;
+
+      // Create backup file
+      const backupFileHandle = await backupFolderHandle.getFileHandle(backupFileName, {
+        create: true,
+      });
+
+      // Write backup
+      await this.writeFile(backupFileHandle, currentContent);
+
+      console.log(`[Backup] Created backup: backup/${backupFileName}`);
+    } catch (error: any) {
+      // Log but don't fail the write operation if backup fails
+      console.warn('Failed to create backup:', error.message);
+    }
   }
 
   async readLock(): Promise<string> {
