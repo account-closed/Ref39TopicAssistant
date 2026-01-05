@@ -23,6 +23,7 @@ import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
 import { Topic, TeamMember, Datastore, Tag as TagModel, TShirtSize } from '../../core/models';
 import { getPriorityStars, getSizeSeverity } from '../../shared/utils/topic-display.utils';
+import { isValidKeyword, sanitizeKeyword } from '../../shared/utils/validation.utils';
 
 interface MemberOption {
   id: string;
@@ -189,11 +190,48 @@ export class TopicsComponent implements OnInit, OnDestroy {
 
   searchKeywords(event: { query: string }): void {
     const query = event.query.toLowerCase();
+    // Sanitize the query for suggestions
+    const sanitized = sanitizeKeyword(query);
+    
     this.keywordSuggestions = this.allKeywords.filter(kw => 
       kw.toLowerCase().includes(query)
     );
-    if (query && !this.keywordSuggestions.includes(query)) {
-      this.keywordSuggestions.unshift(query);
+    // Only suggest the sanitized version if it's valid and not already in suggestions
+    if (sanitized && isValidKeyword(sanitized) && !this.keywordSuggestions.includes(sanitized)) {
+      this.keywordSuggestions.unshift(sanitized);
+    }
+  }
+
+  /**
+   * Validates and sanitizes a keyword when it's added.
+   * Called from the onAdd event of the autocomplete.
+   */
+  onKeywordAdd(event: { value: string }): void {
+    if (!event.value || !this.topic.searchKeywords) return;
+    
+    const sanitized = sanitizeKeyword(event.value);
+    
+    if (!isValidKeyword(sanitized)) {
+      // Remove the invalid keyword if it was added
+      const index = this.topic.searchKeywords.indexOf(event.value);
+      if (index > -1) {
+        this.topic.searchKeywords.splice(index, 1);
+      }
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Ungültiger Suchbegriff',
+        detail: 'Suchbegriffe dürfen keine Leerzeichen oder Sonderzeichen enthalten (erlaubt: _ - .)',
+        life: 4000
+      });
+      return;
+    }
+    
+    // Replace with sanitized version if different
+    if (sanitized !== event.value) {
+      const index = this.topic.searchKeywords.indexOf(event.value);
+      if (index > -1) {
+        this.topic.searchKeywords[index] = sanitized;
+      }
     }
   }
 
@@ -267,9 +305,7 @@ export class TopicsComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.topic.raci.r1MemberId) {
-      return;
-    }
+    // R1 is now optional - topics without R1 are marked as orphan
 
     if (!this.topic.validity.alwaysValid && !this.validFromDate) {
       return;
