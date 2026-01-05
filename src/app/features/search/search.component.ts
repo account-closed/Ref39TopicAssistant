@@ -134,15 +134,58 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
 
   /**
    * Register keyboard shortcuts for fast workflow
+   * 
+   * Search shortcuts:
+   * - ↓/↑: Navigate results
+   * - Enter: Open selected result
+   * - Alt+Q/W/E/R/T: Open result 1-5 directly
+   * - F1-F5: Open result 1-5 directly
+   * 
+   * Dialog shortcuts:
+   * - Ctrl+Shift+C: Copy mail block
+   * - Ctrl+Shift+E: Copy R1 email
+   * - Ctrl+Shift+D: Copy description
+   * - Esc: Close dialog
    */
   private registerHotkeys(): void {
-    // Ctrl+1 to Ctrl+5 for selecting first 5 results
+    // Alt+Q/W/E/R/T for selecting results 1-5 directly
+    const altKeys = ['q', 'w', 'e', 'r', 't'];
+    altKeys.forEach((key, index) => {
+      this.subscriptions.push(
+        this.hotkeys.addShortcut({ keys: `alt.${key}`, preventDefault: true })
+          .subscribe(() => this.selectAndOpenResult(index))
+      );
+    });
+
+    // F1-F5 for selecting results 1-5 directly
     for (let i = 1; i <= 5; i++) {
       this.subscriptions.push(
-        this.hotkeys.addShortcut({ keys: `control.${i}`, preventDefault: true })
+        this.hotkeys.addShortcut({ keys: `f${i}`, preventDefault: true })
           .subscribe(() => this.selectAndOpenResult(i - 1))
       );
     }
+
+    // Arrow down to navigate to next result
+    this.subscriptions.push(
+      this.hotkeys.addShortcut({ keys: 'arrowdown', preventDefault: true })
+        .subscribe(() => this.navigateResults(1))
+    );
+
+    // Arrow up to navigate to previous result
+    this.subscriptions.push(
+      this.hotkeys.addShortcut({ keys: 'arrowup', preventDefault: true })
+        .subscribe(() => this.navigateResults(-1))
+    );
+
+    // Enter to open selected result
+    this.subscriptions.push(
+      this.hotkeys.addShortcut({ keys: 'enter', preventDefault: false })
+        .subscribe(() => {
+          if (!this.detailDialogVisible && this.selectedIndex >= 0) {
+            this.selectAndOpenResult(this.selectedIndex);
+          }
+        })
+    );
 
     // Escape to close dialog and refocus search
     this.subscriptions.push(
@@ -153,6 +196,52 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
           }
         })
     );
+
+    // Dialog shortcuts: Ctrl+Shift+C for copy mail block
+    this.subscriptions.push(
+      this.hotkeys.addShortcut({ keys: 'control.shift.c', preventDefault: true })
+        .subscribe(() => {
+          if (this.detailDialogVisible) {
+            this.copyAllForEmail();
+          }
+        })
+    );
+
+    // Dialog shortcuts: Ctrl+Shift+E for copy R1 email
+    this.subscriptions.push(
+      this.hotkeys.addShortcut({ keys: 'control.shift.e', preventDefault: true })
+        .subscribe(() => {
+          if (this.detailDialogVisible && this.selectedTopic) {
+            const email = this.getMemberEmail(this.selectedTopic.raci.r1MemberId);
+            if (email) {
+              this.copyField('R1 E-Mail', email);
+            }
+          }
+        })
+    );
+
+    // Dialog shortcuts: Ctrl+Shift+D for copy description
+    this.subscriptions.push(
+      this.hotkeys.addShortcut({ keys: 'control.shift.d', preventDefault: true })
+        .subscribe(() => {
+          if (this.detailDialogVisible && this.selectedTopic?.description) {
+            this.copyField('Beschreibung', this.selectedTopic.description);
+          }
+        })
+    );
+  }
+
+  /**
+   * Navigate through search results with arrow keys
+   */
+  navigateResults(direction: number): void {
+    if (this.searchResults.length === 0) return;
+    
+    let newIndex = this.selectedIndex + direction;
+    if (newIndex < 0) newIndex = this.searchResults.length - 1;
+    if (newIndex >= this.searchResults.length) newIndex = 0;
+    
+    this.selectedIndex = newIndex;
   }
 
   /**
@@ -536,7 +625,8 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   getShortcutHint(index: number): string {
     if (index < 5) {
-      return `Ctrl+${index + 1}`;
+      const keys = ['Q', 'W', 'E', 'R', 'T'];
+      return `Alt+${keys[index]} / F${index + 1}`;
     }
     return '';
   }

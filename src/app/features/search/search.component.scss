@@ -48,7 +48,7 @@
 }
 
 .search-header {
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .search-header h1 {
@@ -58,6 +58,50 @@
 .search-header p {
   margin: 0;
   color: var(--p-text-muted-color);
+}
+
+/* Keyboard Shortcuts Panel */
+.keyboard-shortcuts-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: var(--p-surface-50);
+  border-radius: 8px;
+  border: 1px solid var(--p-surface-200);
+}
+
+.shortcuts-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.shortcuts-title {
+  font-weight: 600;
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color);
+}
+
+.shortcut-item {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--p-text-secondary-color);
+}
+
+kbd {
+  display: inline-block;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.75rem;
+  font-family: monospace;
+  background: var(--p-surface-100);
+  border: 1px solid var(--p-surface-300);
+  border-radius: 4px;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
 }
 
 /* Index Status Indicator */
@@ -465,9 +509,31 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
   
   .footer-hint {
     font-size: 0.85rem;
     color: var(--p-text-muted-color);
+  }
+}
+
+.dialog-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+}
+
+.shortcut-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+  
+  kbd {
+    font-size: 0.7rem;
+    padding: 0.1rem 0.3rem;
   }
 }

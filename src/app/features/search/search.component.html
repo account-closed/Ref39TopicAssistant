@@ -35,7 +35,21 @@
   <div *ngIf="isConnected">
     <div class="search-header">
       <h1>Schnellsuche</h1>
-      <p>Schnelle Themensuche mit Tastatursteuerung (Ctrl+1 bis Ctrl+5 für schnelle Auswahl)</p>
+      <p>Schnelle Themensuche mit Tastatursteuerung</p>
+    </div>
+
+    <!-- Keyboard Shortcuts Help -->
+    <div class="keyboard-shortcuts-panel">
+      <div class="shortcuts-group">
+        <span class="shortcuts-title">Navigation:</span>
+        <span class="shortcut-item"><kbd>↓</kbd><kbd>↑</kbd> Navigieren</span>
+        <span class="shortcut-item"><kbd>Enter</kbd> Öffnen</span>
+      </div>
+      <div class="shortcuts-group">
+        <span class="shortcuts-title">Schnellauswahl:</span>
+        <span class="shortcut-item"><kbd>Alt</kbd>+<kbd>Q/W/E/R/T</kbd> Ergebnis 1-5</span>
+        <span class="shortcut-item"><kbd>F1</kbd>-<kbd>F5</kbd> Ergebnis 1-5</span>
+      </div>
     </div>
 
     <!-- Index Status Indicator -->
@@ -74,7 +88,7 @@
     </div>
 
     <div class="search-results" *ngIf="searchResults.length > 0">
-      <p class="results-count">{{ searchResults.length }} Thema(en) gefunden – Klick oder Ctrl+1-5 zum Öffnen</p>
+      <p class="results-count">{{ searchResults.length }} Thema(en) gefunden – <kbd>↓</kbd><kbd>↑</kbd> zum Navigieren, <kbd>Enter</kbd> zum Öffnen</p>
       
       <div class="result-list">
         <ng-container *ngFor="let result of searchResults; let i = index">
@@ -151,8 +165,10 @@
       <i class="pi pi-search"></i>
       <p>Geben Sie einen Suchbegriff ein, um Themen zu finden</p>
       <p class="keyboard-hints">
-        <span class="hint"><strong>Ctrl+1-5:</strong> Ergebnis auswählen</span>
-        <span class="hint"><strong>Esc:</strong> Dialog schließen</span>
+        <span class="hint"><strong>↓/↑:</strong> Navigieren</span>
+        <span class="hint"><strong>Enter:</strong> Öffnen</span>
+        <span class="hint"><strong>Alt+Q/W/E/R/T:</strong> Schnellauswahl 1-5</span>
+        <span class="hint"><strong>F1-F5:</strong> Schnellauswahl 1-5</span>
       </p>
     </div>
   </div>
@@ -385,7 +401,12 @@
 
     <ng-template pTemplate="footer">
       <div class="dialog-footer">
-        <span class="footer-hint">Drücken Sie <strong>Esc</strong> oder klicken Sie außerhalb zum Schließen</span>
+        <div class="dialog-shortcuts">
+          <span class="shortcut-hint"><kbd>Ctrl+Shift+C</kbd> Mail-Block kopieren</span>
+          <span class="shortcut-hint"><kbd>Ctrl+Shift+E</kbd> E-Mail kopieren</span>
+          <span class="shortcut-hint"><kbd>Ctrl+Shift+D</kbd> Beschreibung kopieren</span>
+          <span class="shortcut-hint"><kbd>Esc</kbd> Schließen</span>
+        </div>
         <p-button label="Schließen" icon="pi pi-times" [text]="true" (onClick)="closeDetailDialog()"></p-button>
       </div>
     </ng-template>
