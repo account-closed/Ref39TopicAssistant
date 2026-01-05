@@ -1,4 +1,4 @@
-import { Component, signal, OnInit } from '@angular/core';
+import { Component, signal, OnInit, OnDestroy } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Button } from 'primeng/button';
@@ -11,6 +11,7 @@ import { UserSelectorDialogComponent } from './shared/components/user-selector-d
 import { HeaderUserSelectorComponent } from './shared/components/header-user-selector/header-user-selector.component';
 import { ThemeToggleComponent } from './shared/components/theme-toggle/theme-toggle.component';
 import { BackendService } from './core/services/backend.service';
+import { IndexMonitorService } from './core/services/index-monitor.service';
 
 @Component({
   selector: 'app-root',
@@ -30,14 +31,16 @@ import { BackendService } from './core/services/backend.service';
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
-export class App implements OnInit {
+export class App implements OnInit, OnDestroy {
   protected readonly title = signal('RACI Topic Finder');
   sidebarVisible: boolean = true;
   menuItems: MenuItem[] = [];
+  private stopIndexMonitor: (() => void) | null = null;
 
   constructor(
     private router: Router,
-    private backend: BackendService
+    private backend: BackendService,
+    private indexMonitor: IndexMonitorService
   ) {}
 
   ngOnInit(): void {
@@ -85,6 +88,15 @@ export class App implements OnInit {
     
     if (storedMemberId && storedMemberName) {
       this.backend.setCurrentUser(storedMemberId, storedMemberName);
+    }
+
+    // Start the search index monitor
+    this.stopIndexMonitor = this.indexMonitor.start({ intervalMs: 5000 });
+  }
+
+  ngOnDestroy(): void {
+    if (this.stopIndexMonitor) {
+      this.stopIndexMonitor();
     }
   }
 

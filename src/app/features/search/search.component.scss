@@ -48,7 +48,7 @@
 }
 
 .search-header {
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .search-header h1 {
@@ -58,6 +58,52 @@
 .search-header p {
   margin: 0;
   color: var(--p-text-muted-color);
+}
+
+/* Index Status Indicator */
+.index-status {
+  margin-bottom: 1rem;
+}
+
+.index-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background-color: var(--p-surface-100);
+  
+  i {
+    font-size: 1rem;
+  }
+  
+  &.ready {
+    background-color: #e8f5e9;
+    color: #2e7d32;
+    
+    i {
+      color: #2e7d32;
+    }
+  }
+  
+  &.waiting {
+    background-color: #fff3e0;
+    color: #e65100;
+    
+    i {
+      color: #e65100;
+    }
+  }
+}
+
+.index-status-text {
+  font-weight: 500;
+}
+
+:host ::ng-deep .index-spinner {
+  width: 20px !important;
+  height: 20px !important;
 }
 
 .search-box {
@@ -96,42 +142,85 @@
   padding: 1rem;
 }
 
-.result-header h3 {
+.topic-title {
   margin: 0;
   font-size: 1.25rem;
+  font-weight: 600;
 }
 
 .result-body {
   padding: 0 1rem 1rem 1rem;
 }
 
-.raci-info {
-  display: flex;
-  gap: 2rem;
-  margin-bottom: 1rem;
-  padding: 0.5rem;
-  background: var(--p-surface-100);
-  border-radius: 4px;
-}
-
-.raci-item {
-  font-size: 0.875rem;
-}
-
-.raci-item strong {
-  color: var(--p-primary-color);
-  margin-right: 0.25rem;
-}
-
 .description {
-  margin: 1rem 0;
+  margin: 0 0 1rem 0;
   color: var(--p-text-muted-color);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.raci-section {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: var(--p-surface-100);
+  border-radius: 8px;
+}
+
+.raci-section h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--p-text-muted-color);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.raci-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.raci-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.raci-label {
+  font-weight: 700;
+  font-size: 0.875rem;
+  min-width: 2rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.r-label {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.c-label {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+.i-label {
+  background-color: #f3e5f5;
+  color: #7b1fa2;
+}
+
+.raci-value {
+  font-size: 0.95rem;
+  color: var(--p-text-color);
 }
 
 .tags {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
+  margin-top: 1rem;
 }
 
 .result-actions {

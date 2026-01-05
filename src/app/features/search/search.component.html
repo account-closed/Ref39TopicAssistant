@@ -33,7 +33,27 @@
   <div *ngIf="isConnected">
     <div class="search-header">
       <h1>Schnellsuche</h1>
-      <p>Finden Sie schnell den zuständigen Ansprechpartner für ein Thema</p>
+      <p>Finden Sie schnell das richtige Thema (sucht auch in zugehörigen Tags)</p>
+    </div>
+
+    <!-- Index Status Indicator -->
+    <div class="index-status">
+      <div class="index-status-indicator" *ngIf="isIndexBuilding">
+        <p-progressSpinner 
+          styleClass="index-spinner" 
+          strokeWidth="4" 
+          [style]="{'width': '20px', 'height': '20px'}">
+        </p-progressSpinner>
+        <span class="index-status-text">Suchindex wird erstellt...</span>
+      </div>
+      <div class="index-status-indicator ready" *ngIf="!isIndexBuilding && isIndexReady">
+        <i class="pi pi-check-circle"></i>
+        <span class="index-status-text">Suchindex bereit ({{ indexDocumentCount }} Themen)</span>
+      </div>
+      <div class="index-status-indicator waiting" *ngIf="!isIndexBuilding && !isIndexReady">
+        <i class="pi pi-clock"></i>
+        <span class="index-status-text">Warten auf Daten...</span>
+      </div>
     </div>
 
     <div class="search-box">
@@ -47,67 +67,91 @@
           placeholder="Thema suchen..."
           style="width: 100%"
           #searchInput
+          [disabled]="!isIndexReady"
           autofocus />
       </span>
     </div>
 
     <div class="search-results" *ngIf="searchResults.length > 0">
-      <p class="results-count">{{ searchResults.length }} Ergebnis(se) gefunden</p>
+      <p class="results-count">{{ searchResults.length }} Thema(en) gefunden</p>
       
       <div class="result-list">
-        <p-card *ngFor="let result of searchResults; let i = index" 
-                [ngClass]="{'selected': i === selectedIndex}"
-                (click)="selectResult(i)">
-          <ng-template pTemplate="header">
-            <div class="result-header">
-              <h3>{{ result.topic.header }}</h3>
-              <p-tag [value]="getValidityBadge(result.topic)" 
-                     [severity]="getValiditySeverity(result.topic)">
-              </p-tag>
-            </div>
-          </ng-template>
-          
-          <div class="result-body">
-            <div class="raci-info" *ngIf="result.topic.raci">
-              <div class="raci-item">
-                <strong>R1:</strong> {{ getMemberName(result.topic.raci.r1MemberId) }}
+        <ng-container *ngFor="let result of searchResults; let i = index">
+          <p-card *ngIf="result.topic"
+                  [ngClass]="{'selected': i === selectedIndex}"
+                  (click)="selectResult(i)">
+            <ng-template pTemplate="header">
+              <div class="result-header">
+                <h3 class="topic-title">{{ result.topic.header }}</h3>
+                <p-tag [value]="getValidityBadge(result.topic)" 
+                       [severity]="getValiditySeverity(result.topic)">
+                </p-tag>
               </div>
-              <div class="raci-item" *ngIf="result.topic.raci.r2MemberId">
-                <strong>R2:</strong> {{ getMemberName(result.topic.raci.r2MemberId) }}
+            </ng-template>
+            
+            <div class="result-body">
+              <p *ngIf="result.topic.description" class="description">
+                {{ result.topic.description }}
+              </p>
+
+              <div class="raci-section" *ngIf="result.topic.raci">
+                <h4>Verantwortliche (RACI)</h4>
+                <div class="raci-grid">
+                  <div class="raci-row">
+                    <span class="raci-label r-label">R1</span>
+                    <span class="raci-value">{{ getMemberName(result.topic.raci.r1MemberId) }}</span>
+                  </div>
+                  <div class="raci-row" *ngIf="result.topic.raci.r2MemberId">
+                    <span class="raci-label r-label">R2</span>
+                    <span class="raci-value">{{ getMemberName(result.topic.raci.r2MemberId) }}</span>
+                  </div>
+                  <div class="raci-row" *ngIf="result.topic.raci.r3MemberId">
+                    <span class="raci-label r-label">R3</span>
+                    <span class="raci-value">{{ getMemberName(result.topic.raci.r3MemberId) }}</span>
+                  </div>
+                  <div class="raci-row" *ngIf="result.topic.raci.cMemberIds && result.topic.raci.cMemberIds.length > 0">
+                    <span class="raci-label c-label">C</span>
+                    <span class="raci-value">
+                      <span *ngFor="let memberId of result.topic.raci.cMemberIds; let last = last">
+                        {{ getMemberName(memberId) }}<span *ngIf="!last">, </span>
+                      </span>
+                    </span>
+                  </div>
+                  <div class="raci-row" *ngIf="result.topic.raci.iMemberIds && result.topic.raci.iMemberIds.length > 0">
+                    <span class="raci-label i-label">I</span>
+                    <span class="raci-value">
+                      <span *ngFor="let memberId of result.topic.raci.iMemberIds; let last = last">
+                        {{ getMemberName(memberId) }}<span *ngIf="!last">, </span>
+                      </span>
+                    </span>
+                  </div>
+                </div>
               </div>
-              <div class="raci-item" *ngIf="result.topic.raci.r3MemberId">
-                <strong>R3:</strong> {{ getMemberName(result.topic.raci.r3MemberId) }}
+
+              <div class="tags" *ngIf="result.topic.tags && result.topic.tags.length > 0">
+                <p-tag *ngFor="let tag of result.topic.tags" 
+                       [value]="tag" 
+                       severity="info">
+                </p-tag>
               </div>
             </div>
 
-            <p *ngIf="result.topic.description" class="description">
-              {{ result.topic.description }}
-            </p>
-
-            <div class="tags" *ngIf="result.topic.tags && result.topic.tags.length > 0">
-              <p-tag *ngFor="let tag of result.topic.tags" 
-                     [value]="tag" 
-                     severity="info">
-              </p-tag>
-            </div>
-          </div>
-
-          <ng-template pTemplate="footer">
-            <div class="result-actions">
-              <p-button label="Details" icon="pi pi-info-circle" severity="secondary" size="small"></p-button>
-              <p-button label="Kopieren" icon="pi pi-copy" severity="secondary" size="small" (onClick)="copyToClipboard(result.topic)"></p-button>
-            </div>
-          </ng-template>
-        </p-card>
+            <ng-template pTemplate="footer">
+              <div class="result-actions">
+                <p-button label="Kopieren" icon="pi pi-copy" severity="secondary" size="small" (onClick)="copyToClipboard(result)"></p-button>
+              </div>
+            </ng-template>
+          </p-card>
+        </ng-container>
       </div>
     </div>
 
-    <div class="no-results" *ngIf="searchQuery && searchResults.length === 0">
+    <div class="no-results" *ngIf="searchQuery && searchResults.length === 0 && isIndexReady">
       <i class="pi pi-search"></i>
-      <p>Keine Ergebnisse gefunden</p>
+      <p>Keine Themen gefunden</p>
     </div>
 
-    <div class="empty-state" *ngIf="!searchQuery">
+    <div class="empty-state" *ngIf="!searchQuery && isIndexReady">
       <i class="pi pi-search"></i>
       <p>Geben Sie einen Suchbegriff ein, um Themen zu finden</p>
     </div>

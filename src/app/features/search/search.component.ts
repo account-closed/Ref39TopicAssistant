@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InputText } from 'primeng/inputtext';
@@ -6,34 +6,83 @@ import { Card } from 'primeng/card';
 import { Tag } from 'primeng/tag';
 import { Button } from 'primeng/button';
 import { Message } from 'primeng/message';
+import { ProgressSpinner } from 'primeng/progressspinner';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
-import { SearchIndexService } from '../../core/services/search-index.service';
-import { SearchResult } from '../../core/services/search-index.service';
-import { TeamMember, Topic } from '../../core/models';
+import { SearchEngineService, SearchHit } from '../../core/services/search-engine.service';
+import { IndexMonitorService } from '../../core/services/index-monitor.service';
+import { Datastore, Topic } from '../../core/models';
+
+/**
+ * Extended search result with resolved topic data.
+ */
+interface DisplaySearchResult {
+  hit: SearchHit;
+  topic?: Topic;
+}
 
 @Component({
   selector: 'app-search',
   standalone: true,
-  imports: [CommonModule, FormsModule, InputText, Card, Tag, Button, Message],
+  imports: [CommonModule, FormsModule, InputText, Card, Tag, Button, Message, ProgressSpinner],
   templateUrl: './search.component.html',
   styleUrl: './search.component.scss'
 })
 export class SearchComponent implements OnInit, OnDestroy {
   searchQuery: string = '';
-  searchResults: SearchResult[] = [];
+  searchResults: DisplaySearchResult[] = [];
   selectedIndex: number = -1;
   isConnected = false;
   isConnecting = false;
   hasFileSystemAPI = false;
   connectError = '';
-  private debounceTimer: any;
+  
+  // Index status
+  isIndexBuilding = false;
+  isIndexReady = false;
+  indexDocumentCount = 0;
+  
   private subscriptions: Subscription[] = [];
+  private currentDatastore: Datastore | null = null;
 
   constructor(
     private backend: BackendService,
-    private searchIndex: SearchIndexService
-  ) {}
+    private searchEngine: SearchEngineService,
+    private indexMonitor: IndexMonitorService,
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
+  ) {
+    // React to index version changes (triggers when index is rebuilt)
+    // Use allowSignalWrites to prevent NG0100 error
+    effect(() => {
+      const version = this.searchEngine.indexVersion();
+      console.debug('[SearchComponent] Index version changed:', version);
+      // Only re-run search when index is rebuilt and we have a query
+      if (version > 0 && this.searchQuery && this.searchQuery.trim() !== '') {
+        // Schedule outside Angular to avoid NG0100, then run inside
+        queueMicrotask(() => {
+          this.ngZone.run(() => {
+            this.performSearch();
+            this.cdr.detectChanges();
+          });
+        });
+      }
+    }, { allowSignalWrites: true });
+
+    // React to index status changes
+    effect(() => {
+      const status = this.indexMonitor.indexStatus();
+      // Schedule outside Angular to avoid NG0100, then run inside
+      queueMicrotask(() => {
+        this.ngZone.run(() => {
+          this.isIndexBuilding = status.isBuilding;
+          this.isIndexReady = status.isReady;
+          this.indexDocumentCount = status.documentCount;
+          this.cdr.detectChanges();
+        });
+      });
+    }, { allowSignalWrites: true });
+  }
 
   ngOnInit(): void {
     // Check File System API support
@@ -46,15 +95,11 @@ export class SearchComponent implements OnInit, OnDestroy {
       })
     );
 
-    // Subscribe to datastore changes to rebuild index
+    // Subscribe to datastore changes to keep local reference for entity resolution
     this.subscriptions.push(
       this.backend.datastore$.subscribe(datastore => {
         if (datastore) {
-          this.searchIndex.buildIndex(datastore);
-          // Re-run search if there's a query
-          if (this.searchQuery) {
-            this.performSearch();
-          }
+          this.currentDatastore = datastore;
         }
       })
     );
@@ -62,9 +107,6 @@ export class SearchComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
-    if (this.debounceTimer) {
-      clearTimeout(this.debounceTimer);
-    }
   }
 
   async quickConnect(): Promise<void> {
@@ -86,11 +128,11 @@ export class SearchComponent implements OnInit, OnDestroy {
     }
   }
 
-  onSearchChange(query: string): void {
-    clearTimeout(this.debounceTimer);
-    this.debounceTimer = setTimeout(() => {
-      this.performSearch();
-    }, 100); // 100ms debounce
+  /**
+   * Called on every keystroke. Performs search immediately.
+   */
+  onSearchChange(_query: string): void {
+    this.performSearch();
   }
 
   performSearch(): void {
@@ -100,8 +142,27 @@ export class SearchComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.searchResults = this.searchIndex.search(this.searchQuery, 50);
+    // Search and get top 10 results
+    const hits = this.searchEngine.search(this.searchQuery, 10);
+    console.debug('[SearchComponent] Search results for', this.searchQuery, ':', hits.length, 'hits');
+    
+    // Resolve topics for display
+    this.searchResults = hits.map(hit => this.resolveSearchHit(hit));
     this.selectedIndex = this.searchResults.length > 0 ? 0 : -1;
+  }
+
+  /**
+   * Resolves a SearchHit to include the full topic data.
+   */
+  private resolveSearchHit(hit: SearchHit): DisplaySearchResult {
+    const result: DisplaySearchResult = { hit };
+    
+    if (!this.currentDatastore) {
+      return result;
+    }
+
+    result.topic = this.currentDatastore.topics.find(t => t.id === hit.entityId);
+    return result;
   }
 
   selectResult(index: number): void {
@@ -109,7 +170,10 @@ export class SearchComponent implements OnInit, OnDestroy {
   }
 
   getMemberName(memberId: string): string {
-    const member = this.searchIndex.getMember(memberId);
+    if (!this.currentDatastore) {
+      return 'Unbekannt';
+    }
+    const member = this.currentDatastore.members.find(m => m.id === memberId);
     return member?.displayName || 'Unbekannt';
   }
 
@@ -161,11 +225,13 @@ export class SearchComponent implements OnInit, OnDestroy {
     return 'info';
   }
 
-  copyToClipboard(topic: Topic): void {
-    const text = this.formatTopicForClipboard(topic);
-    navigator.clipboard.writeText(text).then(() => {
-      alert('In Zwischenablage kopiert');
-    });
+  copyToClipboard(result: DisplaySearchResult): void {
+    if (result.topic) {
+      const text = this.formatTopicForClipboard(result.topic);
+      navigator.clipboard.writeText(text).then(() => {
+        // Could add a toast notification here
+      });
+    }
   }
 
   private formatTopicForClipboard(topic: Topic): string {
@@ -184,6 +250,14 @@ export class SearchComponent implements OnInit, OnDestroy {
     
     if (topic.raci.r3MemberId) {
       text += `  R3: ${this.getMemberName(topic.raci.r3MemberId)}\n`;
+    }
+
+    if (topic.raci.cMemberIds && topic.raci.cMemberIds.length > 0) {
+      text += `  C: ${topic.raci.cMemberIds.map(id => this.getMemberName(id)).join(', ')}\n`;
+    }
+
+    if (topic.raci.iMemberIds && topic.raci.iMemberIds.length > 0) {
+      text += `  I: ${topic.raci.iMemberIds.map(id => this.getMemberName(id)).join(', ')}\n`;
     }
 
     return text;
