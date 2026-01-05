@@ -33,7 +33,7 @@
   <div *ngIf="isConnected">
     <div class="search-header">
       <h1>Schnellsuche</h1>
-      <p>Finden Sie schnell den zuständigen Ansprechpartner für ein Thema</p>
+      <p>Finden Sie schnell Themen, Personen oder Tags</p>
     </div>
 
     <div class="search-box">
@@ -44,7 +44,7 @@
           pInputText 
           [(ngModel)]="searchQuery"
           (ngModelChange)="onSearchChange($event)"
-          placeholder="Thema suchen..."
+          placeholder="Thema, Person oder Tag suchen..."
           style="width: 100%"
           #searchInput
           autofocus />
@@ -55,50 +55,128 @@
       <p class="results-count">{{ searchResults.length }} Ergebnis(se) gefunden</p>
       
       <div class="result-list">
-        <p-card *ngFor="let result of searchResults; let i = index" 
-                [ngClass]="{'selected': i === selectedIndex}"
-                (click)="selectResult(i)">
-          <ng-template pTemplate="header">
-            <div class="result-header">
-              <h3>{{ result.topic.header }}</h3>
-              <p-tag [value]="getValidityBadge(result.topic)" 
-                     [severity]="getValiditySeverity(result.topic)">
-              </p-tag>
-            </div>
-          </ng-template>
-          
-          <div class="result-body">
-            <div class="raci-info" *ngIf="result.topic.raci">
-              <div class="raci-item">
-                <strong>R1:</strong> {{ getMemberName(result.topic.raci.r1MemberId) }}
+        <!-- Topic Result -->
+        <ng-container *ngFor="let result of searchResults; let i = index">
+          <p-card *ngIf="result.topic"
+                  [ngClass]="{'selected': i === selectedIndex}"
+                  (click)="selectResult(i)">
+            <ng-template pTemplate="header">
+              <div class="result-header">
+                <div class="result-title-row">
+                  <p-tag [value]="getKindLabel(result.hit.kind)" 
+                         [severity]="getKindSeverity(result.hit.kind)"
+                         styleClass="kind-tag">
+                  </p-tag>
+                  <h3>{{ result.topic.header }}</h3>
+                </div>
+                <p-tag [value]="getValidityBadge(result.topic)" 
+                       [severity]="getValiditySeverity(result.topic)">
+                </p-tag>
               </div>
-              <div class="raci-item" *ngIf="result.topic.raci.r2MemberId">
-                <strong>R2:</strong> {{ getMemberName(result.topic.raci.r2MemberId) }}
+            </ng-template>
+            
+            <div class="result-body">
+              <div class="raci-info" *ngIf="result.topic.raci">
+                <div class="raci-item">
+                  <strong>R1:</strong> {{ getMemberName(result.topic.raci.r1MemberId) }}
+                </div>
+                <div class="raci-item" *ngIf="result.topic.raci.r2MemberId">
+                  <strong>R2:</strong> {{ getMemberName(result.topic.raci.r2MemberId) }}
+                </div>
+                <div class="raci-item" *ngIf="result.topic.raci.r3MemberId">
+                  <strong>R3:</strong> {{ getMemberName(result.topic.raci.r3MemberId) }}
+                </div>
               </div>
-              <div class="raci-item" *ngIf="result.topic.raci.r3MemberId">
-                <strong>R3:</strong> {{ getMemberName(result.topic.raci.r3MemberId) }}
+
+              <p *ngIf="result.topic.description" class="description">
+                {{ result.topic.description }}
+              </p>
+
+              <div class="tags" *ngIf="result.topic.tags && result.topic.tags.length > 0">
+                <p-tag *ngFor="let tag of result.topic.tags" 
+                       [value]="tag" 
+                       severity="info">
+                </p-tag>
               </div>
             </div>
 
-            <p *ngIf="result.topic.description" class="description">
-              {{ result.topic.description }}
-            </p>
+            <ng-template pTemplate="footer">
+              <div class="result-actions">
+                <p-button label="Kopieren" icon="pi pi-copy" severity="secondary" size="small" (onClick)="copyToClipboard(result)"></p-button>
+              </div>
+            </ng-template>
+          </p-card>
 
-            <div class="tags" *ngIf="result.topic.tags && result.topic.tags.length > 0">
-              <p-tag *ngFor="let tag of result.topic.tags" 
-                     [value]="tag" 
-                     severity="info">
-              </p-tag>
+          <!-- Member Result -->
+          <p-card *ngIf="result.member"
+                  [ngClass]="{'selected': i === selectedIndex}"
+                  (click)="selectResult(i)">
+            <ng-template pTemplate="header">
+              <div class="result-header">
+                <div class="result-title-row">
+                  <p-tag [value]="getKindLabel(result.hit.kind)" 
+                         [severity]="getKindSeverity(result.hit.kind)"
+                         styleClass="kind-tag">
+                  </p-tag>
+                  <h3>{{ result.member.displayName }}</h3>
+                </div>
+                <p-tag [value]="result.member.active ? 'Aktiv' : 'Inaktiv'" 
+                       [severity]="result.member.active ? 'success' : 'secondary'">
+                </p-tag>
+              </div>
+            </ng-template>
+            
+            <div class="result-body">
+              <p *ngIf="result.member.email" class="email">
+                <i class="pi pi-envelope"></i> {{ result.member.email }}
+              </p>
+              <div class="tags" *ngIf="result.member.tags && result.member.tags.length > 0">
+                <p-tag *ngFor="let tag of result.member.tags" 
+                       [value]="tag" 
+                       severity="info">
+                </p-tag>
+              </div>
             </div>
-          </div>
 
-          <ng-template pTemplate="footer">
-            <div class="result-actions">
-              <p-button label="Details" icon="pi pi-info-circle" severity="secondary" size="small"></p-button>
-              <p-button label="Kopieren" icon="pi pi-copy" severity="secondary" size="small" (onClick)="copyToClipboard(result.topic)"></p-button>
+            <ng-template pTemplate="footer">
+              <div class="result-actions">
+                <p-button label="Kopieren" icon="pi pi-copy" severity="secondary" size="small" (onClick)="copyToClipboard(result)"></p-button>
+              </div>
+            </ng-template>
+          </p-card>
+
+          <!-- Tag Result -->
+          <p-card *ngIf="result.tag"
+                  [ngClass]="{'selected': i === selectedIndex}"
+                  (click)="selectResult(i)">
+            <ng-template pTemplate="header">
+              <div class="result-header">
+                <div class="result-title-row">
+                  <p-tag [value]="getKindLabel(result.hit.kind)" 
+                         [severity]="getKindSeverity(result.hit.kind)"
+                         styleClass="kind-tag">
+                  </p-tag>
+                  <h3>{{ result.tag.name }}</h3>
+                </div>
+              </div>
+            </ng-template>
+            
+            <div class="result-body">
+              <p *ngIf="result.tag.hinweise" class="hinweise">
+                <strong>Hinweise:</strong> {{ result.tag.hinweise }}
+              </p>
+              <p *ngIf="result.tag.copyPasteText" class="copy-paste-text">
+                {{ result.tag.copyPasteText }}
+              </p>
             </div>
-          </ng-template>
-        </p-card>
+
+            <ng-template pTemplate="footer">
+              <div class="result-actions">
+                <p-button label="Kopieren" icon="pi pi-copy" severity="secondary" size="small" (onClick)="copyToClipboard(result)"></p-button>
+              </div>
+            </ng-template>
+          </p-card>
+        </ng-container>
       </div>
     </div>
 
@@ -109,7 +187,7 @@
 
     <div class="empty-state" *ngIf="!searchQuery">
       <i class="pi pi-search"></i>
-      <p>Geben Sie einen Suchbegriff ein, um Themen zu finden</p>
+      <p>Geben Sie einen Suchbegriff ein, um Themen, Personen oder Tags zu finden</p>
     </div>
   </div>
 </div>

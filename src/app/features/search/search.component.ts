@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InputText } from 'primeng/inputtext';
@@ -8,9 +8,18 @@ import { Button } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
-import { SearchIndexService } from '../../core/services/search-index.service';
-import { SearchResult } from '../../core/services/search-index.service';
-import { TeamMember, Topic } from '../../core/models';
+import { SearchEngineService, SearchHit, SearchableKind } from '../../core/services/search-engine.service';
+import { Datastore, Topic, TeamMember, Tag as TagModel } from '../../core/models';
+
+/**
+ * Extended search result with resolved entity data.
+ */
+interface DisplaySearchResult {
+  hit: SearchHit;
+  topic?: Topic;
+  member?: TeamMember;
+  tag?: TagModel;
+}
 
 @Component({
   selector: 'app-search',
@@ -21,19 +30,29 @@ import { TeamMember, Topic } from '../../core/models';
 })
 export class SearchComponent implements OnInit, OnDestroy {
   searchQuery: string = '';
-  searchResults: SearchResult[] = [];
+  searchResults: DisplaySearchResult[] = [];
   selectedIndex: number = -1;
   isConnected = false;
   isConnecting = false;
   hasFileSystemAPI = false;
   connectError = '';
-  private debounceTimer: any;
+  private rafId: number | null = null;
   private subscriptions: Subscription[] = [];
+  private currentDatastore: Datastore | null = null;
 
   constructor(
     private backend: BackendService,
-    private searchIndex: SearchIndexService
-  ) {}
+    private searchEngine: SearchEngineService
+  ) {
+    // React to index version changes (triggers when index is rebuilt)
+    effect(() => {
+      const _version = this.searchEngine.indexVersion();
+      // Re-run search when index is rebuilt
+      if (this.searchQuery) {
+        this.performSearch();
+      }
+    });
+  }
 
   ngOnInit(): void {
     // Check File System API support
@@ -46,15 +65,11 @@ export class SearchComponent implements OnInit, OnDestroy {
       })
     );
 
-    // Subscribe to datastore changes to rebuild index
+    // Subscribe to datastore changes to keep local reference for entity resolution
     this.subscriptions.push(
       this.backend.datastore$.subscribe(datastore => {
         if (datastore) {
-          this.searchIndex.buildIndex(datastore);
-          // Re-run search if there's a query
-          if (this.searchQuery) {
-            this.performSearch();
-          }
+          this.currentDatastore = datastore;
         }
       })
     );
@@ -62,8 +77,8 @@ export class SearchComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
-    if (this.debounceTimer) {
-      clearTimeout(this.debounceTimer);
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
     }
   }
 
@@ -86,11 +101,20 @@ export class SearchComponent implements OnInit, OnDestroy {
     }
   }
 
-  onSearchChange(query: string): void {
-    clearTimeout(this.debounceTimer);
-    this.debounceTimer = setTimeout(() => {
+  /**
+   * Called on every keystroke. Uses requestAnimationFrame to batch rapid updates.
+   */
+  onSearchChange(_query: string): void {
+    // Cancel any pending search
+    if (this.rafId !== null) {
+      cancelAnimationFrame(this.rafId);
+    }
+    
+    // Schedule search for next animation frame (minimal debounce)
+    this.rafId = requestAnimationFrame(() => {
+      this.rafId = null;
       this.performSearch();
-    }, 100); // 100ms debounce
+    });
   }
 
   performSearch(): void {
@@ -100,8 +124,37 @@ export class SearchComponent implements OnInit, OnDestroy {
       return;
     }
 
-    this.searchResults = this.searchIndex.search(this.searchQuery, 50);
+    // Search and get top 10 results
+    const hits = this.searchEngine.search(this.searchQuery, 10);
+    
+    // Resolve entities for display
+    this.searchResults = hits.map(hit => this.resolveSearchHit(hit));
     this.selectedIndex = this.searchResults.length > 0 ? 0 : -1;
+  }
+
+  /**
+   * Resolves a SearchHit to include the full entity data.
+   */
+  private resolveSearchHit(hit: SearchHit): DisplaySearchResult {
+    const result: DisplaySearchResult = { hit };
+    
+    if (!this.currentDatastore) {
+      return result;
+    }
+
+    switch (hit.kind) {
+      case 'topic':
+        result.topic = this.currentDatastore.topics.find(t => t.id === hit.entityId);
+        break;
+      case 'member':
+        result.member = this.currentDatastore.members.find(m => m.id === hit.entityId);
+        break;
+      case 'tag':
+        result.tag = (this.currentDatastore.tags || []).find(t => t.id === hit.entityId);
+        break;
+    }
+
+    return result;
   }
 
   selectResult(index: number): void {
@@ -109,8 +162,29 @@ export class SearchComponent implements OnInit, OnDestroy {
   }
 
   getMemberName(memberId: string): string {
-    const member = this.searchIndex.getMember(memberId);
+    if (!this.currentDatastore) {
+      return 'Unbekannt';
+    }
+    const member = this.currentDatastore.members.find(m => m.id === memberId);
     return member?.displayName || 'Unbekannt';
+  }
+
+  getKindLabel(kind: SearchableKind): string {
+    switch (kind) {
+      case 'topic': return 'Thema';
+      case 'member': return 'Person';
+      case 'tag': return 'Tag';
+      default: return kind;
+    }
+  }
+
+  getKindSeverity(kind: SearchableKind): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
+    switch (kind) {
+      case 'topic': return 'info';
+      case 'member': return 'success';
+      case 'tag': return 'warn';
+      default: return 'secondary';
+    }
   }
 
   getValidityBadge(topic: Topic): string {
@@ -161,10 +235,19 @@ export class SearchComponent implements OnInit, OnDestroy {
     return 'info';
   }
 
-  copyToClipboard(topic: Topic): void {
-    const text = this.formatTopicForClipboard(topic);
+  copyToClipboard(result: DisplaySearchResult): void {
+    let text = '';
+    
+    if (result.topic) {
+      text = this.formatTopicForClipboard(result.topic);
+    } else if (result.member) {
+      text = this.formatMemberForClipboard(result.member);
+    } else if (result.tag) {
+      text = this.formatTagForClipboard(result.tag);
+    }
+    
     navigator.clipboard.writeText(text).then(() => {
-      alert('In Zwischenablage kopiert');
+      // Could add a toast notification here
     });
   }
 
@@ -186,6 +269,25 @@ export class SearchComponent implements OnInit, OnDestroy {
       text += `  R3: ${this.getMemberName(topic.raci.r3MemberId)}\n`;
     }
 
+    return text;
+  }
+
+  private formatMemberForClipboard(member: TeamMember): string {
+    let text = `Name: ${member.displayName}\n`;
+    if (member.email) {
+      text += `Email: ${member.email}\n`;
+    }
+    return text;
+  }
+
+  private formatTagForClipboard(tag: TagModel): string {
+    let text = `Tag: ${tag.name}\n`;
+    if (tag.copyPasteText) {
+      text += `\n${tag.copyPasteText}\n`;
+    }
+    if (tag.hinweise) {
+      text += `\nHinweise: ${tag.hinweise}\n`;
+    }
     return text;
   }
 }

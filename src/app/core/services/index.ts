@@ -7,3 +7,6 @@ export * from './search-index.service';
 export * from './backend.service';
 export * from './file-system-backend.service';
 export * from './rest-backend.service';
+export * from './checksum';
+export * from './search-engine.service';
+export * from './index-monitor.service';
