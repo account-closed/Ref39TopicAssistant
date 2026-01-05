@@ -51,6 +51,14 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
     const topics = this.topics();
     const activeMembers = this.activeMembers();
     const filter = this.globalFilter().toLowerCase();
+    const allMemberIds = new Set(this.members().map(m => m.id));
+
+    // Map of responsible role keys to display labels
+    const responsibleRoles: { key: keyof Topic['raci']; label: string }[] = [
+      { key: 'r1MemberId', label: 'R1' },
+      { key: 'r2MemberId', label: 'R2' },
+      { key: 'r3MemberId', label: 'R3' }
+    ];
 
     return topics
       .filter(topic => {
@@ -68,19 +76,13 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
         activeMembers.forEach(member => {
           const roles: string[] = [];
 
-          // Check R1, R2, R3
-          if (topic.raci.r1MemberId === member.id) {
-            roles.push('R1');
-            hasAnyAssignment = true;
-          }
-          if (topic.raci.r2MemberId === member.id) {
-            roles.push('R2');
-            hasAnyAssignment = true;
-          }
-          if (topic.raci.r3MemberId === member.id) {
-            roles.push('R3');
-            hasAnyAssignment = true;
-          }
+          // Check R1, R2, R3 using mapping
+          responsibleRoles.forEach(({ key, label }) => {
+            if (topic.raci[key] === member.id) {
+              roles.push(label);
+              hasAnyAssignment = true;
+            }
+          });
 
           // Check Consulted
           if (topic.raci.cMemberIds.includes(member.id)) {
@@ -97,23 +99,20 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
           cells.set(member.id, { roles });
         });
 
-        // Also check for assignments to inactive members
-        const allMemberIds = this.members().map(m => m.id);
-        const activeMemberIds = new Set(activeMembers.map(m => m.id));
+        // Check for assignments to inactive members (for orphan detection)
+        const responsibleMemberIds = [
+          topic.raci.r1MemberId,
+          topic.raci.r2MemberId,
+          topic.raci.r3MemberId
+        ].filter(Boolean);
 
-        if (topic.raci.r1MemberId && allMemberIds.includes(topic.raci.r1MemberId)) {
-          hasAnyAssignment = true;
-        }
-        if (topic.raci.r2MemberId && allMemberIds.includes(topic.raci.r2MemberId)) {
-          hasAnyAssignment = true;
-        }
-        if (topic.raci.r3MemberId && allMemberIds.includes(topic.raci.r3MemberId)) {
-          hasAnyAssignment = true;
-        }
-        if (topic.raci.cMemberIds.length > 0) {
-          hasAnyAssignment = true;
-        }
-        if (topic.raci.iMemberIds.length > 0) {
+        responsibleMemberIds.forEach(memberId => {
+          if (allMemberIds.has(memberId!)) {
+            hasAnyAssignment = true;
+          }
+        });
+
+        if (topic.raci.cMemberIds.length > 0 || topic.raci.iMemberIds.length > 0) {
           hasAnyAssignment = true;
         }
 
