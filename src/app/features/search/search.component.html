@@ -45,11 +45,6 @@
         <span class="shortcut-item"><kbd>↓</kbd><kbd>↑</kbd> Navigieren</span>
         <span class="shortcut-item"><kbd>Enter</kbd> Öffnen</span>
       </div>
-      <div class="shortcuts-group">
-        <span class="shortcuts-title">Schnellauswahl:</span>
-        <span class="shortcut-item"><kbd>Alt</kbd>+<kbd>Q/W/E/R/T</kbd> Ergebnis 1-5</span>
-        <span class="shortcut-item"><kbd>F1</kbd>-<kbd>F5</kbd> Ergebnis 1-5</span>
-      </div>
     </div>
 
     <!-- Index Status Indicator -->
@@ -100,7 +95,6 @@
             <ng-template pTemplate="header">
               <div class="result-header">
                 <div class="result-header-left">
-                  <span class="shortcut-badge" *ngIf="i < 5">{{ getShortcutHint(i) }}</span>
                   <h3 class="topic-title">{{ result.topic.header }}</h3>
                 </div>
                 <p-tag [value]="getValidityBadge(result.topic)" 
@@ -168,8 +162,6 @@
       <p class="keyboard-hints">
         <span class="hint"><strong>↓/↑:</strong> Navigieren</span>
         <span class="hint"><strong>Enter:</strong> Öffnen</span>
-        <span class="hint"><strong>Alt+Q/W/E/R/T:</strong> Schnellauswahl 1-5</span>
-        <span class="hint"><strong>F1-F5:</strong> Schnellauswahl 1-5</span>
       </p>
     </div>
   </div>

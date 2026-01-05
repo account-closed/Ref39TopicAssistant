@@ -138,8 +138,6 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
    * Search shortcuts:
    * - ↓/↑: Navigate results (handled via keydown on input)
    * - Enter: Open selected result (handled via keydown on input)
-   * - Alt+Q/W/E/R/T: Open result 1-5 directly
-   * - F1-F5: Open result 1-5 directly
    * 
    * Dialog shortcuts:
    * - Ctrl+Shift+C: Copy mail block
@@ -148,23 +146,6 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
    * - Esc: Close dialog
    */
   private registerHotkeys(): void {
-    // Alt+Q/W/E/R/T for selecting results 1-5 directly
-    const altKeys = ['q', 'w', 'e', 'r', 't'];
-    altKeys.forEach((key, index) => {
-      this.subscriptions.push(
-        this.hotkeys.addShortcut({ keys: `alt.${key}`, preventDefault: true })
-          .subscribe(() => this.selectAndOpenResult(index))
-      );
-    });
-
-    // F1-F5 for selecting results 1-5 directly
-    for (let i = 1; i <= 5; i++) {
-      this.subscriptions.push(
-        this.hotkeys.addShortcut({ keys: `f${i}`, preventDefault: true })
-          .subscribe(() => this.selectAndOpenResult(i - 1))
-      );
-    }
-
     // Escape to close dialog and refocus search
     this.subscriptions.push(
       this.hotkeys.addShortcut({ keys: 'escape', preventDefault: false })
@@ -621,16 +602,5 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
     text += `\nGÜLTIGKEIT: ${this.getValidityBadge(topic)}\n`;
 
     return text;
-  }
-
-  /**
-   * Get shortcut hint for result index (1-5)
-   */
-  getShortcutHint(index: number): string {
-    if (index < 5) {
-      const keys = ['Q', 'W', 'E', 'R', 'T'];
-      return `Alt+${keys[index]} / F${index + 1}`;
-    }
-    return '';
   }
 }
