@@ -48,8 +48,8 @@ export class SearchComponent implements OnInit, OnDestroy {
     effect(() => {
       const version = this.searchEngine.indexVersion();
       console.debug('[SearchComponent] Index version changed:', version);
-      // Re-run search when index is rebuilt and we have a query
-      if (version > 0 && this.searchQuery) {
+      // Only re-run search when index is rebuilt and we have a query
+      if (version > 0 && this.searchQuery && this.searchQuery.trim() !== '') {
         // Schedule outside Angular to avoid NG0100, then run inside
         queueMicrotask(() => {
           this.ngZone.run(() => {
