@@ -1,4 +1,6 @@
-import { Datastore, Topic } from '../models';
+import { Datastore, Topic, TShirtSize } from '../models';
+
+const VALID_SIZES: TShirtSize[] = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
 /**
  * Result of plausibility checks showing what was cleaned up.
@@ -10,6 +12,8 @@ export interface PlausibilityResult {
   removedTagReferences: number;
   /** Number of invalid member references removed from topics */
   removedMemberReferences: number;
+  /** Number of topic field corrections made */
+  correctedTopicFields: number;
   /** Detailed log of changes for debugging */
   changeLog: string[];
 }
@@ -144,6 +148,78 @@ export function removeInvalidMemberReferences(datastore: Datastore): {
 }
 
 /**
+ * Validate and correct topic classification and reference fields.
+ * - Priority must be between 1 and 10 (or undefined)
+ * - Size must be a valid T-shirt size (or undefined)
+ * - If hasFileNumber is false, fileNumber should be cleared
+ * - If hasSharedFilePath is false, sharedFilePath should be cleared
+ * @param datastore The datastore to check
+ * @returns Updated datastore with corrected topic fields
+ */
+export function validateTopicFields(datastore: Datastore): {
+  datastore: Datastore;
+  correctedCount: number;
+  changeLog: string[];
+} {
+  let correctedCount = 0;
+  const changeLog: string[] = [];
+
+  const updatedTopics = datastore.topics.map((topic) => {
+    const changes: string[] = [];
+    let updatedTopic = { ...topic };
+    let hasChanges = false;
+
+    // Validate priority (must be 1-10 or undefined)
+    if (updatedTopic.priority !== undefined) {
+      if (typeof updatedTopic.priority !== 'number' || updatedTopic.priority < 1 || updatedTopic.priority > 10) {
+        changes.push(`invalid priority "${updatedTopic.priority}" removed`);
+        updatedTopic = { ...updatedTopic, priority: undefined };
+        hasChanges = true;
+        correctedCount++;
+      }
+    }
+
+    // Validate size (must be valid T-shirt size or undefined)
+    if (updatedTopic.size !== undefined) {
+      if (!VALID_SIZES.includes(updatedTopic.size)) {
+        changes.push(`invalid size "${updatedTopic.size}" removed`);
+        updatedTopic = { ...updatedTopic, size: undefined };
+        hasChanges = true;
+        correctedCount++;
+      }
+    }
+
+    // Clear fileNumber if hasFileNumber is false
+    if (!updatedTopic.hasFileNumber && updatedTopic.fileNumber) {
+      changes.push(`fileNumber cleared because hasFileNumber is false`);
+      updatedTopic = { ...updatedTopic, fileNumber: '' };
+      hasChanges = true;
+      correctedCount++;
+    }
+
+    // Clear sharedFilePath if hasSharedFilePath is false
+    if (!updatedTopic.hasSharedFilePath && updatedTopic.sharedFilePath) {
+      changes.push(`sharedFilePath cleared because hasSharedFilePath is false`);
+      updatedTopic = { ...updatedTopic, sharedFilePath: '' };
+      hasChanges = true;
+      correctedCount++;
+    }
+
+    if (changes.length > 0) {
+      changeLog.push(`Topic "${topic.header}" (${topic.id}): ${changes.join('; ')}`);
+    }
+
+    return hasChanges ? updatedTopic : topic;
+  });
+
+  return {
+    datastore: { ...datastore, topics: updatedTopics },
+    correctedCount,
+    changeLog,
+  };
+}
+
+/**
  * Run all plausibility checks on the datastore and return a cleaned version.
  * This function should be called before each save to ensure data consistency.
  * @param datastore The datastore to check
@@ -157,6 +233,7 @@ export function runPlausibilityChecks(datastore: Datastore): {
   const allChangeLogs: string[] = [];
   let totalRemovedTags = 0;
   let totalRemovedMembers = 0;
+  let totalCorrectedFields = 0;
 
   // 1. Remove invalid tag references
   const tagResult = removeInvalidTagReferences(currentDatastore);
@@ -170,12 +247,19 @@ export function runPlausibilityChecks(datastore: Datastore): {
   totalRemovedMembers = memberResult.removedCount;
   allChangeLogs.push(...memberResult.changeLog);
 
-  const hasChanges = totalRemovedTags > 0 || totalRemovedMembers > 0;
+  // 3. Validate and correct topic fields (priority, size, references)
+  const fieldResult = validateTopicFields(currentDatastore);
+  currentDatastore = fieldResult.datastore;
+  totalCorrectedFields = fieldResult.correctedCount;
+  allChangeLogs.push(...fieldResult.changeLog);
+
+  const hasChanges = totalRemovedTags > 0 || totalRemovedMembers > 0 || totalCorrectedFields > 0;
 
   if (hasChanges) {
     console.log('[Plausibility] Cleaned up datastore:', {
       removedTagReferences: totalRemovedTags,
       removedMemberReferences: totalRemovedMembers,
+      correctedTopicFields: totalCorrectedFields,
       changeLog: allChangeLogs,
     });
   }
@@ -186,6 +270,7 @@ export function runPlausibilityChecks(datastore: Datastore): {
       hasChanges,
       removedTagReferences: totalRemovedTags,
       removedMemberReferences: totalRemovedMembers,
+      correctedTopicFields: totalCorrectedFields,
       changeLog: allChangeLogs,
     },
   };

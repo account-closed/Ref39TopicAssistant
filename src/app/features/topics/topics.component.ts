@@ -17,10 +17,12 @@ import { Toast } from 'primeng/toast';
 import { Toolbar } from 'primeng/toolbar';
 import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
+import { Rating } from 'primeng/rating';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
-import { Topic, TeamMember, Datastore, Tag as TagModel } from '../../core/models';
+import { Topic, TeamMember, Datastore, Tag as TagModel, TShirtSize } from '../../core/models';
+import { getPriorityStars, getSizeSeverity } from '../../shared/utils/topic-display.utils';
 
 interface MemberOption {
   id: string;
@@ -48,7 +50,8 @@ interface MemberOption {
     Toast,
     Toolbar,
     IconField,
-    InputIcon
+    InputIcon,
+    Rating
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './topics.component.html',
@@ -87,6 +90,29 @@ export class TopicsComponent implements OnInit, OnDestroy {
     { label: 'Immer gültig', value: 'always' },
     { label: 'Ab Datum', value: 'future' },
     { label: 'Abgelaufen', value: 'expired' }
+  ];
+
+  sizeOptions: { label: string; value: TShirtSize }[] = [
+    { label: 'XXS', value: 'XXS' },
+    { label: 'XS', value: 'XS' },
+    { label: 'S', value: 'S' },
+    { label: 'M', value: 'M' },
+    { label: 'L', value: 'L' },
+    { label: 'XL', value: 'XL' },
+    { label: 'XXL', value: 'XXL' }
+  ];
+
+  priorityOptions = [
+    { label: '1', value: 1 },
+    { label: '2', value: 2 },
+    { label: '3', value: 3 },
+    { label: '4', value: 4 },
+    { label: '5', value: 5 },
+    { label: '6', value: 6 },
+    { label: '7', value: 7 },
+    { label: '8', value: 8 },
+    { label: '9', value: 9 },
+    { label: '10', value: 10 }
   ];
 
   managedTags: TagModel[] = [];
@@ -189,7 +215,13 @@ export class TopicsComponent implements OnInit, OnDestroy {
         cMemberIds: [],
         iMemberIds: []
       },
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      priority: undefined,
+      hasFileNumber: false,
+      fileNumber: '',
+      hasSharedFilePath: false,
+      sharedFilePath: '',
+      size: undefined
     };
   }
 
@@ -387,6 +419,18 @@ export class TopicsComponent implements OnInit, OnDestroy {
     }
   }
 
+  onHasFileNumberChange(): void {
+    if (!this.topic.hasFileNumber) {
+      this.topic.fileNumber = '';
+    }
+  }
+
+  onHasSharedFilePathChange(): void {
+    if (!this.topic.hasSharedFilePath) {
+      this.topic.sharedFilePath = '';
+    }
+  }
+
   getMemberName(memberId: string): string {
     const member = this.members.find(m => m.id === memberId);
     return member?.displayName || 'Unbekannt';
@@ -456,5 +500,13 @@ export class TopicsComponent implements OnInit, OnDestroy {
 
   private toDateString(date: Date | null): string | undefined {
     return date ? date.toISOString().split('T')[0] : undefined;
+  }
+
+  getPriorityStars(priority: number | undefined): string {
+    return getPriorityStars(priority);
+  }
+
+  getSizeSeverity(size: TShirtSize | undefined): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
+    return getSizeSeverity(size);
   }
 }

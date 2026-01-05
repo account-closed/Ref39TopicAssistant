@@ -96,6 +96,10 @@
               <div class="result-header">
                 <div class="result-header-left">
                   <h3 class="topic-title">{{ result.topic.header }}</h3>
+                  <div class="result-badges">
+                    <p-rating *ngIf="result.topic.priority" [(ngModel)]="result.topic.priority" [stars]="10" [readonly]="true" styleClass="compact-rating"></p-rating>
+                    <p-tag *ngIf="result.topic.size" [value]="result.topic.size" [severity]="getSizeSeverity(result.topic.size)" styleClass="size-tag"></p-tag>
+                  </div>
                 </div>
                 <p-tag [value]="getValidityBadge(result.topic)" 
                        [severity]="getValiditySeverity(result.topic)">
@@ -144,6 +148,15 @@
                        [value]="tag" 
                        severity="info">
                 </p-tag>
+              </div>
+
+              <div class="topic-references" *ngIf="(result.topic.hasFileNumber && result.topic.fileNumber) || (result.topic.hasSharedFilePath && result.topic.sharedFilePath)">
+                <span class="reference-item" *ngIf="result.topic.hasFileNumber && result.topic.fileNumber">
+                  <i class="pi pi-file"></i> {{ result.topic.fileNumber }}
+                </span>
+                <span class="reference-item" *ngIf="result.topic.hasSharedFilePath && result.topic.sharedFilePath">
+                  <i class="pi pi-folder"></i> {{ result.topic.sharedFilePath }}
+                </span>
               </div>
             </div>
           </p-card>
@@ -380,6 +393,51 @@
           </p-button>
         </div>
         <p class="section-content notes-content">{{ selectedTopic.notes }}</p>
+      </div>
+
+      <!-- Classification Section -->
+      <div class="detail-section" *ngIf="selectedTopic.priority || selectedTopic.size">
+        <p-divider></p-divider>
+        <h4>Klassifizierung</h4>
+        <div class="classification-info">
+          <div class="classification-item" *ngIf="selectedTopic.priority">
+            <span class="classification-label">Priorität:</span>
+            <p-rating [(ngModel)]="selectedTopic.priority" [stars]="10" [readonly]="true"></p-rating>
+            <span class="priority-value">({{ selectedTopic.priority }}/10)</span>
+          </div>
+          <div class="classification-item" *ngIf="selectedTopic.size">
+            <span class="classification-label">Größe:</span>
+            <p-tag [value]="selectedTopic.size" [severity]="getSizeSeverity(selectedTopic.size)"></p-tag>
+          </div>
+        </div>
+      </div>
+
+      <!-- References Section -->
+      <div class="detail-section" *ngIf="(selectedTopic.hasFileNumber && selectedTopic.fileNumber) || (selectedTopic.hasSharedFilePath && selectedTopic.sharedFilePath)">
+        <p-divider></p-divider>
+        <h4>Referenzen</h4>
+        <div class="references-info">
+          <div class="reference-row" *ngIf="selectedTopic.hasFileNumber && selectedTopic.fileNumber">
+            <span class="reference-label"><i class="pi pi-file"></i> Aktenzeichen:</span>
+            <span class="reference-value">{{ selectedTopic.fileNumber }}</span>
+            <p-button 
+              icon="pi pi-copy" 
+              [text]="true" 
+              size="small"
+              (onClick)="copyField('Aktenzeichen', selectedTopic.fileNumber || '')">
+            </p-button>
+          </div>
+          <div class="reference-row" *ngIf="selectedTopic.hasSharedFilePath && selectedTopic.sharedFilePath">
+            <span class="reference-label"><i class="pi pi-folder"></i> Ablageort:</span>
+            <span class="reference-value">{{ selectedTopic.sharedFilePath }}</span>
+            <p-button 
+              icon="pi pi-copy" 
+              [text]="true" 
+              size="small"
+              (onClick)="copyField('Ablageort', selectedTopic.sharedFilePath || '')">
+            </p-button>
+          </div>
+        </div>
       </div>
 
       <!-- Validity -->

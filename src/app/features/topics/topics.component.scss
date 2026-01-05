@@ -99,6 +99,46 @@
   font-size: 0.875rem;
 }
 
+.classification-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.topic-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--p-text-muted-color);
+  background: var(--p-surface-100);
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--p-border-radius);
+}
+
+.meta-item i {
+  font-size: 0.75rem;
+}
+
+.priority-stars {
+  font-size: 0.75rem;
+  color: var(--p-yellow-500);
+  letter-spacing: -0.05em;
+}
+
+/* Compact Rating for table display */
+:host ::ng-deep .p-datatable .p-rating-icon {
+  font-size: 0.75rem;
+  width: 0.9rem;
+}
+
 .tag-suggestion-item {
   display: flex;
   flex-direction: column;
