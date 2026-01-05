@@ -158,10 +158,11 @@
             [(ngModel)]="tag.name" 
             required 
             autofocus
-            [class.ng-invalid]="submitted && !tag.name"
-            [class.ng-dirty]="submitted && !tag.name" />
+            [class.ng-invalid]="submitted && (!tag.name || !isValidTagName())"
+            [class.ng-dirty]="submitted && (!tag.name || !isValidTagName())" />
           <small class="p-error" *ngIf="submitted && !tag.name">Tag Name ist erforderlich.</small>
-          <small class="p-error" *ngIf="submitted && tag.name && isDuplicateName()">Ein Tag mit diesem Namen existiert bereits.</small>
+          <small class="p-error" *ngIf="submitted && tag.name && !isValidTagName()">Tag Name darf keine Leerzeichen oder Sonderzeichen enthalten (erlaubt: _ - .)</small>
+          <small class="p-error" *ngIf="submitted && tag.name && isValidTagName() && isDuplicateName()">Ein Tag mit diesem Namen existiert bereits.</small>
         </div>
 
         <!-- Search Keywords -->
@@ -173,9 +174,13 @@
             [multiple]="true"
             [suggestions]="keywordSuggestions"
             (completeMethod)="searchKeywords($event)"
+            (onAdd)="onKeywordAdd($event)"
+            [addOnBlur]="true"
+            [addOnTab]="true"
+            [unique]="true"
             placeholder="Suchbegriffe hinzufügen...">
           </p-autoComplete>
-          <small class="hint">Zusätzliche Begriffe für die Suche nach diesem Tag</small>
+          <small class="hint">Keine Leerzeichen oder Sonderzeichen (erlaubt: _ - .)</small>
         </div>
 
         <!-- Hinweise -->

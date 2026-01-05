@@ -18,6 +18,7 @@ import { MessageService, ConfirmationService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
 import { Tag, TeamMember, Datastore } from '../../core/models';
+import { isValidKeyword, sanitizeKeyword } from '../../shared/utils/validation.utils';
 
 @Component({
   selector: 'app-tags',
@@ -126,12 +127,59 @@ export class TagsComponent implements OnInit, OnDestroy {
 
   searchKeywords(event: { query: string }): void {
     const query = event.query.toLowerCase();
+    // Sanitize the query for suggestions
+    const sanitized = sanitizeKeyword(query);
+    
     this.keywordSuggestions = this.allKeywords.filter(kw => 
       kw.toLowerCase().includes(query)
     );
-    if (query && !this.keywordSuggestions.includes(query)) {
-      this.keywordSuggestions.unshift(query);
+    // Only suggest the sanitized version if it's valid and not already in suggestions
+    if (sanitized && isValidKeyword(sanitized) && !this.keywordSuggestions.includes(sanitized)) {
+      this.keywordSuggestions.unshift(sanitized);
     }
+  }
+
+  /**
+   * Validates and sanitizes a keyword when it's added.
+   * Called from the onAdd event of the autocomplete.
+   */
+  onKeywordAdd(event: { value: string }): void {
+    if (!event.value) return;
+    
+    const sanitized = sanitizeKeyword(event.value);
+    
+    if (!isValidKeyword(sanitized)) {
+      // Remove the invalid keyword
+      const index = this.tag.searchKeywords?.indexOf(event.value);
+      if (index !== undefined && index > -1) {
+        this.tag.searchKeywords?.splice(index, 1);
+      }
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Ungültiger Suchbegriff',
+        detail: 'Suchbegriffe dürfen keine Leerzeichen oder Sonderzeichen enthalten (erlaubt: _ - .)',
+        life: 4000
+      });
+      return;
+    }
+    
+    // Replace with sanitized version if different
+    if (sanitized !== event.value) {
+      const index = this.tag.searchKeywords?.indexOf(event.value);
+      if (index !== undefined && index > -1 && this.tag.searchKeywords) {
+        this.tag.searchKeywords[index] = sanitized;
+      }
+    }
+  }
+
+  /**
+   * Checks if the tag name is valid (no spaces or special characters except _, -, .)
+   */
+  isValidTagName(): boolean {
+    if (!this.tag.name?.trim()) {
+      return false;
+    }
+    return isValidKeyword(this.tag.name.trim());
   }
 
   createEmptyTag(): Tag {
@@ -184,6 +232,10 @@ export class TagsComponent implements OnInit, OnDestroy {
     this.submitted = true;
 
     if (!this.tag.name?.trim()) {
+      return;
+    }
+
+    if (!this.isValidTagName()) {
       return;
     }
 

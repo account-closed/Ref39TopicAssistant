@@ -135,7 +135,10 @@
             </span>
           </div>
         </td>
-        <td>{{ getMemberName(topic.raci.r1MemberId) }}</td>
+        <td>
+          <span *ngIf="topic.raci.r1MemberId">{{ getMemberName(topic.raci.r1MemberId) }}</span>
+          <p-tag *ngIf="!topic.raci.r1MemberId" value="Verwaist" severity="warn"></p-tag>
+        </td>
         <td>
           <p-tag *ngFor="let tag of topic.tags" [value]="tag" severity="info" styleClass="mr-1 mb-1"></p-tag>
         </td>
@@ -237,8 +240,13 @@
             [multiple]="true"
             [suggestions]="keywordSuggestions"
             (completeMethod)="searchKeywords($event)"
+            (onAdd)="onKeywordAdd($event)"
+            [addOnBlur]="true"
+            [addOnTab]="true"
+            [unique]="true"
             placeholder="Suchbegriffe hinzufügen...">
           </p-autoComplete>
+          <small class="hint">Keine Leerzeichen oder Sonderzeichen (erlaubt: _ - .)</small>
         </div>
 
         <!-- Notes -->
@@ -372,7 +380,7 @@
           <h4>Verantwortliche</h4>
 
           <div class="field">
-            <label for="r1">R1 (Hauptverantwortlich) *</label>
+            <label for="r1">R1 (Hauptverantwortlich)</label>
             <p-select 
               id="r1"
               [options]="activeMembers" 
@@ -382,11 +390,9 @@
               placeholder="R1 auswählen..."
               [filter]="true"
               filterBy="displayName"
-              [required]="true"
-              [class.ng-invalid]="submitted && !topic.raci.r1MemberId"
-              [class.ng-dirty]="submitted && !topic.raci.r1MemberId">
+              [showClear]="true">
             </p-select>
-            <small class="p-error" *ngIf="submitted && !topic.raci.r1MemberId">R1 ist erforderlich.</small>
+            <small class="hint" *ngIf="!topic.raci.r1MemberId">Ohne R1 wird das Thema als verwaist markiert</small>
           </div>
 
           <div class="field">
