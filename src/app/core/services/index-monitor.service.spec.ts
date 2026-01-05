@@ -64,12 +64,17 @@ describe('IndexMonitorService', () => {
       datastore$: datastoreSubject.asObservable()
     };
 
+    let indexSize = 0;
     mockSearchEngine = {
-      buildIndex: vi.fn().mockResolvedValue(undefined),
+      buildIndex: vi.fn().mockImplementation(async (ds: Datastore) => {
+        // Simulate building index - set size based on topics
+        indexSize = ds.topics?.length || 0;
+      }),
       getIndexMeta: vi.fn(() => storedMeta),
       setIndexMeta: vi.fn((checksum: string) => {
         storedMeta = { checksum, builtAt: new Date().toISOString(), flexVersion: '0.8.212' };
-      })
+      }),
+      getIndexSize: vi.fn(() => indexSize)
     };
 
     service = new IndexMonitorService(
@@ -123,7 +128,7 @@ describe('IndexMonitorService', () => {
       expect(mockSearchEngine.setIndexMeta).toHaveBeenCalled();
     });
 
-    it('should not rebuild if checksum matches', async () => {
+    it('should not rebuild if checksum matches and index has data', async () => {
       const ds = createDatastore();
       
       // Set current datastore directly
@@ -133,13 +138,37 @@ describe('IndexMonitorService', () => {
       await service.checkAndRebuildIfNeeded();
       expect(mockSearchEngine.buildIndex).toHaveBeenCalledTimes(1);
       
-      // Reset mocks
+      // Reset mocks but index still has data (getIndexSize still returns 0 in our mock after build)
+      // To properly test "no rebuild if checksum matches", we need to make sure getIndexSize > 0
+      // Update the mock to return a non-zero size
+      vi.mocked(mockSearchEngine.getIndexSize!).mockReturnValue(1);
       vi.clearAllMocks();
       
       // Trigger another check with same datastore
       await service.checkAndRebuildIfNeeded();
       
+      // Should not rebuild since checksum matches AND index is not empty
       expect(mockSearchEngine.buildIndex).not.toHaveBeenCalled();
+    });
+
+    it('should rebuild if checksum matches but index is empty (page reload scenario)', async () => {
+      const ds = createDatastore();
+      
+      // Set current datastore directly
+      (service as any).currentDatastore = ds;
+      
+      // First build
+      await service.checkAndRebuildIfNeeded();
+      expect(mockSearchEngine.buildIndex).toHaveBeenCalledTimes(1);
+      
+      // Reset mocks to simulate page reload - index is empty but checksum stored
+      vi.mocked(mockSearchEngine.getIndexSize!).mockReturnValue(0);
+      vi.clearAllMocks();
+      
+      // Trigger another check - should rebuild because index is empty
+      await service.checkAndRebuildIfNeeded();
+      
+      expect(mockSearchEngine.buildIndex).toHaveBeenCalledTimes(1);
     });
 
     it('should rebuild if datastore content changes', async () => {
@@ -155,7 +184,7 @@ describe('IndexMonitorService', () => {
       expect(mockSearchEngine.buildIndex).toHaveBeenCalledTimes(2);
     });
 
-    it('should not rebuild if only excluded fields change', async () => {
+    it('should not rebuild if only excluded fields change and index has data', async () => {
       // First build
       (service as any).currentDatastore = createDatastore({ 
         generatedAt: '2024-01-01T00:00:00Z',
@@ -164,6 +193,8 @@ describe('IndexMonitorService', () => {
       await service.checkAndRebuildIfNeeded();
       expect(mockSearchEngine.buildIndex).toHaveBeenCalledTimes(1);
       
+      // Mark index as having data
+      vi.mocked(mockSearchEngine.getIndexSize!).mockReturnValue(1);
       vi.clearAllMocks();
       
       // Change only excluded fields
@@ -173,7 +204,7 @@ describe('IndexMonitorService', () => {
       });
       await service.checkAndRebuildIfNeeded();
       
-      // Should not rebuild since content checksum is the same
+      // Should not rebuild since content checksum is the same AND index has data
       expect(mockSearchEngine.buildIndex).not.toHaveBeenCalled();
     });
 

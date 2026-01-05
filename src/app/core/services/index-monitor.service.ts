@@ -150,9 +150,13 @@ export class IndexMonitorService implements OnDestroy {
       // Compare with stored checksum
       const storedMeta = this.searchEngine.getIndexMeta();
       const storedChecksum = storedMeta?.checksum;
+      
+      // Check if in-memory index is empty (page reload clears it)
+      const indexIsEmpty = this.searchEngine.getIndexSize() === 0;
 
-      if (currentChecksum !== storedChecksum) {
-        // Rebuild index
+      if (currentChecksum !== storedChecksum || indexIsEmpty) {
+        // Rebuild index if checksum changed OR if the in-memory index is empty
+        // (In-memory index is cleared on page reload even if localStorage checksum matches)
         await this.rebuildIndex(currentChecksum);
       } else {
         // Index is up to date, mark as ready
@@ -199,6 +203,8 @@ export class IndexMonitorService implements OnDestroy {
       return;
     }
 
+    console.debug('[IndexMonitor] Building index from datastore with', this.currentDatastore.topics?.length || 0, 'topics');
+
     // Use requestIdleCallback if available to avoid UI freezing
     // For now, we do a direct async rebuild since it's fast enough
     await this.searchEngine.buildIndex(this.currentDatastore);
@@ -210,7 +216,8 @@ export class IndexMonitorService implements OnDestroy {
     this.checksumSignal.set(checksum);
     this.isReadySignal.set(true);
 
-    console.debug('[IndexMonitor] Index rebuilt. Checksum:', checksum.substring(0, 16) + '...');
+    const indexSize = this.searchEngine.getIndexSize();
+    console.debug('[IndexMonitor] Index rebuilt. Checksum:', checksum.substring(0, 16) + '..., Documents:', indexSize);
   }
 
   /**
