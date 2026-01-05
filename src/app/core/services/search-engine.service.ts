@@ -1,8 +1,8 @@
 /**
- * FlexSearch-based search engine for Topics, Tags, and TeamMembers.
+ * FlexSearch-based search engine for Topics.
  * 
  * Features:
- * - Document index covering all searchable entities
+ * - Document index covering topics with tag content included
  * - Fuzzy matching with forward tokenization
  * - Field boosting (title weighted higher than text)
  * - Returns top N results sorted by relevance
@@ -10,12 +10,12 @@
 
 import { Injectable, signal, computed } from '@angular/core';
 import { Document } from 'flexsearch';
-import { Datastore, Topic, Tag, TeamMember } from '../models';
+import { Datastore, Topic } from '../models';
 
 /**
  * Entity kinds that can be searched.
  */
-export type SearchableKind = 'topic' | 'tag' | 'member';
+export type SearchableKind = 'topic';
 
 /**
  * Internal document structure for FlexSearch indexing.
@@ -271,23 +271,15 @@ export class SearchEngineService {
 
   /**
    * Creates SearchDocument entries from datastore entities.
+   * Only indexes Topics since that's what we want to show in search results.
+   * Tag content is included in topic documents to make them searchable via tags.
    */
   private createDocuments(datastore: Datastore): SearchDocument[] {
     const documents: SearchDocument[] = [];
 
-    // Index Topics
+    // Only index Topics (tag content is included in topic documents)
     for (const topic of datastore.topics) {
-      documents.push(this.createTopicDocument(topic));
-    }
-
-    // Index Tags
-    for (const tag of datastore.tags || []) {
-      documents.push(this.createTagDocument(tag));
-    }
-
-    // Index TeamMembers
-    for (const member of datastore.members) {
-      documents.push(this.createMemberDocument(member));
+      documents.push(this.createTopicDocument(topic, datastore));
     }
 
     return documents;
@@ -295,8 +287,9 @@ export class SearchEngineService {
 
   /**
    * Creates a SearchDocument from a Topic.
+   * Includes tag content (name, hinweise, keywords, copyPasteText) in the searchable text.
    */
-  private createTopicDocument(topic: Topic): SearchDocument {
+  private createTopicDocument(topic: Topic, datastore: Datastore): SearchDocument {
     const title = topic.header;
     
     // Concatenate all searchable fields
@@ -305,10 +298,23 @@ export class SearchEngineService {
       ...Array(TITLE_BOOST_REPETITIONS).fill(title),
       topic.description || '',
       topic.notes || '',
-      ...(topic.searchKeywords || []),
-      // Resolve tag names from IDs/names
-      ...(topic.tags || []).map(t => this.resolveTagName(t))
+      ...(topic.searchKeywords || [])
     ];
+    
+    // Include tag content in searchable text (name, hinweise, keywords, copyPasteText)
+    for (const tagRef of topic.tags || []) {
+      // Try to find the full tag object
+      const tag = (datastore.tags || []).find(t => t.id === tagRef || t.name === tagRef);
+      if (tag) {
+        textParts.push(tag.name);
+        if (tag.hinweise) textParts.push(tag.hinweise);
+        if (tag.copyPasteText) textParts.push(tag.copyPasteText);
+        if (tag.searchKeywords) textParts.push(...tag.searchKeywords);
+      } else {
+        // Fallback to just the tag reference
+        textParts.push(tagRef);
+      }
+    }
 
     return {
       id: createDocumentId('topic', topic.id),
@@ -316,59 +322,5 @@ export class SearchEngineService {
       title,
       text: textParts.filter(Boolean).join(' ')
     };
-  }
-
-  /**
-   * Creates a SearchDocument from a Tag.
-   */
-  private createTagDocument(tag: Tag): SearchDocument {
-    const title = tag.name;
-
-    // Title is repeated TITLE_BOOST_REPETITIONS times to boost its relevance
-    const textParts = [
-      ...Array(TITLE_BOOST_REPETITIONS).fill(title),
-      tag.hinweise || '',
-      tag.copyPasteText || '',
-      ...(tag.searchKeywords || [])
-    ];
-
-    return {
-      id: createDocumentId('tag', tag.id),
-      kind: 'tag',
-      title,
-      text: textParts.filter(Boolean).join(' ')
-    };
-  }
-
-  /**
-   * Creates a SearchDocument from a TeamMember.
-   */
-  private createMemberDocument(member: TeamMember): SearchDocument {
-    const title = member.displayName;
-
-    // Title is repeated TITLE_BOOST_REPETITIONS times to boost its relevance
-    const textParts = [
-      ...Array(TITLE_BOOST_REPETITIONS).fill(title),
-      member.email || '',
-      // Resolve tag names from IDs/names
-      ...(member.tags || []).map(t => this.resolveTagName(t))
-    ];
-
-    return {
-      id: createDocumentId('member', member.id),
-      kind: 'member',
-      title,
-      text: textParts.filter(Boolean).join(' ')
-    };
-  }
-
-  /**
-   * Resolves a tag reference to its name.
-   * If the reference is a UUID, looks it up; otherwise returns as-is.
-   */
-  private resolveTagName(tagRef: string): string {
-    // Check if it's a UUID that we can resolve
-    const resolved = this.tagsById.get(tagRef);
-    return resolved || tagRef;
   }
 }

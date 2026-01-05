@@ -19,14 +19,6 @@ describe('Document ID utilities', () => {
     it('should create topic document ID', () => {
       expect(createDocumentId('topic', 'abc-123')).toBe('topic:abc-123');
     });
-
-    it('should create tag document ID', () => {
-      expect(createDocumentId('tag', 'def-456')).toBe('tag:def-456');
-    });
-
-    it('should create member document ID', () => {
-      expect(createDocumentId('member', 'ghi-789')).toBe('member:ghi-789');
-    });
   });
 
   describe('parseDocumentId', () => {
@@ -34,18 +26,6 @@ describe('Document ID utilities', () => {
       const result = parseDocumentId('topic:abc-123');
       expect(result.kind).toBe('topic');
       expect(result.entityId).toBe('abc-123');
-    });
-
-    it('should parse tag document ID', () => {
-      const result = parseDocumentId('tag:def-456');
-      expect(result.kind).toBe('tag');
-      expect(result.entityId).toBe('def-456');
-    });
-
-    it('should parse member document ID', () => {
-      const result = parseDocumentId('member:ghi-789');
-      expect(result.kind).toBe('member');
-      expect(result.entityId).toBe('ghi-789');
     });
 
     it('should handle IDs with colons', () => {
@@ -122,36 +102,15 @@ describe('SearchEngineService', () => {
       expect(service.getIndexSize()).toBe(2);
     });
 
-    it('should index tags', async () => {
-      const ds = createDatastore({
-        tags: [
-          createTag('tag1', 'Important'),
-          createTag('tag2', 'Urgent')
-        ]
-      });
-      await service.buildIndex(ds);
-      expect(service.getIndexSize()).toBe(2);
-    });
-
-    it('should index members', async () => {
-      const ds = createDatastore({
-        members: [
-          createMember('m1', 'John Doe'),
-          createMember('m2', 'Jane Smith')
-        ]
-      });
-      await service.buildIndex(ds);
-      expect(service.getIndexSize()).toBe(2);
-    });
-
-    it('should index all entity types', async () => {
+    it('should only index topics, not tags or members separately', async () => {
       const ds = createDatastore({
         topics: [createTopic('t1', 'Topic One')],
         tags: [createTag('tag1', 'Tag One')],
         members: [createMember('m1', 'Member One')]
       });
       await service.buildIndex(ds);
-      expect(service.getIndexSize()).toBe(3);
+      // Only topics are indexed (tag content is included in topic documents)
+      expect(service.getIndexSize()).toBe(1);
     });
 
     it('should increment index version on rebuild', async () => {
@@ -219,39 +178,44 @@ describe('SearchEngineService', () => {
       expect(results[0].entityId).toBe('t1');
     });
 
-    it('should find tag by name', async () => {
+    it('should find topic by linked tag name', async () => {
       const ds = createDatastore({
+        topics: [createTopic('t1', 'Generic Topic', { tags: ['tag1'] })],
         tags: [createTag('tag1', 'Personnel')]
       });
       await service.buildIndex(ds);
       
+      // Search by tag name should find the topic
       const results = service.search('Personnel');
       expect(results.length).toBeGreaterThan(0);
-      expect(results[0].kind).toBe('tag');
-      expect(results[0].title).toBe('Personnel');
+      expect(results[0].kind).toBe('topic');
+      expect(results[0].entityId).toBe('t1');
     });
 
-    it('should find member by displayName', async () => {
+    it('should find topic by linked tag hinweise', async () => {
       const ds = createDatastore({
-        members: [createMember('m1', 'Hans Mueller')]
+        topics: [createTopic('t1', 'HR Topic', { tags: ['tag1'] })],
+        tags: [createTag('tag1', 'HR Tag', { hinweise: 'Contains important HR guidelines' })]
       });
       await service.buildIndex(ds);
       
-      const results = service.search('Mueller');
+      // Search by tag hinweise should find the topic
+      const results = service.search('guidelines');
       expect(results.length).toBeGreaterThan(0);
-      expect(results[0].kind).toBe('member');
-      expect(results[0].title).toBe('Hans Mueller');
+      expect(results[0].entityId).toBe('t1');
     });
 
-    it('should find member by email', async () => {
+    it('should find topic by linked tag keywords', async () => {
       const ds = createDatastore({
-        members: [createMember('m1', 'John Doe', { email: 'john.doe@example.com' })]
+        topics: [createTopic('t1', 'Finance Topic', { tags: ['tag1'] })],
+        tags: [createTag('tag1', 'Finance', { searchKeywords: ['budget', 'expenses', 'reports'] })]
       });
       await service.buildIndex(ds);
       
-      const results = service.search('john.doe@example');
+      // Search by tag keyword should find the topic
+      const results = service.search('expenses');
       expect(results.length).toBeGreaterThan(0);
-      expect(results[0].entityId).toBe('m1');
+      expect(results[0].entityId).toBe('t1');
     });
 
     it('should respect limit parameter', async () => {

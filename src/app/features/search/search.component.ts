@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, effect } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InputText } from 'primeng/inputtext';
@@ -8,17 +8,15 @@ import { Button } from 'primeng/button';
 import { Message } from 'primeng/message';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
-import { SearchEngineService, SearchHit, SearchableKind } from '../../core/services/search-engine.service';
-import { Datastore, Topic, TeamMember, Tag as TagModel } from '../../core/models';
+import { SearchEngineService, SearchHit } from '../../core/services/search-engine.service';
+import { Datastore, Topic } from '../../core/models';
 
 /**
- * Extended search result with resolved entity data.
+ * Extended search result with resolved topic data.
  */
 interface DisplaySearchResult {
   hit: SearchHit;
   topic?: Topic;
-  member?: TeamMember;
-  tag?: TagModel;
 }
 
 @Component({
@@ -36,23 +34,15 @@ export class SearchComponent implements OnInit, OnDestroy {
   isConnecting = false;
   hasFileSystemAPI = false;
   connectError = '';
-  private rafId: number | null = null;
   private subscriptions: Subscription[] = [];
   private currentDatastore: Datastore | null = null;
 
   constructor(
     private backend: BackendService,
-    private searchEngine: SearchEngineService
-  ) {
-    // React to index version changes (triggers when index is rebuilt)
-    effect(() => {
-      const _version = this.searchEngine.indexVersion();
-      // Re-run search when index is rebuilt
-      if (this.searchQuery) {
-        this.performSearch();
-      }
-    });
-  }
+    private searchEngine: SearchEngineService,
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
+  ) {}
 
   ngOnInit(): void {
     // Check File System API support
@@ -70,6 +60,18 @@ export class SearchComponent implements OnInit, OnDestroy {
       this.backend.datastore$.subscribe(datastore => {
         if (datastore) {
           this.currentDatastore = datastore;
+          // Re-run search if there's a query (index was rebuilt)
+          if (this.searchQuery) {
+            // Use setTimeout to avoid ExpressionChangedAfterItHasBeenCheckedError
+            this.ngZone.runOutsideAngular(() => {
+              setTimeout(() => {
+                this.ngZone.run(() => {
+                  this.performSearch();
+                  this.cdr.detectChanges();
+                });
+              }, 0);
+            });
+          }
         }
       })
     );
@@ -77,9 +79,6 @@ export class SearchComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
-    if (this.rafId !== null) {
-      cancelAnimationFrame(this.rafId);
-    }
   }
 
   async quickConnect(): Promise<void> {
@@ -102,19 +101,10 @@ export class SearchComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Called on every keystroke. Uses requestAnimationFrame to batch rapid updates.
+   * Called on every keystroke. Performs search immediately.
    */
   onSearchChange(_query: string): void {
-    // Cancel any pending search
-    if (this.rafId !== null) {
-      cancelAnimationFrame(this.rafId);
-    }
-    
-    // Schedule search for next animation frame (minimal debounce)
-    this.rafId = requestAnimationFrame(() => {
-      this.rafId = null;
-      this.performSearch();
-    });
+    this.performSearch();
   }
 
   performSearch(): void {
@@ -127,13 +117,13 @@ export class SearchComponent implements OnInit, OnDestroy {
     // Search and get top 10 results
     const hits = this.searchEngine.search(this.searchQuery, 10);
     
-    // Resolve entities for display
+    // Resolve topics for display
     this.searchResults = hits.map(hit => this.resolveSearchHit(hit));
     this.selectedIndex = this.searchResults.length > 0 ? 0 : -1;
   }
 
   /**
-   * Resolves a SearchHit to include the full entity data.
+   * Resolves a SearchHit to include the full topic data.
    */
   private resolveSearchHit(hit: SearchHit): DisplaySearchResult {
     const result: DisplaySearchResult = { hit };
@@ -142,18 +132,7 @@ export class SearchComponent implements OnInit, OnDestroy {
       return result;
     }
 
-    switch (hit.kind) {
-      case 'topic':
-        result.topic = this.currentDatastore.topics.find(t => t.id === hit.entityId);
-        break;
-      case 'member':
-        result.member = this.currentDatastore.members.find(m => m.id === hit.entityId);
-        break;
-      case 'tag':
-        result.tag = (this.currentDatastore.tags || []).find(t => t.id === hit.entityId);
-        break;
-    }
-
+    result.topic = this.currentDatastore.topics.find(t => t.id === hit.entityId);
     return result;
   }
 
@@ -167,24 +146,6 @@ export class SearchComponent implements OnInit, OnDestroy {
     }
     const member = this.currentDatastore.members.find(m => m.id === memberId);
     return member?.displayName || 'Unbekannt';
-  }
-
-  getKindLabel(kind: SearchableKind): string {
-    switch (kind) {
-      case 'topic': return 'Thema';
-      case 'member': return 'Person';
-      case 'tag': return 'Tag';
-      default: return kind;
-    }
-  }
-
-  getKindSeverity(kind: SearchableKind): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
-    switch (kind) {
-      case 'topic': return 'info';
-      case 'member': return 'success';
-      case 'tag': return 'warn';
-      default: return 'secondary';
-    }
   }
 
   getValidityBadge(topic: Topic): string {
@@ -236,19 +197,12 @@ export class SearchComponent implements OnInit, OnDestroy {
   }
 
   copyToClipboard(result: DisplaySearchResult): void {
-    let text = '';
-    
     if (result.topic) {
-      text = this.formatTopicForClipboard(result.topic);
-    } else if (result.member) {
-      text = this.formatMemberForClipboard(result.member);
-    } else if (result.tag) {
-      text = this.formatTagForClipboard(result.tag);
+      const text = this.formatTopicForClipboard(result.topic);
+      navigator.clipboard.writeText(text).then(() => {
+        // Could add a toast notification here
+      });
     }
-    
-    navigator.clipboard.writeText(text).then(() => {
-      // Could add a toast notification here
-    });
   }
 
   private formatTopicForClipboard(topic: Topic): string {
@@ -269,25 +223,14 @@ export class SearchComponent implements OnInit, OnDestroy {
       text += `  R3: ${this.getMemberName(topic.raci.r3MemberId)}\n`;
     }
 
-    return text;
-  }
+    if (topic.raci.cMemberIds && topic.raci.cMemberIds.length > 0) {
+      text += `  C: ${topic.raci.cMemberIds.map(id => this.getMemberName(id)).join(', ')}\n`;
+    }
 
-  private formatMemberForClipboard(member: TeamMember): string {
-    let text = `Name: ${member.displayName}\n`;
-    if (member.email) {
-      text += `Email: ${member.email}\n`;
+    if (topic.raci.iMemberIds && topic.raci.iMemberIds.length > 0) {
+      text += `  I: ${topic.raci.iMemberIds.map(id => this.getMemberName(id)).join(', ')}\n`;
     }
-    return text;
-  }
 
-  private formatTagForClipboard(tag: TagModel): string {
-    let text = `Tag: ${tag.name}\n`;
-    if (tag.copyPasteText) {
-      text += `\n${tag.copyPasteText}\n`;
-    }
-    if (tag.hinweise) {
-      text += `\nHinweise: ${tag.hinweise}\n`;
-    }
     return text;
   }
 }
