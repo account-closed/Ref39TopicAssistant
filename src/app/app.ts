@@ -50,39 +50,46 @@ export class App implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // Define all menu items
+    // Define all menu items with IDs for robust filtering
     this.allMenuItems = [
       {
+        id: 'search',
         label: 'Suche',
         icon: 'pi pi-search',
         command: () => this.router.navigate(['/search'])
       },
       {
+        id: 'quick-assignment',
         label: 'Schnellzuordnung',
         icon: 'pi pi-bolt',
         command: () => this.router.navigate(['/quick-assignment'])
       },
       {
+        id: 'topics',
         label: 'Themen verwalten',
         icon: 'pi pi-list',
         command: () => this.router.navigate(['/topics'])
       },
       {
+        id: 'members',
         label: 'Teammitglieder verwalten',
         icon: 'pi pi-users',
         command: () => this.router.navigate(['/members'])
       },
       {
+        id: 'topics-by-member',
         label: 'Themen nach Teammitglied',
         icon: 'pi pi-user',
         command: () => this.router.navigate(['/topics-by-member'])
       },
       {
+        id: 'tags',
         label: 'Tags verwalten',
         icon: 'pi pi-tags',
         command: () => this.router.navigate(['/tags'])
       },
       {
+        id: 'settings',
         label: 'Einstellungen',
         icon: 'pi pi-cog',
         command: () => this.router.navigate(['/settings'])
@@ -112,14 +119,17 @@ export class App implements OnInit, OnDestroy {
     this.stopIndexMonitor = this.indexMonitor.start({ intervalMs: 5000 });
   }
 
+  // Menu item IDs that are always visible (even when not connected)
+  private readonly ALWAYS_VISIBLE_MENU_IDS = ['search', 'settings'];
+
   private updateMenuItems(): void {
     if (this.isConnected) {
       // Show all menu items when connected
       this.menuItems = [...this.allMenuItems];
     } else {
-      // Show only "Suche" (welcome screen) and "Einstellungen" when not connected
+      // Show only search (welcome screen) and settings when not connected
       this.menuItems = this.allMenuItems.filter(
-        item => item.label === 'Suche' || item.label === 'Einstellungen'
+        item => this.ALWAYS_VISIBLE_MENU_IDS.includes(item.id || '')
       );
     }
   }
