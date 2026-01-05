@@ -21,6 +21,7 @@ import { MessageService, ConfirmationService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
 import { Topic, TeamMember, Datastore, Tag as TagModel, TShirtSize } from '../../core/models';
+import { getPriorityStars, getSizeSeverity } from '../../shared/utils/topic-display.utils';
 
 interface MemberOption {
   id: string;
@@ -500,25 +501,10 @@ export class TopicsComponent implements OnInit, OnDestroy {
   }
 
   getPriorityStars(priority: number | undefined): string {
-    if (!priority) return '';
-    return '★'.repeat(priority) + '☆'.repeat(10 - priority);
+    return getPriorityStars(priority);
   }
 
   getSizeSeverity(size: TShirtSize | undefined): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
-    switch (size) {
-      case 'XXS':
-      case 'XS':
-        return 'success';
-      case 'S':
-      case 'M':
-        return 'info';
-      case 'L':
-      case 'XL':
-        return 'warn';
-      case 'XXL':
-        return 'danger';
-      default:
-        return 'secondary';
-    }
+    return getSizeSeverity(size);
   }
 }
