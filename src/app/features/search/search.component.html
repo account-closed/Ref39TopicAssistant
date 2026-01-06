@@ -99,51 +99,50 @@
     <div class="search-results" *ngIf="searchResults.length > 0">
       <p class="results-count">{{ searchResults.length }} Thema(en) gefunden – <kbd>↓</kbd><kbd>↑</kbd> zum Navigieren, <kbd>Enter</kbd> zum Öffnen</p>
       
-      <div class="result-list compact">
+      <div class="result-list">
         <ng-container *ngFor="let result of searchResults; let i = index">
-          <div *ngIf="result.topic"
-               [ngClass]="{'selected': i === selectedIndex}"
-               (click)="selectAndOpenResult(i)"
-               class="result-item">
+          <p-card *ngIf="result.topic"
+                  [header]="result.topic.header"
+                  [subheader]="result.topic.description || ''"
+                  [ngClass]="{'selected': i === selectedIndex}"
+                  (click)="selectAndOpenResult(i)"
+                  styleClass="result-card">
             
-            <!-- Header Line -->
-            <div class="result-header-compact">
-              <h3 class="topic-title-compact">{{ result.topic.header }}</h3>
-              <p-tag [value]="getValidityBadge(result.topic)" 
-                     [severity]="getValiditySeverity(result.topic)"
-                     styleClass="validity-tag-compact">
-              </p-tag>
+            <!-- RACI Badges in Body -->
+            <div class="raci-badges" *ngIf="result.topic.raci">
+              <div class="raci-badge-item">
+                <p-tag value="R1" severity="info" styleClass="raci-tag r-tag"></p-tag>
+                <span class="raci-member-name">{{ getMemberName(result.topic.raci.r1MemberId) }}</span>
+              </div>
+              <div class="raci-badge-item" *ngIf="result.topic.raci.r2MemberId">
+                <p-tag value="R2" severity="info" styleClass="raci-tag r-tag"></p-tag>
+                <span class="raci-member-name">{{ getMemberName(result.topic.raci.r2MemberId) }}</span>
+              </div>
+              <div class="raci-badge-item" *ngIf="result.topic.raci.r3MemberId">
+                <p-tag value="R3" severity="info" styleClass="raci-tag r-tag"></p-tag>
+                <span class="raci-member-name">{{ getMemberName(result.topic.raci.r3MemberId) }}</span>
+              </div>
+              <div class="raci-badge-item" *ngIf="result.topic.raci.iMemberIds && result.topic.raci.iMemberIds.length > 0">
+                <p-tag value="I" severity="warn" styleClass="raci-tag i-tag"></p-tag>
+                <span class="raci-member-name">{{ getMembersDisplay(result.topic.raci.iMemberIds) }}</span>
+              </div>
+              <div class="raci-badge-item" *ngIf="result.topic.raci.cMemberIds && result.topic.raci.cMemberIds.length > 0">
+                <p-tag value="C" severity="secondary" styleClass="raci-tag c-tag"></p-tag>
+                <span class="raci-member-name">{{ getMembersDisplay(result.topic.raci.cMemberIds) }}</span>
+              </div>
             </div>
-            
-            <!-- Description Line -->
-            <p *ngIf="result.topic.description" class="description-compact">
-              {{ result.topic.description }}
-            </p>
 
-            <!-- Compact RACI Line -->
-            <div class="raci-line" *ngIf="result.topic.raci">
-              <span class="raci-item r1">
-                <span class="raci-badge-compact r-badge-compact">R1</span>
-                <span class="raci-name">{{ getMemberName(result.topic.raci.r1MemberId) }}</span>
-              </span>
-              <span class="raci-item" *ngIf="result.topic.raci.r2MemberId">
-                <span class="raci-badge-compact r-badge-compact">R2</span>
-                <span class="raci-name">{{ getMemberName(result.topic.raci.r2MemberId) }}</span>
-              </span>
-              <span class="raci-item" *ngIf="result.topic.raci.r3MemberId">
-                <span class="raci-badge-compact r-badge-compact">R3</span>
-                <span class="raci-name">{{ getMemberName(result.topic.raci.r3MemberId) }}</span>
-              </span>
-              <span class="raci-item" *ngIf="result.topic.raci.iMemberIds && result.topic.raci.iMemberIds.length > 0">
-                <span class="raci-badge-compact i-badge-compact">I</span>
-                <span class="raci-name">{{ getMembersDisplay(result.topic.raci.iMemberIds) }}</span>
-              </span>
-              <span class="raci-item" *ngIf="result.topic.raci.cMemberIds && result.topic.raci.cMemberIds.length > 0">
-                <span class="raci-badge-compact c-badge-compact">C</span>
-                <span class="raci-name">{{ getMembersDisplay(result.topic.raci.cMemberIds) }}</span>
-              </span>
-            </div>
-          </div>
+            <!-- Tags in Footer -->
+            <ng-template pTemplate="footer" *ngIf="result.topic.tags && result.topic.tags.length > 0">
+              <div class="result-tags">
+                <p-tag *ngFor="let tag of result.topic.tags" 
+                       [value]="tag" 
+                       severity="info"
+                       styleClass="topic-tag">
+                </p-tag>
+              </div>
+            </ng-template>
+          </p-card>
         </ng-container>
       </div>
     </div>
