@@ -37,6 +37,8 @@ export class ThemeService {
         this.systemPrefersDark.set(e.matches);
       });
 
+
+
       // Apply theme on changes
       effect(() => {
         this.applyTheme(this.isDarkMode());
