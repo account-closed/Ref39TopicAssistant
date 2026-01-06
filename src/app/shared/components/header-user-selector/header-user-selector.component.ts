@@ -39,7 +39,10 @@ export class HeaderUserSelectorComponent implements OnInit, OnDestroy {
             const member = datastore.members.find(
               m => m.id === this.selectedMemberId && m.active
             );
-            if (!member) {
+            if (member) {
+              // User exists, set them as current user
+              this.backend.setCurrentUser(member.id, member.displayName);
+            } else {
               // User no longer valid, clear selection
               this.selectedMemberId = '';
               localStorage.removeItem('currentMemberId');

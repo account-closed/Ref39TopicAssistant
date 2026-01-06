@@ -12,12 +12,25 @@
           Wählen Sie ein Verzeichnis auf einem gemeinsamen Netzlaufwerk (z.B. SMB-Freigabe),
           damit alle Teammitglieder auf die gleichen Daten zugreifen können.
         </p>
+        
+        <!-- Quick Reconnect Button - shown when there's a stored connection -->
         <p-button 
-          label="Schnellverbindung - Datenverzeichnis wählen" 
+          *ngIf="hasStoredConnection"
+          label="Letztes Verzeichnis wiederverwenden" 
+          icon="pi pi-refresh" 
+          (onClick)="quickReconnect()"
+          [loading]="isConnecting"
+          severity="success"
+          size="large"
+          styleClass="mb-2">
+        </p-button>
+        
+        <p-button 
+          [label]="hasStoredConnection ? 'Anderes Verzeichnis wählen' : 'Datenverzeichnis wählen'" 
           icon="pi pi-folder-open" 
           (onClick)="quickConnect()"
           [loading]="isConnecting"
-          severity="primary"
+          [severity]="hasStoredConnection ? 'secondary' : 'primary'"
           size="large">
         </p-button>
         <p-message *ngIf="!hasFileSystemAPI" severity="error" styleClass="mt-3">
@@ -86,80 +99,51 @@
     <div class="search-results" *ngIf="searchResults.length > 0">
       <p class="results-count">{{ searchResults.length }} Thema(en) gefunden – <kbd>↓</kbd><kbd>↑</kbd> zum Navigieren, <kbd>Enter</kbd> zum Öffnen</p>
       
-      <div class="result-list">
+      <div class="result-list compact">
         <ng-container *ngFor="let result of searchResults; let i = index">
-          <p-card *ngIf="result.topic"
-                  [ngClass]="{'selected': i === selectedIndex}"
-                  (click)="selectAndOpenResult(i)"
-                  class="result-card">
-            <ng-template pTemplate="header">
-              <div class="result-header">
-                <div class="result-header-left">
-                  <h3 class="topic-title">{{ result.topic.header }}</h3>
-                  <div class="result-badges">
-                    <p-rating *ngIf="result.topic.priority" [(ngModel)]="result.topic.priority" [stars]="10" [readonly]="true" styleClass="compact-rating"></p-rating>
-                    <p-tag *ngIf="result.topic.size" [value]="result.topic.size" [severity]="getSizeSeverity(result.topic.size)" styleClass="size-tag"></p-tag>
-                  </div>
-                </div>
-                <p-tag [value]="getValidityBadge(result.topic)" 
-                       [severity]="getValiditySeverity(result.topic)">
-                </p-tag>
-              </div>
-            </ng-template>
+          <div *ngIf="result.topic"
+               [ngClass]="{'selected': i === selectedIndex}"
+               (click)="selectAndOpenResult(i)"
+               class="result-item">
             
-            <div class="result-body">
-              <p *ngIf="result.topic.description" class="description">
-                {{ result.topic.description }}
-              </p>
-
-              <div class="raci-compact" *ngIf="result.topic.raci">
-                <div class="raci-row">
-                  <span class="raci-label r-label">R1</span>
-                  <span class="raci-value">{{ getMemberName(result.topic.raci.r1MemberId) }}</span>
-                </div>
-                <div class="raci-row" *ngIf="result.topic.raci.r2MemberId">
-                  <span class="raci-label r-label">R2</span>
-                  <span class="raci-value">{{ getMemberName(result.topic.raci.r2MemberId) }}</span>
-                </div>
-                <div class="raci-row" *ngIf="result.topic.raci.r3MemberId">
-                  <span class="raci-label r-label">R3</span>
-                  <span class="raci-value">{{ getMemberName(result.topic.raci.r3MemberId) }}</span>
-                </div>
-                <div class="raci-row" *ngIf="result.topic.raci.iMemberIds && result.topic.raci.iMemberIds.length > 0">
-                  <span class="raci-label i-label">I</span>
-                  <span class="raci-value">
-                    <span *ngFor="let memberId of result.topic.raci.iMemberIds; let last = last">
-                      {{ getMemberName(memberId) }}<span *ngIf="!last">, </span>
-                    </span>
-                  </span>
-                </div>
-                <div class="raci-row" *ngIf="result.topic.raci.cMemberIds && result.topic.raci.cMemberIds.length > 0">
-                  <span class="raci-label c-label">C</span>
-                  <span class="raci-value">
-                    <span *ngFor="let memberId of result.topic.raci.cMemberIds; let last = last">
-                      {{ getMemberName(memberId) }}<span *ngIf="!last">, </span>
-                    </span>
-                  </span>
-                </div>
-              </div>
-
-              <div class="tags" *ngIf="result.topic.tags && result.topic.tags.length > 0">
-                <p-tag *ngFor="let tag of result.topic.tags" 
-                       [value]="tag" 
-                       severity="info">
-                </p-tag>
-              </div>
-
-              <div class="topic-references" *ngIf="(result.topic.hasFileNumber && result.topic.fileNumber) || (result.topic.hasSharedFilePath && result.topic.sharedFilePath)">
-                <span class="reference-item" *ngIf="result.topic.hasFileNumber && result.topic.fileNumber">
-                  <i class="pi pi-file"></i> {{ result.topic.fileNumber }}
-                </span>
-                <span class="reference-item" *ngIf="result.topic.hasSharedFilePath && result.topic.sharedFilePath">
-                  <i class="pi pi-folder"></i> {{ result.topic.sharedFilePath }}
-                </span>
-              </div>
+            <!-- Header Line -->
+            <div class="result-header-compact">
+              <h3 class="topic-title-compact">{{ result.topic.header }}</h3>
+              <p-tag [value]="getValidityBadge(result.topic)" 
+                     [severity]="getValiditySeverity(result.topic)"
+                     styleClass="validity-tag-compact">
+              </p-tag>
             </div>
-          </p-card>
+            
+            <!-- Description Line -->
+            <p *ngIf="result.topic.description" class="description-compact">
+              {{ result.topic.description }}
+            </p>
+
+            <!-- Compact RACI Line -->
+            <div class="raci-line" *ngIf="result.topic.raci">
+              <span class="raci-item r1">
+                <span class="raci-badge-compact r-badge-compact">R1</span>
+                <span class="raci-name">{{ getMemberName(result.topic.raci.r1MemberId) }}</span>
+              </span>
+              <span class="raci-item" *ngIf="result.topic.raci.r2MemberId">
+                <span class="raci-badge-compact r-badge-compact">R2</span>
+                <span class="raci-name">{{ getMemberName(result.topic.raci.r2MemberId) }}</span>
+              </span>
+              <span class="raci-item" *ngIf="result.topic.raci.r3MemberId">
+                <span class="raci-badge-compact r-badge-compact">R3</span>
+                <span class="raci-name">{{ getMemberName(result.topic.raci.r3MemberId) }}</span>
+              </span>
+              <span class="raci-item" *ngIf="result.topic.raci.iMemberIds && result.topic.raci.iMemberIds.length > 0">
+                <span class="raci-badge-compact i-badge-compact">I</span>
+                <span class="raci-name">{{ result.topic.raci.iMemberIds.length > 1 ? result.topic.raci.iMemberIds.length + ' Personen' : getMemberName(result.topic.raci.iMemberIds[0]) }}</span>
+              </span>
+              <span class="raci-item" *ngIf="result.topic.raci.cMemberIds && result.topic.raci.cMemberIds.length > 0">
+                <span class="raci-badge-compact c-badge-compact">C</span>
+                <span class="raci-name">{{ result.topic.raci.cMemberIds.length > 1 ? result.topic.raci.cMemberIds.length + ' Personen' : getMemberName(result.topic.raci.cMemberIds[0]) }}</span>
+              </span>
+            </div>
+          </div>
         </ng-container>
       </div>
     </div>
