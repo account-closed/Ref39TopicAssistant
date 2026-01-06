@@ -41,8 +41,8 @@ subtle = "2.6"
 # Configuration
 dotenvy = "0.15"
 
-# Validation
-validator = { version = "0.20", features = ["derive"] }
+# Validation (reserved for future use)
+# validator = { version = "0.20", features = ["derive"] }
 
 [dev-dependencies]
 # Testing

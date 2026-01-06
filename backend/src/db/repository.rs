@@ -889,5 +889,11 @@ fn topic_from_row(row: &sqlx::sqlite::SqliteRow) -> Topic {
 }
 
 fn parse_json_array(s: &str) -> Vec<String> {
-    serde_json::from_str(s).unwrap_or_default()
+    match serde_json::from_str(s) {
+        Ok(arr) => arr,
+        Err(e) => {
+            tracing::warn!("Failed to parse JSON array '{}': {}", s, e);
+            Vec::new()
+        }
+    }
 }

@@ -10,6 +10,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 /// Error codes as constants to avoid stringly-typed errors.
+/// Note: Some codes like INVALID_PSK and CONFLICT are reserved for future use.
 #[allow(dead_code)]
 pub mod codes {
     pub const UNAUTHORIZED: &str = "UNAUTHORIZED";

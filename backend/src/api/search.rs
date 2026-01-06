@@ -42,6 +42,9 @@ pub struct SearchResultItem {
     pub score: f32,
 }
 
+/// Maximum number of search results allowed.
+const MAX_SEARCH_LIMIT: usize = 100;
+
 /// GET /api/search - Search for topics.
 pub async fn search_topics(
     State(state): State<AppState>,
@@ -50,7 +53,7 @@ pub async fn search_topics(
     let revision_id = state.repo.get_revision_id().await.unwrap_or(0);
 
     // Limit the maximum number of results
-    let limit = params.limit.min(100);
+    let limit = params.limit.min(MAX_SEARCH_LIMIT);
 
     // Perform search
     let search_results = match state.search.search(&params.q, limit, params.offset) {
