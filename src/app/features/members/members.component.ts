@@ -15,6 +15,7 @@ import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
 import { Select } from 'primeng/select';
+import { ColorPicker } from 'primeng/colorpicker';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
@@ -48,7 +49,8 @@ interface TopicAssignment {
     Tab,
     TabPanels,
     TabPanel,
-    Select
+    Select,
+    ColorPicker
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './members.component.html',

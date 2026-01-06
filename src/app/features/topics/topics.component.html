@@ -140,7 +140,7 @@
           <p-tag *ngIf="!topic.raci.r1MemberId" value="Verwaist" severity="warn"></p-tag>
         </td>
         <td>
-          <p-tag *ngFor="let tag of topic.tags" [value]="tag" severity="info" styleClass="mr-1 mb-1"></p-tag>
+          <p-tag *ngFor="let tag of topic.tags" [value]="tag" severity="info" styleClass="mr-1 mb-1" [style]="getTagStyle(tag)"></p-tag>
         </td>
         <td>
           <p-rating *ngIf="topic.priority" [(ngModel)]="topic.priority" [stars]="10" [readonly]="true"></p-rating>

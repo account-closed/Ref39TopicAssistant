@@ -1,4 +1,5 @@
 import { Datastore, Topic, TShirtSize } from '../models';
+import { isValidHexColor, normalizeHexColor } from '../../shared/utils/validation.utils';
 
 const VALID_SIZES: TShirtSize[] = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL'];
 
@@ -14,6 +15,10 @@ export interface PlausibilityResult {
   removedMemberReferences: number;
   /** Number of topic field corrections made */
   correctedTopicFields: number;
+  /** Number of member color corrections made */
+  correctedMemberColors: number;
+  /** Number of tag color corrections made */
+  correctedTagColors: number;
   /** Detailed log of changes for debugging */
   changeLog: string[];
 }
@@ -220,6 +225,86 @@ export function validateTopicFields(datastore: Datastore): {
 }
 
 /**
+ * Validate and normalize member color fields.
+ * Removes invalid colors and normalizes valid ones to include # prefix.
+ * @param datastore The datastore to check
+ * @returns Updated datastore with corrected member colors
+ */
+export function validateMemberColors(datastore: Datastore): {
+  datastore: Datastore;
+  correctedCount: number;
+  changeLog: string[];
+} {
+  let correctedCount = 0;
+  const changeLog: string[] = [];
+
+  const updatedMembers = datastore.members.map((member) => {
+    if (member.color !== undefined) {
+      if (!isValidHexColor(member.color)) {
+        changeLog.push(`Member "${member.displayName}" (${member.id}): invalid color "${member.color}" removed`);
+        correctedCount++;
+        return { ...member, color: undefined };
+      }
+      const normalized = normalizeHexColor(member.color);
+      if (normalized !== member.color) {
+        changeLog.push(`Member "${member.displayName}" (${member.id}): color normalized from "${member.color}" to "${normalized}"`);
+        correctedCount++;
+        return { ...member, color: normalized };
+      }
+    }
+    return member;
+  });
+
+  return {
+    datastore: { ...datastore, members: updatedMembers },
+    correctedCount,
+    changeLog,
+  };
+}
+
+/**
+ * Validate and normalize tag color fields.
+ * Removes invalid colors and normalizes valid ones to include # prefix.
+ * @param datastore The datastore to check
+ * @returns Updated datastore with corrected tag colors
+ */
+export function validateTagColors(datastore: Datastore): {
+  datastore: Datastore;
+  correctedCount: number;
+  changeLog: string[];
+} {
+  let correctedCount = 0;
+  const changeLog: string[] = [];
+
+  if (!datastore.tags) {
+    return { datastore, correctedCount: 0, changeLog: [] };
+  }
+
+  const updatedTags = datastore.tags.map((tag) => {
+    if (tag.color !== undefined) {
+      if (!isValidHexColor(tag.color)) {
+        changeLog.push(`Tag "${tag.name}" (${tag.id}): invalid color "${tag.color}" removed`);
+        correctedCount++;
+        return { ...tag, color: undefined };
+      }
+      const normalized = normalizeHexColor(tag.color);
+      if (normalized !== tag.color) {
+        changeLog.push(`Tag "${tag.name}" (${tag.id}): color normalized from "${tag.color}" to "${normalized}"`);
+        correctedCount++;
+        return { ...tag, color: normalized };
+      }
+    }
+    return tag;
+  });
+
+  return {
+    datastore: { ...datastore, tags: updatedTags },
+    correctedCount,
+    changeLog,
+  };
+}
+
+/**
  * Run all plausibility checks on the datastore and return a cleaned version.
  * This function should be called before each save to ensure data consistency.
  * @param datastore The datastore to check
@@ -234,6 +319,8 @@ export function runPlausibilityChecks(datastore: Datastore): {
   let totalRemovedTags = 0;
   let totalRemovedMembers = 0;
   let totalCorrectedFields = 0;
+  let totalCorrectedMemberColors = 0;
+  let totalCorrectedTagColors = 0;
 
   // 1. Remove invalid tag references
   const tagResult = removeInvalidTagReferences(currentDatastore);
@@ -253,13 +340,27 @@ export function runPlausibilityChecks(datastore: Datastore): {
   totalCorrectedFields = fieldResult.correctedCount;
   allChangeLogs.push(...fieldResult.changeLog);
 
-  const hasChanges = totalRemovedTags > 0 || totalRemovedMembers > 0 || totalCorrectedFields > 0;
+  // 4. Validate and correct member colors
+  const memberColorResult = validateMemberColors(currentDatastore);
+  currentDatastore = memberColorResult.datastore;
+  totalCorrectedMemberColors = memberColorResult.correctedCount;
+  allChangeLogs.push(...memberColorResult.changeLog);
+
+  // 5. Validate and correct tag colors
+  const tagColorResult = validateTagColors(currentDatastore);
+  currentDatastore = tagColorResult.datastore;
+  totalCorrectedTagColors = tagColorResult.correctedCount;
+  allChangeLogs.push(...tagColorResult.changeLog);
+
+  const hasChanges = totalRemovedTags > 0 || totalRemovedMembers > 0 || totalCorrectedFields > 0 || totalCorrectedMemberColors > 0 || totalCorrectedTagColors > 0;
 
   if (hasChanges) {
     console.log('[Plausibility] Cleaned up datastore:', {
       removedTagReferences: totalRemovedTags,
       removedMemberReferences: totalRemovedMembers,
       correctedTopicFields: totalCorrectedFields,
+      correctedMemberColors: totalCorrectedMemberColors,
+      correctedTagColors: totalCorrectedTagColors,
       changeLog: allChangeLogs,
     });
   }
@@ -271,6 +372,8 @@ export function runPlausibilityChecks(datastore: Datastore): {
       removedTagReferences: totalRemovedTags,
       removedMemberReferences: totalRemovedMembers,
       correctedTopicFields: totalCorrectedFields,
+      correctedMemberColors: totalCorrectedMemberColors,
+      correctedTagColors: totalCorrectedTagColors,
       changeLog: allChangeLogs,
     },
   };

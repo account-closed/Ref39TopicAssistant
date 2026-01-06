@@ -188,6 +188,16 @@ export class TopicsComponent implements OnInit, OnDestroy {
     return tag?.hinweise || '';
   }
 
+  getTagColor(tagName: string): string | undefined {
+    const tag = this.managedTags.find(t => t.name === tagName);
+    return tag?.color;
+  }
+
+  getTagStyle(tagName: string): { [key: string]: string } {
+    const color = this.getTagColor(tagName);
+    return color ? { 'background-color': color } : {};
+  }
+
   searchKeywords(event: { query: string }): void {
     const query = event.query.toLowerCase();
     // Sanitize the query for suggestions

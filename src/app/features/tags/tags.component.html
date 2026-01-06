@@ -89,7 +89,9 @@
     <ng-template pTemplate="body" let-tag>
       <tr>
         <td>
-          <p-tag [value]="tag.name" severity="info"></p-tag>
+          <p-tag [value]="tag.name" severity="info" [style]="tag.color ? {'background-color': tag.color} : {}"></p-tag>
+          <i *ngIf="tag.isSuperTag" class="pi pi-star ml-1" pTooltip="Super-Tag" tooltipPosition="top"></i>
+          <i *ngIf="tag.isGvplTag" class="pi pi-briefcase ml-1" pTooltip="GVPl-Tag" tooltipPosition="top"></i>
         </td>
         <td>
           <span *ngFor="let kw of tag.searchKeywords; let last = last">
@@ -210,6 +212,33 @@
             placeholder="Text zum Kopieren...">
           </textarea>
           <small class="hint">Vorlagen-Text zum schnellen Kopieren in die Zwischenablage</small>
+        </div>
+
+        <!-- Color -->
+        <div class="field">
+          <label for="color">Farbe</label>
+          <p-colorpicker [(ngModel)]="tag.color" inputId="cp-hex" />
+        </div>
+
+        <!-- Tag Type Toggles -->
+        <div class="field-group">
+          <h4>Tag-Typ</h4>
+          
+          <div class="field-checkbox">
+            <p-toggleswitch 
+              [(ngModel)]="tag.isSuperTag" 
+              inputId="isSuperTag">
+            </p-toggleswitch>
+            <label for="isSuperTag" class="ml-2">Super-Tag (Übergeordneter Tag)</label>
+          </div>
+
+          <div class="field-checkbox">
+            <p-toggleswitch 
+              [(ngModel)]="tag.isGvplTag" 
+              inputId="isGvplTag">
+            </p-toggleswitch>
+            <label for="isGvplTag" class="ml-2">GVPl-Tag (Geschäftsverteilungsplan)</label>
+          </div>
         </div>
       </div>
     </ng-template>

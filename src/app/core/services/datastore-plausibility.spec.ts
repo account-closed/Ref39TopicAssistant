@@ -3,6 +3,8 @@ import {
   removeInvalidTagReferences,
   removeInvalidMemberReferences,
   validateTopicFields,
+  validateMemberColors,
+  validateTagColors,
   runPlausibilityChecks,
 } from './datastore-plausibility';
 import { Datastore, Topic, TeamMember, Tag, TShirtSize } from '../models';
@@ -328,6 +330,8 @@ describe('runPlausibilityChecks', () => {
     expect(result.removedTagReferences).toBe(0);
     expect(result.removedMemberReferences).toBe(0);
     expect(result.correctedTopicFields).toBe(0);
+    expect(result.correctedMemberColors).toBe(0);
+    expect(result.correctedTagColors).toBe(0);
     expect(result.changeLog).toHaveLength(0);
   });
 
@@ -344,6 +348,8 @@ describe('runPlausibilityChecks', () => {
     expect(result.removedTagReferences).toBe(0);
     expect(result.removedMemberReferences).toBe(0);
     expect(result.correctedTopicFields).toBe(0);
+    expect(result.correctedMemberColors).toBe(0);
+    expect(result.correctedTagColors).toBe(0);
   });
 });
 
@@ -517,5 +523,136 @@ describe('validateTopicFields', () => {
     expect(result.datastore.topics[0].priority).toBeUndefined();
     expect(result.datastore.topics[0].size).toBeUndefined();
     expect(result.datastore.topics[0].fileNumber).toBe('');
+  });
+});
+
+describe('validateMemberColors', () => {
+  it('should not modify members with valid colors', () => {
+    const datastore = createDatastore({
+      members: [
+        { ...createMember('member-1', 'User 1'), color: '#FF5733' },
+        { ...createMember('member-2', 'User 2'), color: '#00FF00' },
+      ],
+    });
+
+    const result = validateMemberColors(datastore);
+
+    expect(result.correctedCount).toBe(0);
+    expect(result.datastore.members[0].color).toBe('#FF5733');
+    expect(result.datastore.members[1].color).toBe('#00FF00');
+    expect(result.changeLog).toHaveLength(0);
+  });
+
+  it('should remove invalid color values', () => {
+    const datastore = createDatastore({
+      members: [
+        { ...createMember('member-1', 'User 1'), color: 'not-a-color' },
+      ],
+    });
+
+    const result = validateMemberColors(datastore);
+
+    expect(result.correctedCount).toBe(1);
+    expect(result.datastore.members[0].color).toBeUndefined();
+    expect(result.changeLog).toHaveLength(1);
+    expect(result.changeLog[0]).toContain('invalid color');
+  });
+
+  it('should normalize colors without # prefix', () => {
+    const datastore = createDatastore({
+      members: [
+        { ...createMember('member-1', 'User 1'), color: 'FF5733' },
+      ],
+    });
+
+    const result = validateMemberColors(datastore);
+
+    expect(result.correctedCount).toBe(1);
+    expect(result.datastore.members[0].color).toBe('#FF5733');
+    expect(result.changeLog).toHaveLength(1);
+    expect(result.changeLog[0]).toContain('normalized');
+  });
+
+  it('should handle members without colors', () => {
+    const datastore = createDatastore({
+      members: [createMember('member-1', 'User 1')],
+    });
+
+    const result = validateMemberColors(datastore);
+
+    expect(result.correctedCount).toBe(0);
+    expect(result.datastore.members[0].color).toBeUndefined();
+  });
+});
+
+describe('validateTagColors', () => {
+  it('should not modify tags with valid colors', () => {
+    const datastore = createDatastore({
+      tags: [
+        { ...createTag('tag-1', 'tag1'), color: '#FF5733' },
+        { ...createTag('tag-2', 'tag2'), color: '#00FF00' },
+      ],
+    });
+
+    const result = validateTagColors(datastore);
+
+    expect(result.correctedCount).toBe(0);
+    expect(result.datastore.tags![0].color).toBe('#FF5733');
+    expect(result.datastore.tags![1].color).toBe('#00FF00');
+    expect(result.changeLog).toHaveLength(0);
+  });
+
+  it('should remove invalid color values', () => {
+    const datastore = createDatastore({
+      tags: [
+        { ...createTag('tag-1', 'tag1'), color: 'invalid-color' },
+      ],
+    });
+
+    const result = validateTagColors(datastore);
+
+    expect(result.correctedCount).toBe(1);
+    expect(result.datastore.tags![0].color).toBeUndefined();
+    expect(result.changeLog).toHaveLength(1);
+    expect(result.changeLog[0]).toContain('invalid color');
+  });
+
+  it('should normalize colors without # prefix', () => {
+    const datastore = createDatastore({
+      tags: [
+        { ...createTag('tag-1', 'tag1'), color: 'ABC123' },
+      ],
+    });
+
+    const result = validateTagColors(datastore);
+
+    expect(result.correctedCount).toBe(1);
+    expect(result.datastore.tags![0].color).toBe('#ABC123');
+    expect(result.changeLog).toHaveLength(1);
+    expect(result.changeLog[0]).toContain('normalized');
+  });
+
+  it('should handle empty tags array', () => {
+    const datastore = createDatastore({
+      tags: [],
+    });
+
+    const result = validateTagColors(datastore);
+
+    expect(result.correctedCount).toBe(0);
+  });
+
+  it('should handle undefined tags', () => {
+    const datastore: Datastore = {
+      schemaVersion: 1,
+      generatedAt: new Date().toISOString(),
+      revisionId: 1,
+      members: [],
+      topics: [],
+    };
+
+    const result = validateTagColors(datastore);
+
+    expect(result.correctedCount).toBe(0);
   });
 });

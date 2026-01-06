@@ -4,5 +4,6 @@ export interface TeamMember {
   email?: string;
   active: boolean;
   tags?: string[];
+  color?: string; // Hex color code (e.g., '#FF5733')
   updatedAt: string; // ISO timestamp
 }
