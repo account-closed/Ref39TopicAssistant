@@ -172,6 +172,7 @@ kbd {
 
 /* Result Card Styles */
 :host ::ng-deep .result-card {
+  position: relative;
   cursor: pointer;
   transition: all 0.15s ease;
   
@@ -188,6 +189,7 @@ kbd {
     font-size: 1.1rem;
     font-weight: 600;
     margin-bottom: 0.25rem;
+    padding-right: 8rem; /* Make room for badges */
   }
   
   .p-card-subtitle {
@@ -368,9 +370,20 @@ kbd {
 
 /* Priority Stars */
 .priority-stars { font-size: 0.8rem; color: var(--p-yellow-500); letter-spacing: -0.05em; }
-.result-badges { display: flex; align-items: center; gap: 0.5rem; }
 :host ::ng-deep .size-tag { font-size: 0.7rem; padding: 0.15rem 0.4rem; }
 :host ::ng-deep .compact-rating { .p-rating-icon { font-size: 0.75rem; width: 0.9rem; } }
+
+/* Priority and Size Badges positioned in top-right of card */
+.result-card-badges {
+  position: absolute;
+  top: 0.75rem;
+  right: 1rem;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
 
 /* Topic References in Result Cards */
 .topic-references { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--p-surface-200); }

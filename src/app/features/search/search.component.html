@@ -108,6 +108,12 @@
                   (click)="selectAndOpenResult(i)"
                   styleClass="result-card">
             
+            <!-- Priority and Size Badges positioned absolutely in top-right -->
+            <div class="result-card-badges" *ngIf="result.topic.priority || result.topic.size">
+              <span class="priority-stars" *ngIf="result.topic.priority" [attr.aria-label]="'Priorität: ' + result.topic.priority + ' von 10'" role="img">{{ getPriorityStars(result.topic.priority) }}</span>
+              <p-tag *ngIf="result.topic.size" [value]="result.topic.size" [severity]="getSizeSeverity(result.topic.size)" styleClass="size-tag"></p-tag>
+            </div>
+            
             <!-- RACI Badges in Body -->
             <div class="raci-badges" *ngIf="result.topic.raci">
               <div class="raci-badge-item">
