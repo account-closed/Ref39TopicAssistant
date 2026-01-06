@@ -112,7 +112,7 @@
               <div class="result-card-header">
                 <span class="result-card-title">{{ result.topic.header }}</span>
                 <div class="result-card-badges">
-                  <span class="priority-stars" *ngIf="result.topic.priority">{{ getPriorityStars(result.topic.priority) }}</span>
+                  <span class="priority-stars" *ngIf="result.topic.priority" [attr.aria-label]="'Priorität: ' + result.topic.priority + ' von 10'" role="img">{{ getPriorityStars(result.topic.priority) }}</span>
                   <p-tag *ngIf="result.topic.size" [value]="result.topic.size" [severity]="getSizeSeverity(result.topic.size)" styleClass="size-tag"></p-tag>
                 </div>
               </div>
