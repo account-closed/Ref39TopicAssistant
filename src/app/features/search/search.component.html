@@ -144,7 +144,8 @@
                 <p-tag *ngFor="let tag of result.topic.tags" 
                        [value]="tag" 
                        severity="info"
-                       styleClass="topic-tag">
+                       styleClass="topic-tag"
+                       [style]="getTagColor(tag) ? {'background-color': getTagColor(tag)} : {}">
                 </p-tag>
               </div>
             </ng-template>
@@ -350,7 +351,9 @@
         <div class="tags-detail-grid">
           <div class="tag-detail-item" *ngFor="let tag of selectedTopicTags">
             <div class="tag-header">
-              <p-tag [value]="tag.name" severity="info"></p-tag>
+              <p-tag [value]="tag.name" severity="info" [style]="tag.color ? {'background-color': tag.color} : {}"></p-tag>
+              <i *ngIf="tag.isSuperTag" class="pi pi-star ml-1" pTooltip="Super-Tag" tooltipPosition="top"></i>
+              <i *ngIf="tag.isGvplTag" class="pi pi-briefcase ml-1" pTooltip="GVPl-Tag" tooltipPosition="top"></i>
               <p-button 
                 *ngIf="tag.copyPasteText"
                 icon="pi pi-copy" 

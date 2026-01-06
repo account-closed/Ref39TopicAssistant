@@ -104,6 +104,7 @@
     <ng-template pTemplate="body" let-member>
       <tr>
         <td>
+          <span *ngIf="member.color" class="member-color-swatch" [style.background-color]="member.color"></span>
           <strong>{{ member.displayName }}</strong>
         </td>
         <td>{{ member.email || '-' }}</td>
@@ -191,6 +192,12 @@
             (completeMethod)="searchTags($event)"
             placeholder="Tags hinzufügen...">
           </p-autoComplete>
+        </div>
+
+        <!-- Color -->
+        <div class="field">
+          <label for="color">Farbe</label>
+          <p-colorpicker [(ngModel)]="member.color" inputId="cp-hex" />
         </div>
 
         <!-- Active Status -->

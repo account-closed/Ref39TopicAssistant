@@ -14,6 +14,8 @@ import { Toolbar } from 'primeng/toolbar';
 import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
 import { Tooltip } from 'primeng/tooltip';
+import { ColorPicker } from 'primeng/colorpicker';
+import { ToggleSwitch } from 'primeng/toggleswitch';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
@@ -38,7 +40,9 @@ import { isValidKeyword, sanitizeKeyword } from '../../shared/utils/validation.u
     Toolbar,
     IconField,
     InputIcon,
-    Tooltip
+    Tooltip,
+    ColorPicker,
+    ToggleSwitch
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './tags.component.html',

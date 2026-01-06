@@ -11,6 +11,7 @@ import { Dialog } from 'primeng/dialog';
 import { Toast } from 'primeng/toast';
 import { Divider } from 'primeng/divider';
 import { Rating } from 'primeng/rating';
+import { Tooltip } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { HotkeysService } from '@ngneat/hotkeys';
@@ -32,7 +33,7 @@ interface DisplaySearchResult {
 @Component({
   selector: 'app-search',
   standalone: true,
-  imports: [CommonModule, FormsModule, InputText, Card, Tag, Button, Message, ProgressSpinner, Dialog, Toast, Divider, Rating],
+  imports: [CommonModule, FormsModule, InputText, Card, Tag, Button, Message, ProgressSpinner, Dialog, Toast, Divider, Rating, Tooltip],
   providers: [MessageService],
   templateUrl: './search.component.html',
   styleUrl: './search.component.scss'
@@ -416,6 +417,14 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!memberIds || memberIds.length === 0) return '';
     if (memberIds.length === 1) return this.getMemberName(memberIds[0]);
     return `${memberIds.length} Personen`;
+  }
+
+  getTagColor(tagName: string): string | undefined {
+    if (!this.currentDatastore?.tags) {
+      return undefined;
+    }
+    const tag = this.currentDatastore.tags.find(t => t.name === tagName);
+    return tag?.color;
   }
 
   getValidityBadge(topic: Topic): string {

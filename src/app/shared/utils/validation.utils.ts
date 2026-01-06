@@ -8,6 +8,12 @@
 const VALID_KEYWORD_REGEX = /^[\p{L}\p{N}_.-]+$/u;
 
 /**
+ * Regular expression for valid hex color codes.
+ * Matches 3, 4, 6, or 8 digit hex colors with or without # prefix.
+ */
+const VALID_HEX_COLOR_REGEX = /^#?([A-Fa-f0-9]{3}|[A-Fa-f0-9]{4}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$/;
+
+/**
  * Validates a keyword or tag name.
  * - No spaces allowed
  * - No special characters except: _ - .
@@ -40,4 +46,34 @@ export function sanitizeKeyword(value: string): string {
   // Remove all characters except allowed ones (hyphen at end of character class)
   sanitized = sanitized.replace(/[^\p{L}\p{N}_.-]/gu, '');
   return sanitized;
+}
+
+/**
+ * Validates a hex color code.
+ * Accepts colors with or without # prefix.
+ * 
+ * @param value The color value to validate
+ * @returns true if the value is a valid hex color
+ */
+export function isValidHexColor(value: string | undefined): boolean {
+  if (!value) {
+    return true; // undefined/empty is valid (color is optional)
+  }
+  return VALID_HEX_COLOR_REGEX.test(value);
+}
+
+/**
+ * Normalizes a hex color to include # prefix if missing.
+ * 
+ * @param value The color value to normalize
+ * @returns The normalized color with # prefix, or undefined if invalid/empty
+ */
+export function normalizeHexColor(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  if (!isValidHexColor(value)) {
+    return undefined;
+  }
+  return value.startsWith('#') ? value : `#${value}`;
 }
