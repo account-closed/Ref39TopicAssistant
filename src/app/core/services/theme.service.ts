@@ -9,9 +9,9 @@ const THEME_STORAGE_KEY = 'raci-theme-mode';
   providedIn: 'root'
 })
 export class ThemeService {
-  private readonly themeMode = signal<ThemeMode>('system');
+  private readonly themeMode = signal<ThemeMode>('light');
   private readonly systemPrefersDark = signal<boolean>(false);
-  
+
   readonly currentMode = computed(() => this.themeMode());
   readonly isDarkMode = computed(() => {
     const mode = this.themeMode();
@@ -32,7 +32,7 @@ export class ThemeService {
       // Detect system preference
       const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
       this.systemPrefersDark.set(mediaQuery.matches);
-      
+
       mediaQuery.addEventListener('change', (e) => {
         this.systemPrefersDark.set(e.matches);
       });
