@@ -427,6 +427,11 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
     return tag?.color;
   }
 
+  getTagStyle(tagName: string): { [key: string]: string } {
+    const color = this.getTagColor(tagName);
+    return color ? { 'background-color': color } : {};
+  }
+
   getValidityBadge(topic: Topic): string {
     if (topic.validity.alwaysValid) {
       return 'Immer gültig';
