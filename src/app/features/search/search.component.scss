@@ -372,6 +372,33 @@ kbd {
 :host ::ng-deep .size-tag { font-size: 0.7rem; padding: 0.15rem 0.4rem; }
 :host ::ng-deep .compact-rating { .p-rating-icon { font-size: 0.75rem; width: 0.9rem; } }
 
+/* Custom Card Header with Priority and Size */
+.result-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem 0.5rem 1.25rem;
+}
+
+.result-card-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--p-text-color);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.result-card-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
 /* Topic References in Result Cards */
 .topic-references { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--p-surface-200); }
 .reference-item { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; color: var(--p-text-muted-color); background: var(--p-surface-100); padding: 0.25rem 0.75rem; border-radius: 4px; i { font-size: 0.8rem; } }

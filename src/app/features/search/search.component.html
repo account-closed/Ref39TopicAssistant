@@ -102,11 +102,21 @@
       <div class="result-list">
         <ng-container *ngFor="let result of searchResults; let i = index">
           <p-card *ngIf="result.topic"
-                  [header]="result.topic.header"
                   [subheader]="result.topic.description || ''"
                   [ngClass]="{'selected': i === selectedIndex}"
                   (click)="selectAndOpenResult(i)"
                   styleClass="result-card">
+            
+            <!-- Custom Header with Priority and Size -->
+            <ng-template pTemplate="header">
+              <div class="result-card-header">
+                <span class="result-card-title">{{ result.topic.header }}</span>
+                <div class="result-card-badges">
+                  <span class="priority-stars" *ngIf="result.topic.priority">{{ getPriorityStars(result.topic.priority) }}</span>
+                  <p-tag *ngIf="result.topic.size" [value]="result.topic.size" [severity]="getSizeSeverity(result.topic.size)" styleClass="size-tag"></p-tag>
+                </div>
+              </div>
+            </ng-template>
             
             <!-- RACI Badges in Body -->
             <div class="raci-badges" *ngIf="result.topic.raci">
