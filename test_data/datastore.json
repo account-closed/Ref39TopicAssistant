@@ -102,7 +102,9 @@
       "updatedAt": "2026-01-05T09:20:15.851Z",
       "r1Name": "asdf",
       "r1MemberId": "d3bf84af-1198-420f-8648-c039de293a2b",
-      "tagsString": ""
+      "tagsString": "",
+      "priority": 7,
+      "size": "M"
     },
     {
       "id": "5085c0af-59fe-40d3-8af2-a4bfb3e012a7",
@@ -118,7 +120,9 @@
         "iMemberIds": ["f0c2e10e-5e3f-4a1d-9c8d-1d2e3f4a5b6c"]
       },
       "updatedAt": "2026-01-05T09:22:06.680Z",
-      "tagsString": "FAQ"
+      "tagsString": "FAQ",
+      "priority": 3,
+      "size": "S"
     },
     {
       "id": "90f82893-de9a-4447-9899-19dfe2b906a5",
@@ -136,7 +140,9 @@
       "updatedAt": "2026-01-05T09:25:52.194Z",
       "r1Name": "Admin",
       "r1MemberId": "b774c13a-5139-4463-9e19-778415197fba",
-      "tagsString": "Wichtig"
+      "tagsString": "Wichtig",
+      "priority": 9,
+      "size": "XL"
     },
     {
       "id": "c3b1e56d-3d40-41d8-9d5d-7c2a1f41b7c8",
@@ -153,7 +159,9 @@
         "r3MemberId": "b774c13a-5139-4463-9e19-778415197fba"
       },
       "updatedAt": "2026-01-05T09:28:10.010Z",
-      "tagsString": "Prozess, Wichtig"
+      "tagsString": "Prozess, Wichtig",
+      "priority": 5,
+      "size": "L"
     },
     {
       "id": "b7a8f4ab-0d6b-46d4-92b5-9e2d9d9b4a21",

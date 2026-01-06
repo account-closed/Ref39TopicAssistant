@@ -373,17 +373,12 @@ kbd {
 :host ::ng-deep .size-tag { font-size: 0.7rem; padding: 0.15rem 0.4rem; }
 :host ::ng-deep .compact-rating { .p-rating-icon { font-size: 0.75rem; width: 0.9rem; } }
 
-/* Custom Card Header with Priority and Size Badges */
-:host ::ng-deep .result-card {
-  .p-card-header {
-    position: absolute;
-    top: 0.75rem;
-    right: 1rem;
-    z-index: 1;
-  }
-}
-
+/* Priority and Size Badges positioned in top-right of card */
 .result-card-badges {
+  position: absolute;
+  top: 0.75rem;
+  right: 1rem;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 0.5rem;
