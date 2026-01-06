@@ -6,6 +6,7 @@ import { MembersComponent } from './features/members/members.component';
 import { TopicsByMemberComponent } from './features/topics-by-member/topics-by-member.component';
 import { TagsComponent } from './features/tags/tags.component';
 import { SettingsComponent } from './features/settings/settings.component';
+import { NotFoundComponent } from './shared/components/not-found/not-found.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/search', pathMatch: 'full' },
@@ -16,4 +17,5 @@ export const routes: Routes = [
   { path: 'topics-by-member', component: TopicsByMemberComponent },
   { path: 'tags', component: TagsComponent },
   { path: 'settings', component: SettingsComponent },
+  { path: '**', component: NotFoundComponent }
 ];
