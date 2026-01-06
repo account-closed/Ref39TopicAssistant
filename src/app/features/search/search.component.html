@@ -102,19 +102,17 @@
       <div class="result-list">
         <ng-container *ngFor="let result of searchResults; let i = index">
           <p-card *ngIf="result.topic"
+                  [header]="result.topic.header"
                   [subheader]="result.topic.description || ''"
                   [ngClass]="{'selected': i === selectedIndex}"
                   (click)="selectAndOpenResult(i)"
                   styleClass="result-card">
             
-            <!-- Custom Header with Priority and Size -->
+            <!-- Priority and Size Badges in Header Area -->
             <ng-template pTemplate="header">
-              <div class="result-card-header">
-                <span class="result-card-title">{{ result.topic.header }}</span>
-                <div class="result-card-badges">
-                  <span class="priority-stars" *ngIf="result.topic.priority" [attr.aria-label]="'Priorität: ' + result.topic.priority + ' von 10'" role="img">{{ getPriorityStars(result.topic.priority) }}</span>
-                  <p-tag *ngIf="result.topic.size" [value]="result.topic.size" [severity]="getSizeSeverity(result.topic.size)" styleClass="size-tag"></p-tag>
-                </div>
+              <div class="result-card-badges" *ngIf="result.topic.priority || result.topic.size">
+                <span class="priority-stars" *ngIf="result.topic.priority" [attr.aria-label]="'Priorität: ' + result.topic.priority + ' von 10'" role="img">{{ getPriorityStars(result.topic.priority) }}</span>
+                <p-tag *ngIf="result.topic.size" [value]="result.topic.size" [severity]="getSizeSeverity(result.topic.size)" styleClass="size-tag"></p-tag>
               </div>
             </ng-template>
             
