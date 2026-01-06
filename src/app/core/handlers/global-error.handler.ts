@@ -1,4 +1,4 @@
-import { ErrorHandler, Injectable, Injector, NgZone } from '@angular/core';
+import { ErrorHandler, Injectable, Injector, NgZone, isDevMode } from '@angular/core';
 import { Router, NavigationError } from '@angular/router';
 
 /**
@@ -125,9 +125,7 @@ export class GlobalErrorHandler implements ErrorHandler {
   }
 
   private isDevelopment(): boolean {
-    // In production builds, this would be false
-    return typeof window !== 'undefined' && 
-           (window.location.hostname === 'localhost' || 
-            window.location.hostname === '127.0.0.1');
+    // Use Angular's isDevMode for proper environment detection
+    return isDevMode();
   }
 }
