@@ -1,4 +1,4 @@
-<div class="user-selector">
+<div class="user-selector" *ngIf="isConnected">
   <i class="pi pi-user"></i>
   <p-select 
     [(ngModel)]="selectedMemberId" 

@@ -16,6 +16,7 @@ import { Subscription } from 'rxjs';
 export class HeaderUserSelectorComponent implements OnInit, OnDestroy {
   selectedMemberId: string = '';
   activeMembers = signal<TeamMember[]>([]);
+  isConnected = false;
   
   private subscriptions: Subscription[] = [];
 
@@ -28,6 +29,13 @@ export class HeaderUserSelectorComponent implements OnInit, OnDestroy {
       this.selectedMemberId = storedMemberId;
     }
 
+    // Subscribe to connection status
+    this.subscriptions.push(
+      this.backend.connectionStatus$.subscribe(connected => {
+        this.isConnected = connected;
+      })
+    );
+
     // Subscribe to datastore to get active members
     this.subscriptions.push(
       this.backend.datastore$.subscribe(datastore => {
@@ -39,7 +47,10 @@ export class HeaderUserSelectorComponent implements OnInit, OnDestroy {
             const member = datastore.members.find(
               m => m.id === this.selectedMemberId && m.active
             );
-            if (!member) {
+            if (member) {
+              // User exists, set them as current user
+              this.backend.setCurrentUser(member.id, member.displayName);
+            } else {
               // User no longer valid, clear selection
               this.selectedMemberId = '';
               localStorage.removeItem('currentMemberId');

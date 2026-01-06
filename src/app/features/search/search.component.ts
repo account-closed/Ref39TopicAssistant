@@ -17,6 +17,7 @@ import { HotkeysService } from '@ngneat/hotkeys';
 import { BackendService } from '../../core/services/backend.service';
 import { SearchEngineService, SearchHit } from '../../core/services/search-engine.service';
 import { IndexMonitorService } from '../../core/services/index-monitor.service';
+import { FileConnectionService } from '../../core/services/file-connection.service';
 import { Datastore, Topic, Tag as TagModel, TShirtSize } from '../../core/models';
 import { getPriorityStars, getSizeSeverity } from '../../shared/utils/topic-display.utils';
 
@@ -46,6 +47,7 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
   isConnecting = false;
   hasFileSystemAPI = false;
   connectError = '';
+  hasStoredConnection = false;
   
   // Index status
   isIndexBuilding = false;
@@ -64,6 +66,7 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
     private backend: BackendService,
     private searchEngine: SearchEngineService,
     private indexMonitor: IndexMonitorService,
+    private fileConnection: FileConnectionService,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone,
     private hotkeys: HotkeysService,
@@ -104,6 +107,9 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnInit(): void {
     // Check File System API support
     this.hasFileSystemAPI = 'showDirectoryPicker' in window;
+
+    // Check if there's a stored connection available for quick reconnect
+    this.checkStoredConnection();
 
     // Subscribe to connection status
     this.subscriptions.push(
@@ -241,6 +247,47 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
     }, SearchComponent.FOCUS_DELAY_MS);
   }
 
+  /**
+   * Check if there's a stored connection available from a previous session.
+   */
+  private async checkStoredConnection(): Promise<void> {
+    this.hasStoredConnection = await this.fileConnection.hasStoredConnection();
+  }
+
+  /**
+   * Quick reconnect to a previously used directory (requires user gesture).
+   */
+  async quickReconnect(): Promise<void> {
+    if (!this.hasFileSystemAPI) {
+      this.connectError = 'Ihr Browser unterstützt die File System Access API nicht.';
+      return;
+    }
+
+    this.isConnecting = true;
+    this.connectError = '';
+    
+    try {
+      const success = await this.fileConnection.reconnectFromStored();
+      if (success) {
+        await this.backend.loadDatastore();
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Verbunden',
+          detail: 'Erfolgreich mit dem letzten Verzeichnis verbunden.',
+          life: 2000
+        });
+      } else {
+        // Fall back to normal connect if reconnect fails
+        await this.backend.connect();
+      }
+    } catch (error) {
+      console.error('Quick reconnect failed:', error);
+      this.connectError = 'Schnellverbindung fehlgeschlagen: ' + (error as Error).message;
+    } finally {
+      this.isConnecting = false;
+    }
+  }
+
   async quickConnect(): Promise<void> {
     if (!this.hasFileSystemAPI) {
       this.connectError = 'Ihr Browser unterstützt die File System Access API nicht.';
@@ -359,6 +406,16 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
     }
     const member = this.currentDatastore.members.find(m => m.id === memberId);
     return member?.email || '';
+  }
+
+  /**
+   * Get compact display text for multiple members.
+   * Shows single name or count for multiple members.
+   */
+  getMembersDisplay(memberIds: string[]): string {
+    if (!memberIds || memberIds.length === 0) return '';
+    if (memberIds.length === 1) return this.getMemberName(memberIds[0]);
+    return `${memberIds.length} Personen`;
   }
 
   getValidityBadge(topic: Topic): string {
