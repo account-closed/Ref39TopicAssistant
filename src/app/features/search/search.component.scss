@@ -195,23 +195,6 @@ kbd {
 .c-badge-compact { background-color: #fff3e0; color: #e65100; }
 .raci-name { font-size: 0.8rem; color: var(--p-text-color); }
 
-.result-list p-card { cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
-.result-list p-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
-.result-list p-card.selected { border: 2px solid var(--p-primary-color); }
-.result-header { display: flex; justify-content: space-between; align-items: center; padding: 1rem; }
-.result-header-left { display: flex; align-items: center; gap: 0.75rem; }
-.topic-title { margin: 0; font-size: 1.25rem; font-weight: 600; }
-.result-body { padding: 0 1rem 1rem 1rem; }
-.description { margin: 0 0 1rem 0; color: var(--p-text-muted-color); font-size: 0.95rem; line-height: 1.5; }
-.raci-compact { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.75rem 0; padding: 0.75rem; background: var(--p-surface-100); border-radius: 6px; }
-.raci-row { display: flex; align-items: center; gap: 0.5rem; }
-.raci-label { font-weight: 700; font-size: 0.75rem; padding: 0.15rem 0.4rem; border-radius: 4px; text-align: center; }
-.r-label { background-color: #e3f2fd; color: #1565c0; }
-.c-label { background-color: #fff3e0; color: #e65100; }
-.i-label { background-color: #f3e5f5; color: #7b1fa2; }
-.raci-value { font-size: 0.9rem; color: var(--p-text-color); }
-.tags { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.75rem; }
-
 .no-results,
 .empty-state {
   text-align: center;

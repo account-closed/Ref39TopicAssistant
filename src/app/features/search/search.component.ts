@@ -409,20 +409,10 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Get compact display text for I (Informed) members.
+   * Get compact display text for multiple members.
    * Shows single name or count for multiple members.
    */
-  getIMembersDisplay(memberIds: string[]): string {
-    if (!memberIds || memberIds.length === 0) return '';
-    if (memberIds.length === 1) return this.getMemberName(memberIds[0]);
-    return `${memberIds.length} Personen`;
-  }
-
-  /**
-   * Get compact display text for C (Consulted) members.
-   * Shows single name or count for multiple members.
-   */
-  getCMembersDisplay(memberIds: string[]): string {
+  getMembersDisplay(memberIds: string[]): string {
     if (!memberIds || memberIds.length === 0) return '';
     if (memberIds.length === 1) return this.getMemberName(memberIds[0]);
     return `${memberIds.length} Personen`;

@@ -136,11 +136,11 @@
               </span>
               <span class="raci-item" *ngIf="result.topic.raci.iMemberIds && result.topic.raci.iMemberIds.length > 0">
                 <span class="raci-badge-compact i-badge-compact">I</span>
-                <span class="raci-name">{{ getIMembersDisplay(result.topic.raci.iMemberIds) }}</span>
+                <span class="raci-name">{{ getMembersDisplay(result.topic.raci.iMemberIds) }}</span>
               </span>
               <span class="raci-item" *ngIf="result.topic.raci.cMemberIds && result.topic.raci.cMemberIds.length > 0">
                 <span class="raci-badge-compact c-badge-compact">C</span>
-                <span class="raci-name">{{ getCMembersDisplay(result.topic.raci.cMemberIds) }}</span>
+                <span class="raci-name">{{ getMembersDisplay(result.topic.raci.cMemberIds) }}</span>
               </span>
             </div>
           </div>
