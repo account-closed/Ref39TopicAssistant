@@ -1,4 +1,4 @@
-import { ApplicationConfig, provideBrowserGlobalErrorListeners, APP_INITIALIZER, inject } from '@angular/core';
+import { ApplicationConfig, provideBrowserGlobalErrorListeners, APP_INITIALIZER, inject, ErrorHandler } from '@angular/core';
 import { provideRouter, withHashLocation } from '@angular/router';
 import { provideAnimationsAsync } from '@angular/platform-browser/animations/async';
 import { MessageService } from 'primeng/api';
@@ -8,6 +8,7 @@ import Aura from '@primeng/themes/aura';
 import { BackendService } from './core/services/backend.service';
 import { FileSystemBackendService } from './core/services/file-system-backend.service';
 import { ThemeService } from './core/services/theme.service';
+import { GlobalErrorHandler } from './core/handlers';
 
 import { routes } from './app.routes';
 
@@ -40,6 +41,8 @@ export const appConfig: ApplicationConfig = {
       useFactory: initializeThemeService,
       multi: true
     },
+    // Global error handler for centralized error reporting
+    { provide: ErrorHandler, useClass: GlobalErrorHandler },
     // Backend abstraction: switch between FileSystemBackendService and RestBackendService here
     { provide: BackendService, useClass: FileSystemBackendService }
   ]
