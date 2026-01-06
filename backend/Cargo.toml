@@ -1,0 +1,56 @@
+[package]
+name = "raci-backend"
+version = "0.1.0"
+edition = "2021"
+description = "REST backend for RACI Topic Finder application"
+authors = ["RACI Team"]
+license = "MIT"
+
+[dependencies]
+# Web framework
+axum = { version = "0.8", features = ["macros"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+
+# Async runtime
+tokio = { version = "1.42", features = ["full"] }
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "sqlite", "chrono", "uuid"] }
+
+# Search
+tantivy = "0.22"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Time handling
+chrono = { version = "0.4", features = ["serde"] }
+
+# UUID generation
+uuid = { version = "1.11", features = ["v4", "serde"] }
+
+# Logging/tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+
+# Security (constant-time comparison)
+subtle = "2.6"
+
+# Configuration
+dotenvy = "0.15"
+
+# Validation
+validator = { version = "0.20", features = ["derive"] }
+
+[dev-dependencies]
+# Testing
+reqwest = { version = "0.12", features = ["json"] }
+tempfile = "3.14"
+once_cell = "1.20"
+
+[profile.release]
+lto = true
+codegen-units = 1
+strip = true
