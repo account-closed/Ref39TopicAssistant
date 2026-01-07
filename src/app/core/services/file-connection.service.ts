@@ -158,17 +158,21 @@ export class FileConnectionService {
    * Retries up to 3 times with exponential backoff for transient errors.
    */
   async readFile(handle: FileSystemFileHandle): Promise<string> {
+    let lastError: any;
+    
     for (let attempt = 0; attempt < FILE_READ_WRITE_MAX_RETRIES; attempt++) {
       try {
         const file = await handle.getFile();
         const content = await file.text();
         
-        // Success - log retry if it wasn't the first attempt
+        // Success - log if it wasn't the first attempt
         if (attempt > 0) {
-          console.log(`[FileConnection] Read succeeded after ${attempt} retries`);
+          console.log(`[FileConnection] Read succeeded after ${attempt + 1} attempts`);
         }
         return content;
       } catch (error: any) {
+        lastError = error;
+        
         // Non-retriable errors
         if (error.name === 'NotAllowedError') {
           throw new FileConnectionError(
@@ -185,13 +189,9 @@ export class FileConnectionService {
           );
         }
         
-        // If this was the last attempt, throw the error
+        // If this was the last attempt, don't retry
         if (attempt === FILE_READ_WRITE_MAX_RETRIES - 1) {
-          throw new FileConnectionError(
-            'Failed to read file: ' + error.message,
-            'Fehler beim Lesen der Datei: ' + error.message,
-            'READ_ERROR'
-          );
+          break;
         }
         
         // Calculate delay with exponential backoff
@@ -203,10 +203,10 @@ export class FileConnectionService {
       }
     }
     
-    // This should never be reached, but TypeScript needs it
+    // All retries exhausted
     throw new FileConnectionError(
-      'Failed to read file after all retries',
-      'Fehler beim Lesen der Datei nach allen Wiederholungsversuchen',
+      'Failed to read file: ' + lastError.message,
+      'Fehler beim Lesen der Datei: ' + lastError.message,
       'READ_ERROR'
     );
   }
@@ -217,18 +217,22 @@ export class FileConnectionService {
    * Retries up to 3 times with exponential backoff for transient errors.
    */
   async writeFile(handle: FileSystemFileHandle, content: string): Promise<void> {
+    let lastError: any;
+    
     for (let attempt = 0; attempt < FILE_READ_WRITE_MAX_RETRIES; attempt++) {
       try {
         const writable = await handle.createWritable();
         await writable.write(content);
         await writable.close();
         
-        // Success - log retry if it wasn't the first attempt
+        // Success - log if it wasn't the first attempt
         if (attempt > 0) {
-          console.log(`[FileConnection] Write succeeded after ${attempt} retries`);
+          console.log(`[FileConnection] Write succeeded after ${attempt + 1} attempts`);
         }
         return;
       } catch (error: any) {
+        lastError = error;
+        
         // Non-retriable errors
         if (error.name === 'NotAllowedError') {
           throw new FileConnectionError(
@@ -238,13 +242,9 @@ export class FileConnectionService {
           );
         }
         
-        // If this was the last attempt, throw the error
+        // If this was the last attempt, don't retry
         if (attempt === FILE_READ_WRITE_MAX_RETRIES - 1) {
-          throw new FileConnectionError(
-            'Failed to write file: ' + error.message,
-            'Fehler beim Schreiben der Datei: ' + error.message,
-            'WRITE_ERROR'
-          );
+          break;
         }
         
         // Calculate delay with exponential backoff
@@ -255,6 +255,13 @@ export class FileConnectionService {
         await new Promise(resolve => setTimeout(resolve, delayMs));
       }
     }
+    
+    // All retries exhausted
+    throw new FileConnectionError(
+      'Failed to write file: ' + lastError.message,
+      'Fehler beim Schreiben der Datei: ' + lastError.message,
+      'WRITE_ERROR'
+    );
   }
 
   async readDatastore(): Promise<string> {

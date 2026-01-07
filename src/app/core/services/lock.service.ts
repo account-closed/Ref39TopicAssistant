@@ -80,6 +80,8 @@ export class LockService implements OnDestroy {
       displayName: this.currentMemberName
     };
 
+    let lastError: any;
+
     for (let attempt = 0; attempt < LOCK_ACQUIRE_MAX_RETRIES; attempt++) {
       try {
         // Step 1: Read current lock
@@ -119,7 +121,7 @@ export class LockService implements OnDestroy {
           this.startRenewal(purpose, holder);
           
           if (attempt > 0) {
-            console.log(`[Lock] Lock acquired after ${attempt} retries`);
+            console.log(`[Lock] Lock acquired after ${attempt + 1} attempts`);
           }
           
           return {
@@ -136,19 +138,11 @@ export class LockService implements OnDestroy {
           remainingSeconds: verifyLock ? this.getRemainingSeconds(verifyLock) : undefined
         };
       } catch (error) {
-        // If this was the last attempt, return the error
+        lastError = error;
+        
+        // If this was the last attempt, don't retry
         if (attempt === LOCK_ACQUIRE_MAX_RETRIES - 1) {
-          console.error('Failed to acquire lock after all retries:', error);
-          if (error instanceof FileConnectionError) {
-            return {
-              success: false,
-              germanMessage: error.germanMessage
-            };
-          }
-          return {
-            success: false,
-            germanMessage: 'Fehler beim Erwerben der Sperre: ' + (error as Error).message
-          };
+          break;
         }
         
         // Calculate delay with exponential backoff
@@ -160,10 +154,17 @@ export class LockService implements OnDestroy {
       }
     }
     
-    // This should never be reached, but TypeScript needs it
+    // All retries exhausted
+    console.error('Failed to acquire lock after all attempts:', lastError);
+    if (lastError instanceof FileConnectionError) {
+      return {
+        success: false,
+        germanMessage: lastError.germanMessage
+      };
+    }
     return {
       success: false,
-      germanMessage: 'Fehler beim Erwerben der Sperre nach allen Wiederholungsversuchen.'
+      germanMessage: 'Fehler beim Erwerben der Sperre: ' + (lastError as Error).message
     };
   }
 
@@ -189,12 +190,12 @@ export class LockService implements OnDestroy {
         await this.updateLockStatus();
         
         if (attempt > 0) {
-          console.log(`[Lock] Lock released after ${attempt} retries`);
+          console.log(`[Lock] Lock released after ${attempt + 1} attempts`);
         }
         return;
       } catch (error) {
         if (attempt === LOCK_RELEASE_RENEW_MAX_RETRIES - 1) {
-          console.error('Failed to release lock after all retries:', error);
+          console.error('Failed to release lock after all attempts:', error);
           // Don't throw - best effort release
           return;
         }
@@ -221,14 +222,14 @@ export class LockService implements OnDestroy {
           await this.updateLockStatus();
           
           if (attempt > 0) {
-            console.log(`[Lock] Lock renewed after ${attempt} retries`);
+            console.log(`[Lock] Lock renewed after ${attempt + 1} attempts`);
           }
           return true;
         }
         return false;
       } catch (error) {
         if (attempt === LOCK_RELEASE_RENEW_MAX_RETRIES - 1) {
-          console.error('Failed to renew lock after all retries:', error);
+          console.error('Failed to renew lock after all attempts:', error);
           return false;
         }
         
