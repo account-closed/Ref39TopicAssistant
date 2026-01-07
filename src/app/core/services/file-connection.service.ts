@@ -150,57 +150,112 @@ export class FileConnectionService {
   }
 
   /**
-   * Read file content with consistent error handling.
+   * Read file content with consistent error handling and retry mechanism.
+   * Retries up to 3 times with exponential backoff for transient errors.
    */
   async readFile(handle: FileSystemFileHandle): Promise<string> {
-    try {
-      const file = await handle.getFile();
-      return await file.text();
-    } catch (error: any) {
-      if (error.name === 'NotAllowedError') {
-        throw new FileConnectionError(
-          'Permission denied reading file',
-          'Keine Berechtigung zum Lesen der Datei. Bitte verbinden Sie das Verzeichnis erneut.',
-          'PERMISSION_DENIED'
-        );
+    const maxRetries = 3;
+    const baseDelayMs = 200;
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const file = await handle.getFile();
+        const content = await file.text();
+        
+        // Success - log retry if it wasn't the first attempt
+        if (attempt > 0) {
+          console.log(`[FileConnection] Read succeeded after ${attempt} retries`);
+        }
+        return content;
+      } catch (error: any) {
+        // Non-retriable errors
+        if (error.name === 'NotAllowedError') {
+          throw new FileConnectionError(
+            'Permission denied reading file',
+            'Keine Berechtigung zum Lesen der Datei. Bitte verbinden Sie das Verzeichnis erneut.',
+            'PERMISSION_DENIED'
+          );
+        }
+        if (error.name === 'NotFoundError') {
+          throw new FileConnectionError(
+            'File not found',
+            'Datei nicht gefunden.',
+            'FILE_NOT_FOUND'
+          );
+        }
+        
+        // If this was the last attempt, throw the error
+        if (attempt === maxRetries) {
+          throw new FileConnectionError(
+            'Failed to read file: ' + error.message,
+            'Fehler beim Lesen der Datei: ' + error.message,
+            'READ_ERROR'
+          );
+        }
+        
+        // Calculate delay with exponential backoff
+        const delayMs = baseDelayMs * Math.pow(2, attempt);
+        console.warn(`[FileConnection] Read failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delayMs}ms:`, error.message);
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, delayMs));
       }
-      if (error.name === 'NotFoundError') {
-        throw new FileConnectionError(
-          'File not found',
-          'Datei nicht gefunden.',
-          'FILE_NOT_FOUND'
-        );
-      }
-      throw new FileConnectionError(
-        'Failed to read file: ' + error.message,
-        'Fehler beim Lesen der Datei: ' + error.message,
-        'READ_ERROR'
-      );
     }
+    
+    // This should never be reached, but TypeScript needs it
+    throw new FileConnectionError(
+      'Failed to read file after all retries',
+      'Fehler beim Lesen der Datei nach allen Wiederholungsversuchen',
+      'READ_ERROR'
+    );
   }
 
   /**
-   * Write file content with consistent error handling.
+   * Write file content with consistent error handling and retry mechanism.
    * Uses createWritable, write full JSON, close pattern.
+   * Retries up to 3 times with exponential backoff for transient errors.
    */
   async writeFile(handle: FileSystemFileHandle, content: string): Promise<void> {
-    try {
-      const writable = await handle.createWritable();
-      await writable.write(content);
-      await writable.close();
-    } catch (error: any) {
-      if (error.name === 'NotAllowedError') {
-        throw new FileConnectionError(
-          'Permission denied writing file',
-          'Keine Berechtigung zum Schreiben der Datei. Bitte verbinden Sie das Verzeichnis erneut.',
-          'PERMISSION_DENIED'
-        );
+    const maxRetries = 3;
+    const baseDelayMs = 200;
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const writable = await handle.createWritable();
+        await writable.write(content);
+        await writable.close();
+        
+        // Success - log retry if it wasn't the first attempt
+        if (attempt > 0) {
+          console.log(`[FileConnection] Write succeeded after ${attempt} retries`);
+        }
+        return;
+      } catch (error: any) {
+        // Non-retriable errors
+        if (error.name === 'NotAllowedError') {
+          throw new FileConnectionError(
+            'Permission denied writing file',
+            'Keine Berechtigung zum Schreiben der Datei. Bitte verbinden Sie das Verzeichnis erneut.',
+            'PERMISSION_DENIED'
+          );
+        }
+        
+        // If this was the last attempt, throw the error
+        if (attempt === maxRetries) {
+          throw new FileConnectionError(
+            'Failed to write file: ' + error.message,
+            'Fehler beim Schreiben der Datei: ' + error.message,
+            'WRITE_ERROR'
+          );
+        }
+        
+        // Calculate delay with exponential backoff
+        const delayMs = baseDelayMs * Math.pow(2, attempt);
+        console.warn(`[FileConnection] Write failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delayMs}ms:`, error.message);
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, delayMs));
       }
-      throw new FileConnectionError(
-        'Failed to write file: ' + error.message,
-        'Fehler beim Schreiben der Datei: ' + error.message,
-        'WRITE_ERROR'
-      );
     }
   }
 
