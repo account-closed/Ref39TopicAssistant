@@ -21,8 +21,12 @@ const LOCK_TTL_SECONDS = 120;
 const LOCK_RENEWAL_INTERVAL_MS = 30000; // 30 seconds
 const LOCK_STATUS_POLL_INTERVAL_MS = 1000; // 1 second
 const LOCK_VERIFICATION_DELAY_MS = 2000; // Wait 2 seconds before verifying lock acquisition (increased for antivirus delays)
+
+// Lock acquisition retry configuration (more critical, longer delays)
 const LOCK_ACQUIRE_MAX_RETRIES = 3; // Maximum number of lock acquisition attempts
 const LOCK_ACQUIRE_BASE_DELAY_MS = 500; // Base delay for lock acquisition retries
+
+// Lock release/renewal retry configuration (less critical, shorter delays)
 const LOCK_RELEASE_RENEW_MAX_RETRIES = 3; // Maximum retries for lock release/renewal
 const LOCK_RELEASE_RENEW_BASE_DELAY_MS = 200; // Base delay for lock release/renewal retries
 
