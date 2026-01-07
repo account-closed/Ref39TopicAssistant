@@ -22,6 +22,9 @@ const LOCK_RENEWAL_INTERVAL_MS = 30000; // 30 seconds
 const LOCK_STATUS_POLL_INTERVAL_MS = 1000; // 1 second
 const LOCK_VERIFICATION_DELAY_MS = 2000; // Wait 2 seconds before verifying lock acquisition (increased for antivirus delays)
 const LOCK_ACQUIRE_MAX_RETRIES = 3; // Maximum number of lock acquisition attempts
+const LOCK_ACQUIRE_BASE_DELAY_MS = 500; // Base delay for lock acquisition retries
+const LOCK_RELEASE_RENEW_MAX_RETRIES = 3; // Maximum retries for lock release/renewal
+const LOCK_RELEASE_RENEW_BASE_DELAY_MS = 200; // Base delay for lock release/renewal retries
 
 @Injectable({
   providedIn: 'root'
@@ -149,7 +152,7 @@ export class LockService implements OnDestroy {
         }
         
         // Calculate delay with exponential backoff
-        const delayMs = 500 * Math.pow(2, attempt);
+        const delayMs = LOCK_ACQUIRE_BASE_DELAY_MS * Math.pow(2, attempt);
         console.warn(`[Lock] Lock acquisition failed (attempt ${attempt + 1}/${LOCK_ACQUIRE_MAX_RETRIES}), retrying in ${delayMs}ms:`, error);
         
         // Wait before retrying
@@ -171,8 +174,7 @@ export class LockService implements OnDestroy {
   async releaseLock(): Promise<void> {
     this.stopRenewal();
     
-    const maxRetries = 3;
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
+    for (let attempt = 0; attempt < LOCK_RELEASE_RENEW_MAX_RETRIES; attempt++) {
       try {
         // Write stale lock to unlock reliably
         const staleLock: Lock = {
@@ -191,14 +193,14 @@ export class LockService implements OnDestroy {
         }
         return;
       } catch (error) {
-        if (attempt === maxRetries - 1) {
+        if (attempt === LOCK_RELEASE_RENEW_MAX_RETRIES - 1) {
           console.error('Failed to release lock after all retries:', error);
           // Don't throw - best effort release
           return;
         }
         
-        const delayMs = 200 * Math.pow(2, attempt);
-        console.warn(`[Lock] Lock release failed (attempt ${attempt + 1}/${maxRetries}), retrying in ${delayMs}ms:`, error);
+        const delayMs = LOCK_RELEASE_RENEW_BASE_DELAY_MS * Math.pow(2, attempt);
+        console.warn(`[Lock] Lock release failed (attempt ${attempt + 1}/${LOCK_RELEASE_RENEW_MAX_RETRIES}), retrying in ${delayMs}ms:`, error);
         await this.sleep(delayMs);
       }
     }
@@ -209,9 +211,7 @@ export class LockService implements OnDestroy {
    * Retries with exponential backoff for transient errors.
    */
   async renewLock(): Promise<boolean> {
-    const maxRetries = 3;
-    
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
+    for (let attempt = 0; attempt < LOCK_RELEASE_RENEW_MAX_RETRIES; attempt++) {
       try {
         const currentLock = await this.readLockFile();
 
@@ -227,13 +227,13 @@ export class LockService implements OnDestroy {
         }
         return false;
       } catch (error) {
-        if (attempt === maxRetries - 1) {
+        if (attempt === LOCK_RELEASE_RENEW_MAX_RETRIES - 1) {
           console.error('Failed to renew lock after all retries:', error);
           return false;
         }
         
-        const delayMs = 200 * Math.pow(2, attempt);
-        console.warn(`[Lock] Lock renewal failed (attempt ${attempt + 1}/${maxRetries}), retrying in ${delayMs}ms:`, error);
+        const delayMs = LOCK_RELEASE_RENEW_BASE_DELAY_MS * Math.pow(2, attempt);
+        console.warn(`[Lock] Lock renewal failed (attempt ${attempt + 1}/${LOCK_RELEASE_RENEW_MAX_RETRIES}), retrying in ${delayMs}ms:`, error);
         await this.sleep(delayMs);
       }
     }

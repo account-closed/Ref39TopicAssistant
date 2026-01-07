@@ -24,6 +24,10 @@ const INDEXEDDB_NAME = 'RaciTopicFinderDB';
 const INDEXEDDB_STORE = 'fileHandles';
 const INDEXEDDB_VERSION = 1;
 
+// File operation retry configuration
+const FILE_READ_WRITE_MAX_RETRIES = 3;
+const FILE_READ_WRITE_BASE_DELAY_MS = 200;
+
 @Injectable({
   providedIn: 'root'
 })
@@ -154,10 +158,7 @@ export class FileConnectionService {
    * Retries up to 3 times with exponential backoff for transient errors.
    */
   async readFile(handle: FileSystemFileHandle): Promise<string> {
-    const maxRetries = 3;
-    const baseDelayMs = 200;
-    
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
+    for (let attempt = 0; attempt < FILE_READ_WRITE_MAX_RETRIES; attempt++) {
       try {
         const file = await handle.getFile();
         const content = await file.text();
@@ -185,7 +186,7 @@ export class FileConnectionService {
         }
         
         // If this was the last attempt, throw the error
-        if (attempt === maxRetries - 1) {
+        if (attempt === FILE_READ_WRITE_MAX_RETRIES - 1) {
           throw new FileConnectionError(
             'Failed to read file: ' + error.message,
             'Fehler beim Lesen der Datei: ' + error.message,
@@ -194,8 +195,8 @@ export class FileConnectionService {
         }
         
         // Calculate delay with exponential backoff
-        const delayMs = baseDelayMs * Math.pow(2, attempt);
-        console.warn(`[FileConnection] Read failed (attempt ${attempt + 1}/${maxRetries}), retrying in ${delayMs}ms:`, error.message);
+        const delayMs = FILE_READ_WRITE_BASE_DELAY_MS * Math.pow(2, attempt);
+        console.warn(`[FileConnection] Read failed (attempt ${attempt + 1}/${FILE_READ_WRITE_MAX_RETRIES}), retrying in ${delayMs}ms:`, error.message);
         
         // Wait before retrying
         await new Promise(resolve => setTimeout(resolve, delayMs));
@@ -216,10 +217,7 @@ export class FileConnectionService {
    * Retries up to 3 times with exponential backoff for transient errors.
    */
   async writeFile(handle: FileSystemFileHandle, content: string): Promise<void> {
-    const maxRetries = 3;
-    const baseDelayMs = 200;
-    
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
+    for (let attempt = 0; attempt < FILE_READ_WRITE_MAX_RETRIES; attempt++) {
       try {
         const writable = await handle.createWritable();
         await writable.write(content);
@@ -241,7 +239,7 @@ export class FileConnectionService {
         }
         
         // If this was the last attempt, throw the error
-        if (attempt === maxRetries - 1) {
+        if (attempt === FILE_READ_WRITE_MAX_RETRIES - 1) {
           throw new FileConnectionError(
             'Failed to write file: ' + error.message,
             'Fehler beim Schreiben der Datei: ' + error.message,
@@ -250,8 +248,8 @@ export class FileConnectionService {
         }
         
         // Calculate delay with exponential backoff
-        const delayMs = baseDelayMs * Math.pow(2, attempt);
-        console.warn(`[FileConnection] Write failed (attempt ${attempt + 1}/${maxRetries}), retrying in ${delayMs}ms:`, error.message);
+        const delayMs = FILE_READ_WRITE_BASE_DELAY_MS * Math.pow(2, attempt);
+        console.warn(`[FileConnection] Write failed (attempt ${attempt + 1}/${FILE_READ_WRITE_MAX_RETRIES}), retrying in ${delayMs}ms:`, error.message);
         
         // Wait before retrying
         await new Promise(resolve => setTimeout(resolve, delayMs));
