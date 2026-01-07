@@ -199,7 +199,7 @@ export class FileConnectionService {
         console.warn(`[FileConnection] Read failed (attempt ${attempt + 1}/${FILE_READ_WRITE_MAX_RETRIES}), retrying in ${delayMs}ms:`, error.message);
         
         // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+        await this.sleep(delayMs);
       }
     }
     
@@ -252,7 +252,7 @@ export class FileConnectionService {
         console.warn(`[FileConnection] Write failed (attempt ${attempt + 1}/${FILE_READ_WRITE_MAX_RETRIES}), retrying in ${delayMs}ms:`, error.message);
         
         // Wait before retrying
-        await new Promise(resolve => setTimeout(resolve, delayMs));
+        await this.sleep(delayMs);
       }
     }
     
@@ -397,6 +397,13 @@ export class FileConnectionService {
   async disconnect(): Promise<void> {
     this.connectionSubject.next({ connected: false });
     await this.clearIndexedDB();
+  }
+
+  /**
+   * Sleep for a specified number of milliseconds.
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   // IndexedDB persistence methods
