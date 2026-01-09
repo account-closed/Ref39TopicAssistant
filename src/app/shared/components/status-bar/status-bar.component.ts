@@ -142,6 +142,25 @@ export class StatusBarComponent implements OnInit {
     const minutes = Math.floor(seconds / 60);
     return `vor ${minutes}m`;
   }
+  
+  getWriteQueueDisplayText(): string {
+    if (!this.hasOpenWrites()) {
+      return 'keine';
+    }
+    
+    let text = '';
+    if (this.writeQueueStatus.isProcessing) {
+      text = '1 aktiv';
+    } else {
+      text = '0 aktiv';
+    }
+    
+    if (this.writeQueueStatus.queueLength > 0) {
+      text += `, ${this.writeQueueStatus.queueLength} wartend`;
+    }
+    
+    return text;
+  }
 
   private updateLockStatusText(status: LockStatus): void {
     if (!status.isLocked) {
