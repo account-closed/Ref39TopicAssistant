@@ -284,13 +284,18 @@ export class DatastoreCommitService {
     modifyFn: (datastore: Datastore) => Datastore,
     purpose: LockPurpose
   ): Promise<CommitResult> {
+    console.log(`[DatastoreCommit] Starting commit for purpose: ${purpose}`);
+    
     // Step 2: Re-read datastore.json
+    console.log('[DatastoreCommit] Step 2: Reading datastore.json');
     const content = await this.fileConnection.readDatastore();
     
     let datastore: Datastore;
     try {
       datastore = JSON.parse(content) as Datastore;
+      console.log(`[DatastoreCommit] Parsed datastore, current revision: ${datastore.revisionId}`);
     } catch (parseError) {
+      console.error('[DatastoreCommit] JSON parse error:', parseError);
       return {
         success: false,
         germanMessage: 'Ungültiges JSON-Format in datastore.json. Änderungen wurden nicht gespeichert.'
@@ -298,8 +303,10 @@ export class DatastoreCommitService {
     }
 
     // Step 3: Validate schema
+    console.log('[DatastoreCommit] Step 3: Validating schema before modification');
     const validationErrors = this.validateDatastore(datastore);
     if (validationErrors.length > 0) {
+      console.error('[DatastoreCommit] Validation errors before modification:', validationErrors);
       return {
         success: false,
         germanMessage: 'Ungültiges Datenschema: ' + validationErrors.map(e => e.germanMessage).join(', ')
@@ -307,27 +314,54 @@ export class DatastoreCommitService {
     }
 
     // Step 4: Apply the change (pure function)
+    console.log('[DatastoreCommit] Step 4: Applying modification function');
     let modifiedDatastore = modifyFn(datastore);
+    console.log(`[DatastoreCommit] After modification: ${modifiedDatastore.topics.length} topics, ${modifiedDatastore.members.length} members`);
+    
+    // Validate modified datastore before plausibility checks
+    console.log('[DatastoreCommit] Validating modified datastore');
+    const postModValidationErrors = this.validateDatastore(modifiedDatastore);
+    if (postModValidationErrors.length > 0) {
+      console.error('[DatastoreCommit] Validation errors after modification:', postModValidationErrors);
+      // Log details about the specific topic/item with errors
+      postModValidationErrors.forEach(err => {
+        console.error(`  - ${err.field}: ${err.germanMessage}`);
+      });
+      return {
+        success: false,
+        germanMessage: 'Ungültiges Datenschema nach Änderung: ' + postModValidationErrors.map(e => e.germanMessage).join(', ')
+      };
+    }
 
     // Step 5: Run plausibility checks to ensure data consistency
+    console.log('[DatastoreCommit] Step 5: Running plausibility checks');
     const { datastore: cleanedDatastore, result: plausibilityResult } =
       runPlausibilityChecks(modifiedDatastore);
     modifiedDatastore = cleanedDatastore;
+    if (plausibilityResult.hasChanges) {
+      console.warn('[DatastoreCommit] Plausibility checks made changes:', plausibilityResult.changeLog);
+    }
 
     // Step 6: Update metadata
+    console.log('[DatastoreCommit] Step 6: Updating metadata');
     modifiedDatastore.revisionId = datastore.revisionId + 1;
     modifiedDatastore.generatedAt = new Date().toISOString();
+    console.log(`[DatastoreCommit] New revision: ${modifiedDatastore.revisionId}`);
 
     // Step 7: Write datastore.json (backup is created automatically)
+    console.log('[DatastoreCommit] Step 7: Writing datastore.json');
     const newContent = JSON.stringify(modifiedDatastore, null, 2);
     await this.fileConnection.writeDatastore(newContent);
+    console.log('[DatastoreCommit] Write complete');
 
     // Step 8: Verification step (mandatory)
+    console.log('[DatastoreCommit] Step 8: Verifying write');
     const verifyContent = await this.fileConnection.readDatastore();
     let verifiedDatastore: Datastore;
     try {
       verifiedDatastore = JSON.parse(verifyContent) as Datastore;
     } catch (parseError) {
+      console.error('[DatastoreCommit] Verification JSON parse error:', parseError);
       return {
         success: false,
         germanMessage: 'Verifizierung fehlgeschlagen: Geschriebene Datei ist kein gültiges JSON.'
@@ -335,13 +369,16 @@ export class DatastoreCommitService {
     }
 
     if (verifiedDatastore.revisionId !== modifiedDatastore.revisionId) {
+      console.error(`[DatastoreCommit] Revision mismatch: expected ${modifiedDatastore.revisionId}, got ${verifiedDatastore.revisionId}`);
       return {
         success: false,
         germanMessage: `Verifizierung fehlgeschlagen: Revision stimmt nicht überein (erwartet: ${modifiedDatastore.revisionId}, gefunden: ${verifiedDatastore.revisionId}).`
       };
     }
+    console.log('[DatastoreCommit] Verification successful');
 
     // Step 9: Write refresh.json signal
+    console.log('[DatastoreCommit] Step 9: Writing refresh signal');
     await this.refreshService.writeRefreshSignal(
       modifiedDatastore.revisionId,
       this.currentMemberId,
@@ -351,6 +388,7 @@ export class DatastoreCommitService {
     // Update local state
     this.updateState(modifiedDatastore, true, null);
 
+    console.log('[DatastoreCommit] Commit completed successfully');
     return {
       success: true,
       germanMessage: 'Änderungen erfolgreich gespeichert.',
@@ -685,8 +723,11 @@ export class DatastoreCommitService {
     if (!topic.raci || typeof topic.raci !== 'object') {
       errors.push({ field: `${prefix}.raci`, germanMessage: `${prefix}.raci ist erforderlich` });
     } else {
-      if (typeof topic.raci.r1MemberId !== 'string' || !topic.raci.r1MemberId) {
-        errors.push({ field: `${prefix}.raci.r1MemberId`, germanMessage: `${prefix}.raci.r1MemberId ist erforderlich` });
+      // r1MemberId is optional - topics without R1 are orphan topics
+      if (topic.raci.r1MemberId !== undefined && topic.raci.r1MemberId !== null && topic.raci.r1MemberId !== '') {
+        if (typeof topic.raci.r1MemberId !== 'string') {
+          errors.push({ field: `${prefix}.raci.r1MemberId`, germanMessage: `${prefix}.raci.r1MemberId muss ein String sein` });
+        }
       }
       if (!Array.isArray(topic.raci.cMemberIds)) {
         errors.push({ field: `${prefix}.raci.cMemberIds`, germanMessage: `${prefix}.raci.cMemberIds muss ein Array sein` });

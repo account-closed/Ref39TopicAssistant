@@ -393,7 +393,10 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
       .filter((tag): tag is TagModel => tag !== undefined);
   }
 
-  getMemberName(memberId: string): string {
+  getMemberName(memberId: string | undefined): string {
+    if (!memberId) {
+      return 'Nicht zugewiesen';
+    }
     if (!this.currentDatastore) {
       return 'Unbekannt';
     }
@@ -401,7 +404,10 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
     return member?.displayName || 'Unbekannt';
   }
 
-  getMemberEmail(memberId: string): string {
+  getMemberEmail(memberId: string | undefined): string {
+    if (!memberId) {
+      return '';
+    }
     if (!this.currentDatastore) {
       return '';
     }

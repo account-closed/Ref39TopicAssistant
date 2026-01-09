@@ -477,7 +477,10 @@ export class TopicsComponent implements OnInit, OnDestroy {
     }
   }
 
-  getMemberName(memberId: string): string {
+  getMemberName(memberId: string | undefined): string {
+    if (!memberId) {
+      return 'Nicht zugewiesen';
+    }
     const member = this.members.find(m => m.id === memberId);
     return member?.displayName || 'Unbekannt';
   }
