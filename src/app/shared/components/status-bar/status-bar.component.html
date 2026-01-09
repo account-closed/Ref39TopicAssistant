@@ -10,10 +10,23 @@
         <strong>Datenstand:</strong> 
         {{ revisionInfo }}
       </span>
-      <span class="status-item">
+      <span class="status-item" 
+            [pTooltip]="getLockStatusTooltip()" 
+            tooltipPosition="top"
+            [escape]="false">
         <i class="pi pi-lock"></i>
         <strong>Sperre:</strong> 
         <span [class]="getLockStatusClass()">{{ lockStatusText }}</span>
+      </span>
+      <span class="status-item" 
+            [pTooltip]="getWriteQueueTooltip()" 
+            tooltipPosition="top"
+            [escape]="false">
+        <i class="pi" [ngClass]="hasOpenWrites() ? 'pi-spin pi-spinner' : 'pi-check-circle'"></i>
+        <strong>Schreibvorgänge:</strong> 
+        <span [class]="hasOpenWrites() ? 'writes-active' : 'writes-idle'">
+          {{ hasOpenWrites() ? (writeQueueStatus.isProcessing ? '1 aktiv' : '0 aktiv') + (writeQueueStatus.queueLength > 0 ? ', ' + writeQueueStatus.queueLength + ' wartend' : '') : 'keine' }}
+        </span>
       </span>
       <span class="status-item">
         <i class="pi pi-wifi"></i>

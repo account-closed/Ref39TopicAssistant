@@ -25,6 +25,15 @@ export interface DatastoreState {
   lastValidDatastore: Datastore | null;
 }
 
+export interface WriteQueueStatus {
+  queueLength: number;
+  isProcessing: boolean;
+  queuedOperations: Array<{
+    purpose: LockPurpose;
+    timestamp: Date;
+  }>;
+}
+
 /**
  * Single entry point for all datastore modifications.
  * Implements the lock acquire, commit, verification, refresh write, and lock release algorithm.
@@ -49,10 +58,19 @@ export class DatastoreCommitService {
   private writeQueue: Array<{
     modifyFn: (datastore: Datastore) => Datastore;
     purpose: LockPurpose;
+    timestamp: Date;
     resolve: (result: CommitResult) => void;
     reject: (error: any) => void;
   }> = [];
   private isProcessingQueue: boolean = false;
+  
+  // Write queue status observable
+  private writeQueueStatusSubject = new BehaviorSubject<WriteQueueStatus>({
+    queueLength: 0,
+    isProcessing: false,
+    queuedOperations: []
+  });
+  public writeQueueStatus$: Observable<WriteQueueStatus> = this.writeQueueStatusSubject.asObservable();
 
   constructor(
     private fileConnection: FileConnectionService,
@@ -167,7 +185,14 @@ export class DatastoreCommitService {
   ): Promise<CommitResult> {
     // Add to queue and process
     return new Promise<CommitResult>((resolve, reject) => {
-      this.writeQueue.push({ modifyFn, purpose, resolve, reject });
+      this.writeQueue.push({ 
+        modifyFn, 
+        purpose, 
+        timestamp: new Date(),
+        resolve, 
+        reject 
+      });
+      this.updateWriteQueueStatus();
       this.processWriteQueue();
     });
   }
@@ -179,15 +204,18 @@ export class DatastoreCommitService {
   private async processWriteQueue(): Promise<void> {
     // If already processing, the current process will handle new items
     if (this.isProcessingQueue) {
+      this.updateWriteQueueStatus();
       return;
     }
 
     this.isProcessingQueue = true;
+    this.updateWriteQueueStatus();
 
     try {
       while (this.writeQueue.length > 0) {
         // Batch multiple writes together
         const batch = this.writeQueue.splice(0, this.writeQueue.length);
+        this.updateWriteQueueStatus();
         
         // Step 1: Acquire lock (will reuse if we already have it)
         const lockResult = await this.lockService.acquireLock(batch[0].purpose);
@@ -226,11 +254,27 @@ export class DatastoreCommitService {
           if (this.writeQueue.length === 0) {
             await this.lockService.releaseLock();
           }
+          this.updateWriteQueueStatus();
         }
       }
     } finally {
       this.isProcessingQueue = false;
+      this.updateWriteQueueStatus();
     }
+  }
+  
+  /**
+   * Update the write queue status observable.
+   */
+  private updateWriteQueueStatus(): void {
+    this.writeQueueStatusSubject.next({
+      queueLength: this.writeQueue.length,
+      isProcessing: this.isProcessingQueue,
+      queuedOperations: this.writeQueue.map(item => ({
+        purpose: item.purpose,
+        timestamp: item.timestamp
+      }))
+    });
   }
 
   /**

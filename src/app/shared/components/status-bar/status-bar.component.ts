@@ -2,14 +2,16 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Button } from 'primeng/button';
 import { Toolbar } from 'primeng/toolbar';
+import { Tooltip } from 'primeng/tooltip';
 import { BackendService } from '../../../core/services/backend.service';
 import { LockService } from '../../../core/services/lock.service';
 import { LockStatus } from '../../../core/services/lock.service';
+import { DatastoreCommitService, WriteQueueStatus } from '../../../core/services';
 
 @Component({
   selector: 'app-status-bar',
   standalone: true,
-  imports: [CommonModule, Button, Toolbar],
+  imports: [CommonModule, Button, Toolbar, Tooltip],
   templateUrl: './status-bar.component.html',
   styleUrl: './status-bar.component.scss'
 })
@@ -20,10 +22,18 @@ export class StatusBarComponent implements OnInit {
   connectivityText: string = 'nicht verbunden';
   isConnected: boolean = false;
   private lockStatus: LockStatus = { isLocked: false, isOwnLock: false };
+  
+  // Write queue status
+  writeQueueStatus: WriteQueueStatus = {
+    queueLength: 0,
+    isProcessing: false,
+    queuedOperations: []
+  };
 
   constructor(
     private backend: BackendService,
-    private lockService: LockService
+    private lockService: LockService,
+    private datastoreCommit: DatastoreCommitService
   ) {}
 
   ngOnInit(): void {
@@ -49,6 +59,11 @@ export class StatusBarComponent implements OnInit {
         this.revisionInfo = `rev ${datastore.revisionId} / ${date.toLocaleString('de-DE')}`;
       }
     });
+    
+    // Subscribe to write queue status
+    this.datastoreCommit.writeQueueStatus$.subscribe(status => {
+      this.writeQueueStatus = status;
+    });
   }
 
   connectFiles(): void {
@@ -68,6 +83,64 @@ export class StatusBarComponent implements OnInit {
 
   getConnectivityClass(): string {
     return this.isConnected ? 'connected' : 'disconnected';
+  }
+  
+  hasOpenWrites(): boolean {
+    return this.writeQueueStatus.queueLength > 0 || this.writeQueueStatus.isProcessing;
+  }
+  
+  getWriteQueueTooltip(): string {
+    if (!this.hasOpenWrites()) {
+      return 'Keine offenen Schreibvorgänge';
+    }
+    
+    let tooltip = `Schreibvorgänge: ${this.writeQueueStatus.isProcessing ? '1 aktiv' : '0 aktiv'}`;
+    
+    if (this.writeQueueStatus.queueLength > 0) {
+      tooltip += `, ${this.writeQueueStatus.queueLength} in Warteschlange\n\nWarteschlange:`;
+      this.writeQueueStatus.queuedOperations.forEach((op, index) => {
+        const timeAgo = this.getTimeAgo(op.timestamp);
+        const purposeText = this.getPurposeText(op.purpose);
+        tooltip += `\n${index + 1}. ${purposeText} (${timeAgo})`;
+      });
+    }
+    
+    return tooltip;
+  }
+  
+  getLockStatusTooltip(): string {
+    if (!this.lockStatus.isLocked) {
+      return 'Keine aktive Sperre';
+    }
+    
+    if (this.lockStatus.isOwnLock) {
+      return `Sie halten die Sperre\nVerbleibende Zeit: ${this.lockStatus.remainingSeconds} Sekunden`;
+    }
+    
+    const holderName = this.lockStatus.lock?.lockedBy.displayName || 'Unbekannt';
+    return `Sperre gehalten von: ${holderName}\nVerbleibende Zeit: ${this.lockStatus.remainingSeconds} Sekunden`;
+  }
+  
+  private getPurposeText(purpose: string): string {
+    const purposeMap: { [key: string]: string } = {
+      'topic-save': 'Thema speichern',
+      'member-save': 'Mitglied speichern',
+      'assignment-save': 'Zuweisung speichern',
+      'tag-save': 'Tag speichern'
+    };
+    return purposeMap[purpose] || purpose;
+  }
+  
+  private getTimeAgo(timestamp: Date): string {
+    const now = new Date();
+    const diff = now.getTime() - new Date(timestamp).getTime();
+    const seconds = Math.floor(diff / 1000);
+    
+    if (seconds < 60) {
+      return `vor ${seconds}s`;
+    }
+    const minutes = Math.floor(seconds / 60);
+    return `vor ${minutes}m`;
   }
 
   private updateLockStatusText(status: LockStatus): void {
