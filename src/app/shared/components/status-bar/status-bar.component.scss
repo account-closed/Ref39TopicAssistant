@@ -18,10 +18,15 @@
   gap: 0.5rem;
   font-size: 0.8rem;
   color: var(--p-text-muted-color);
+  cursor: help;
 }
 
 .status-item i {
   color: var(--p-text-muted-color);
+}
+
+.status-item i.pi-spin {
+  color: var(--p-primary-color);
 }
 
 .status-item strong {
@@ -47,4 +52,13 @@
 
 .disconnected {
   color: var(--p-red-500);
+}
+
+.writes-active {
+  color: var(--p-primary-color);
+  font-weight: 600;
+}
+
+.writes-idle {
+  color: var(--p-green-500);
 }

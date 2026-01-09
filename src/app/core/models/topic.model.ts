@@ -5,7 +5,7 @@ export interface TopicValidity {
 }
 
 export interface TopicRaci {
-  r1MemberId: string; // required
+  r1MemberId?: string; // optional - topics without R1 are orphan topics
   r2MemberId?: string;
   r3MemberId?: string;
   cMemberIds: string[];
