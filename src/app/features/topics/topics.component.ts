@@ -257,7 +257,7 @@ export class TopicsComponent implements OnInit, OnDestroy {
       },
       notes: '',
       raci: {
-        r1MemberId: '',
+        r1MemberId: undefined,
         r2MemberId: undefined,
         r3MemberId: undefined,
         cMemberIds: [],
