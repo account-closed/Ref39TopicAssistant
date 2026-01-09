@@ -93,6 +93,24 @@ export class LockService implements OnDestroy {
 
         // Step 2: Check if locked and not stale
         if (existingLock && !this.isLockStale(existingLock)) {
+          // Check if this is our own lock (avoid self-blocking)
+          if (existingLock.clientId === this.clientId) {
+            // We already hold the lock - just renew it and return success
+            existingLock.lockedAt = new Date().toISOString();
+            await this.fileConnection.writeLock(JSON.stringify(existingLock, null, 2));
+            await this.updateLockStatus();
+            
+            if (attempt > 0) {
+              console.log(`[Lock] Re-acquired own lock after ${attempt + 1} attempts`);
+            }
+            
+            return {
+              success: true,
+              germanMessage: 'Sperre erfolgreich erworben (bereits vorhanden).'
+            };
+          }
+          
+          // Lock is held by another client
           const remainingSeconds = this.getRemainingSeconds(existingLock);
           return {
             success: false,

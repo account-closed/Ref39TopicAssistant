@@ -44,6 +44,15 @@ export class DatastoreCommitService {
 
   private currentMemberId: string = '';
   private currentMemberName: string = '';
+  
+  // Write queue for handling multiple quick writes in the same session
+  private writeQueue: Array<{
+    modifyFn: (datastore: Datastore) => Datastore;
+    purpose: LockPurpose;
+    resolve: (result: CommitResult) => void;
+    reject: (error: any) => void;
+  }> = [];
+  private isProcessingQueue: boolean = false;
 
   constructor(
     private fileConnection: FileConnectionService,
@@ -149,110 +158,161 @@ export class DatastoreCommitService {
    * Commit changes to the datastore.
    * Follows the specification: acquire lock, re-read, validate, apply, run plausibility checks,
    * update metadata, write, verify, write refresh, release lock.
+   * 
+   * Uses a write queue to handle multiple quick writes in the same session without blocking.
    */
   async commitChanges(
     modifyFn: (datastore: Datastore) => Datastore,
     purpose: LockPurpose
   ): Promise<CommitResult> {
-    // Step 1: Acquire lock
-    const lockResult = await this.lockService.acquireLock(purpose);
-    if (!lockResult.success) {
-      console.error('Failed to acquire lock:', lockResult.germanMessage);
-      return {
-        success: false,
-        germanMessage: lockResult.germanMessage
-      };
+    // Add to queue and process
+    return new Promise<CommitResult>((resolve, reject) => {
+      this.writeQueue.push({ modifyFn, purpose, resolve, reject });
+      this.processWriteQueue();
+    });
+  }
+
+  /**
+   * Process the write queue sequentially.
+   * Batches multiple writes together when possible and maintains lock across operations.
+   */
+  private async processWriteQueue(): Promise<void> {
+    // If already processing, the current process will handle new items
+    if (this.isProcessingQueue) {
+      return;
     }
+
+    this.isProcessingQueue = true;
 
     try {
-      // Step 2: Re-read datastore.json
-      const content = await this.fileConnection.readDatastore();
-      
-      let datastore: Datastore;
-      try {
-        datastore = JSON.parse(content) as Datastore;
-      } catch (parseError) {
-        return {
-          success: false,
-          germanMessage: 'Ungültiges JSON-Format in datastore.json. Änderungen wurden nicht gespeichert.'
-        };
+      while (this.writeQueue.length > 0) {
+        // Batch multiple writes together
+        const batch = this.writeQueue.splice(0, this.writeQueue.length);
+        
+        // Step 1: Acquire lock (will reuse if we already have it)
+        const lockResult = await this.lockService.acquireLock(batch[0].purpose);
+        if (!lockResult.success) {
+          console.error('Failed to acquire lock:', lockResult.germanMessage);
+          const errorResult: CommitResult = {
+            success: false,
+            germanMessage: lockResult.germanMessage
+          };
+          // Reject all items in batch
+          batch.forEach(item => item.resolve(errorResult));
+          continue;
+        }
+
+        try {
+          // Process all writes in the batch
+          for (const item of batch) {
+            try {
+              const result = await this.performCommit(item.modifyFn, item.purpose);
+              item.resolve(result);
+            } catch (error) {
+              const errorMsg = error instanceof FileConnectionError 
+                ? error.germanMessage 
+                : 'Fehler beim Speichern: ' + (error as Error).message;
+              
+              console.error('Error during commit:', error);
+              
+              item.resolve({
+                success: false,
+                germanMessage: errorMsg
+              });
+            }
+          }
+        } finally {
+          // Step 10: Release lock only if queue is empty
+          if (this.writeQueue.length === 0) {
+            await this.lockService.releaseLock();
+          }
+        }
       }
+    } finally {
+      this.isProcessingQueue = false;
+    }
+  }
 
-      // Step 3: Validate schema
-      const validationErrors = this.validateDatastore(datastore);
-      if (validationErrors.length > 0) {
-        return {
-          success: false,
-          germanMessage: 'Ungültiges Datenschema: ' + validationErrors.map(e => e.germanMessage).join(', ')
-        };
-      }
-
-      // Step 4: Apply the change (pure function)
-      let modifiedDatastore = modifyFn(datastore);
-
-      // Step 5: Run plausibility checks to ensure data consistency
-      const { datastore: cleanedDatastore, result: plausibilityResult } =
-        runPlausibilityChecks(modifiedDatastore);
-      modifiedDatastore = cleanedDatastore;
-
-      // Step 6: Update metadata
-      modifiedDatastore.revisionId = datastore.revisionId + 1;
-      modifiedDatastore.generatedAt = new Date().toISOString();
-
-      // Step 7: Write datastore.json (backup is created automatically)
-      const newContent = JSON.stringify(modifiedDatastore, null, 2);
-      await this.fileConnection.writeDatastore(newContent);
-
-      // Step 8: Verification step (mandatory)
-      const verifyContent = await this.fileConnection.readDatastore();
-      let verifiedDatastore: Datastore;
-      try {
-        verifiedDatastore = JSON.parse(verifyContent) as Datastore;
-      } catch (parseError) {
-        return {
-          success: false,
-          germanMessage: 'Verifizierung fehlgeschlagen: Geschriebene Datei ist kein gültiges JSON.'
-        };
-      }
-
-      if (verifiedDatastore.revisionId !== modifiedDatastore.revisionId) {
-        return {
-          success: false,
-          germanMessage: `Verifizierung fehlgeschlagen: Revision stimmt nicht überein (erwartet: ${modifiedDatastore.revisionId}, gefunden: ${verifiedDatastore.revisionId}).`
-        };
-      }
-
-      // Step 9: Write refresh.json signal
-      await this.refreshService.writeRefreshSignal(
-        modifiedDatastore.revisionId,
-        this.currentMemberId,
-        this.currentMemberName
-      );
-
-      // Update local state
-      this.updateState(modifiedDatastore, true, null);
-
-      return {
-        success: true,
-        germanMessage: 'Änderungen erfolgreich gespeichert.',
-        datastore: modifiedDatastore,
-        plausibilityResult
-      };
-    } catch (error) {
-      const errorMsg = error instanceof FileConnectionError 
-        ? error.germanMessage 
-        : 'Fehler beim Speichern: ' + (error as Error).message;
-      
-      console.error('Error during commit:', error);
-      
+  /**
+   * Perform the actual commit operation (internal method used by queue processor).
+   */
+  private async performCommit(
+    modifyFn: (datastore: Datastore) => Datastore,
+    purpose: LockPurpose
+  ): Promise<CommitResult> {
+    // Step 2: Re-read datastore.json
+    const content = await this.fileConnection.readDatastore();
+    
+    let datastore: Datastore;
+    try {
+      datastore = JSON.parse(content) as Datastore;
+    } catch (parseError) {
       return {
         success: false,
-        germanMessage: errorMsg
+        germanMessage: 'Ungültiges JSON-Format in datastore.json. Änderungen wurden nicht gespeichert.'
       };
-    } finally {
-      // Step 10: Release lock
-      await this.lockService.releaseLock();
     }
+
+    // Step 3: Validate schema
+    const validationErrors = this.validateDatastore(datastore);
+    if (validationErrors.length > 0) {
+      return {
+        success: false,
+        germanMessage: 'Ungültiges Datenschema: ' + validationErrors.map(e => e.germanMessage).join(', ')
+      };
+    }
+
+    // Step 4: Apply the change (pure function)
+    let modifiedDatastore = modifyFn(datastore);
+
+    // Step 5: Run plausibility checks to ensure data consistency
+    const { datastore: cleanedDatastore, result: plausibilityResult } =
+      runPlausibilityChecks(modifiedDatastore);
+    modifiedDatastore = cleanedDatastore;
+
+    // Step 6: Update metadata
+    modifiedDatastore.revisionId = datastore.revisionId + 1;
+    modifiedDatastore.generatedAt = new Date().toISOString();
+
+    // Step 7: Write datastore.json (backup is created automatically)
+    const newContent = JSON.stringify(modifiedDatastore, null, 2);
+    await this.fileConnection.writeDatastore(newContent);
+
+    // Step 8: Verification step (mandatory)
+    const verifyContent = await this.fileConnection.readDatastore();
+    let verifiedDatastore: Datastore;
+    try {
+      verifiedDatastore = JSON.parse(verifyContent) as Datastore;
+    } catch (parseError) {
+      return {
+        success: false,
+        germanMessage: 'Verifizierung fehlgeschlagen: Geschriebene Datei ist kein gültiges JSON.'
+      };
+    }
+
+    if (verifiedDatastore.revisionId !== modifiedDatastore.revisionId) {
+      return {
+        success: false,
+        germanMessage: `Verifizierung fehlgeschlagen: Revision stimmt nicht überein (erwartet: ${modifiedDatastore.revisionId}, gefunden: ${verifiedDatastore.revisionId}).`
+      };
+    }
+
+    // Step 9: Write refresh.json signal
+    await this.refreshService.writeRefreshSignal(
+      modifiedDatastore.revisionId,
+      this.currentMemberId,
+      this.currentMemberName
+    );
+
+    // Update local state
+    this.updateState(modifiedDatastore, true, null);
+
+    return {
+      success: true,
+      germanMessage: 'Änderungen erfolgreich gespeichert.',
+      datastore: modifiedDatastore,
+      plausibilityResult
+    };
   }
 
   // Convenience methods for common operations
