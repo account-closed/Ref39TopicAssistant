@@ -32,7 +32,7 @@
       </p-select>
     </div>
 
-    @if (selectedMemberId()) {
+    @if (selectedMemberId) {
       <!-- Filters Toolbar -->
       <p-toolbar styleClass="filters-toolbar">
         <div class="toolbar-left">
@@ -64,19 +64,19 @@
           <!-- Super-Tag Toggle -->
           <p-button
             [label]="'Super-Tags'"
-            [outlined]="!filterSuperTagOnly()"
-            [severity]="filterSuperTagOnly() ? 'success' : 'secondary'"
+            [outlined]="!filterSuperTagOnly"
+            [severity]="filterSuperTagOnly ? 'success' : 'secondary'"
             size="small"
-            (onClick)="filterSuperTagOnly.set(!filterSuperTagOnly())">
+            (onClick)="toggleSuperTagFilter()">
           </p-button>
 
           <!-- GVPL-Tag Toggle -->
           <p-button
             [label]="'GVPL-Tags'"
-            [outlined]="!filterGvplTagOnly()"
-            [severity]="filterGvplTagOnly() ? 'success' : 'secondary'"
+            [outlined]="!filterGvplTagOnly"
+            [severity]="filterGvplTagOnly ? 'success' : 'secondary'"
             size="small"
-            (onClick)="filterGvplTagOnly.set(!filterGvplTagOnly())">
+            (onClick)="toggleGvplTagFilter()">
           </p-button>
 
           <!-- Priority Filter -->
@@ -273,7 +273,7 @@
       </p-table>
     }
 
-    @if (!selectedMemberId()) {
+    @if (!selectedMemberId) {
       <div class="no-selection-message">
         <i class="pi pi-arrow-up"></i>
         <p>Bitte wählen Sie ein Teammitglied aus, um dessen Themen anzuzeigen.</p>

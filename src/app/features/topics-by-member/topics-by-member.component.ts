@@ -12,7 +12,7 @@ import { Button } from 'primeng/button';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
 import { Topic, TeamMember, Datastore, Tag as TagModel, TShirtSize } from '../../core/models';
-import { getPriorityStars, getSizeSeverity } from '../../shared/utils/topic-display.utils';
+import { getSizeSeverity } from '../../shared/utils/topic-display.utils';
 
 interface MemberOption {
   id: string;
@@ -50,16 +50,44 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
   topics = signal<Topic[]>([]);
   allTags = signal<TagModel[]>([]);
   
-  // Filter signals
-  selectedMemberId = signal<string | null>(null);
-  filterRoles = signal<string[]>([]);
-  filterTags = signal<string[]>([]);
-  filterSuperTagOnly = signal(false);
-  filterGvplTagOnly = signal(false);
-  filterPriorityMin = signal<number | null>(null);
-  filterPriorityMax = signal<number | null>(null);
-  filterSizes = signal<TShirtSize[]>([]);
-  filterValidity = signal<string[]>([]);
+  // Filter signals (internal)
+  private _selectedMemberId = signal<string | null>(null);
+  private _filterRoles = signal<string[]>([]);
+  private _filterTags = signal<string[]>([]);
+  private _filterSuperTagOnly = signal(false);
+  private _filterGvplTagOnly = signal(false);
+  private _filterPriorityMin = signal<number | null>(null);
+  private _filterPriorityMax = signal<number | null>(null);
+  private _filterSizes = signal<TShirtSize[]>([]);
+  private _filterValidity = signal<string[]>([]);
+
+  // Getter/Setter properties for ngModel compatibility
+  get selectedMemberId(): string | null { return this._selectedMemberId(); }
+  set selectedMemberId(value: string | null) { this._selectedMemberId.set(value); }
+
+  get filterRoles(): string[] { return this._filterRoles(); }
+  set filterRoles(value: string[]) { this._filterRoles.set(value); }
+
+  get filterTags(): string[] { return this._filterTags(); }
+  set filterTags(value: string[]) { this._filterTags.set(value); }
+
+  get filterSuperTagOnly(): boolean { return this._filterSuperTagOnly(); }
+  set filterSuperTagOnly(value: boolean) { this._filterSuperTagOnly.set(value); }
+
+  get filterGvplTagOnly(): boolean { return this._filterGvplTagOnly(); }
+  set filterGvplTagOnly(value: boolean) { this._filterGvplTagOnly.set(value); }
+
+  get filterPriorityMin(): number | null { return this._filterPriorityMin(); }
+  set filterPriorityMin(value: number | null) { this._filterPriorityMin.set(value); }
+
+  get filterPriorityMax(): number | null { return this._filterPriorityMax(); }
+  set filterPriorityMax(value: number | null) { this._filterPriorityMax.set(value); }
+
+  get filterSizes(): TShirtSize[] { return this._filterSizes(); }
+  set filterSizes(value: TShirtSize[]) { this._filterSizes.set(value); }
+
+  get filterValidity(): string[] { return this._filterValidity(); }
+  set filterValidity(value: string[]) { this._filterValidity.set(value); }
 
   // Computed: active members for dropdown
   activeMemberOptions = computed<MemberOption[]>(() => 
@@ -71,7 +99,7 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
 
   // Computed: selected member name
   selectedMemberName = computed(() => {
-    const memberId = this.selectedMemberId();
+    const memberId = this._selectedMemberId();
     if (!memberId) return null;
     return this.activeMemberOptions().find(m => m.id === memberId)?.displayName || null;
   });
@@ -87,7 +115,7 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
 
   // Computed: topics for selected member
   memberTopics = computed<TopicWithRoles[]>(() => {
-    const memberId = this.selectedMemberId();
+    const memberId = this._selectedMemberId();
     if (!memberId) return [];
 
     const topics = this.topics();
@@ -121,7 +149,7 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
     const allTagsMap = new Map(this.allTags().map(t => [t.name, t]));
 
     // Filter by roles
-    const filterRoles = this.filterRoles();
+    const filterRoles = this._filterRoles();
     if (filterRoles.length > 0) {
       result = result.filter(item => 
         item.roles.some(role => filterRoles.includes(role))
@@ -129,7 +157,7 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
     }
 
     // Filter by tags
-    const filterTags = this.filterTags();
+    const filterTags = this._filterTags();
     if (filterTags.length > 0) {
       result = result.filter(item => 
         item.topic.tags?.some(tag => filterTags.includes(tag)) ?? false
@@ -137,7 +165,7 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
     }
 
     // Filter by super-tag
-    if (this.filterSuperTagOnly()) {
+    if (this._filterSuperTagOnly()) {
       result = result.filter(item => 
         item.topic.tags?.some(tagName => {
           const tag = allTagsMap.get(tagName);
@@ -147,7 +175,7 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
     }
 
     // Filter by GVPL tag
-    if (this.filterGvplTagOnly()) {
+    if (this._filterGvplTagOnly()) {
       result = result.filter(item => 
         item.topic.tags?.some(tagName => {
           const tag = allTagsMap.get(tagName);
@@ -157,8 +185,8 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
     }
 
     // Filter by priority range
-    const minPriority = this.filterPriorityMin();
-    const maxPriority = this.filterPriorityMax();
+    const minPriority = this._filterPriorityMin();
+    const maxPriority = this._filterPriorityMax();
     if (minPriority !== null) {
       result = result.filter(item => (item.topic.priority ?? 0) >= minPriority);
     }
@@ -167,7 +195,7 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
     }
 
     // Filter by sizes
-    const filterSizes = this.filterSizes();
+    const filterSizes = this._filterSizes();
     if (filterSizes.length > 0) {
       result = result.filter(item => 
         item.topic.size && filterSizes.includes(item.topic.size)
@@ -175,7 +203,7 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
     }
 
     // Filter by validity
-    const filterValidity = this.filterValidity();
+    const filterValidity = this._filterValidity();
     if (filterValidity.length > 0) {
       result = result.filter(item => {
         const validityStatus = this.getValidityStatus(item.topic);
@@ -256,14 +284,22 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
   }
 
   clearFilters(): void {
-    this.filterRoles.set([]);
-    this.filterTags.set([]);
-    this.filterSuperTagOnly.set(false);
-    this.filterGvplTagOnly.set(false);
-    this.filterPriorityMin.set(null);
-    this.filterPriorityMax.set(null);
-    this.filterSizes.set([]);
-    this.filterValidity.set([]);
+    this._filterRoles.set([]);
+    this._filterTags.set([]);
+    this._filterSuperTagOnly.set(false);
+    this._filterGvplTagOnly.set(false);
+    this._filterPriorityMin.set(null);
+    this._filterPriorityMax.set(null);
+    this._filterSizes.set([]);
+    this._filterValidity.set([]);
+  }
+
+  toggleSuperTagFilter(): void {
+    this._filterSuperTagOnly.set(!this._filterSuperTagOnly());
+  }
+
+  toggleGvplTagFilter(): void {
+    this._filterGvplTagOnly.set(!this._filterGvplTagOnly());
   }
 
   getRoleSeverity(role: string): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
