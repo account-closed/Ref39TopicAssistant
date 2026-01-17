@@ -1,36 +1,7 @@
 <div class="page-container">
   <div class="page-header">
-    <h1>Themen nach Teammitglied</h1>
-    <p>RACI-Matrix: Übersicht aller Themen und Zuständigkeiten</p>
-  </div>
-
-  <div class="legend">
-    <span class="legend-title">Legende:</span>
-    <p-tag value="R1" severity="success" pTooltip="Hauptverantwortlich"></p-tag>
-    <p-tag value="R2" severity="info" pTooltip="Stellvertretung"></p-tag>
-    <p-tag value="R3" severity="secondary" pTooltip="Weitere Stellvertretung"></p-tag>
-    <p-tag value="C" severity="warn" pTooltip="Consulted (wird konsultiert)"></p-tag>
-    <p-tag value="I" severity="contrast" pTooltip="Informed (wird informiert)"></p-tag>
-    <p-tag value="Verwaist" severity="danger" pTooltip="Keine Zuordnung"></p-tag>
-  </div>
-
-  @if (orphanCount() > 0) {
-    <div class="orphan-warning">
-      <i class="pi pi-exclamation-triangle"></i>
-      <span>{{ orphanCount() }} Thema(en) ohne Zuordnung gefunden</span>
-    </div>
-  }
-
-  <div class="toolbar">
-    <p-iconfield>
-      <p-inputicon styleClass="pi pi-search" />
-      <input 
-        pInputText 
-        type="text" 
-        [value]="globalFilter()" 
-        (input)="onGlobalFilter($event)" 
-        placeholder="Themen filtern..." />
-    </p-iconfield>
+    <h1>Themen pro Teammitglied</h1>
+    <p>Übersicht aller Themen eines Teammitglieds mit Filteroptionen</p>
   </div>
 
   @if (!isConnected()) {
@@ -43,58 +14,270 @@
   }
 
   @if (isConnected()) {
-    <div class="matrix-container">
-      <table class="raci-matrix">
-        <thead>
-          <tr>
-            <th class="topic-header">Thema</th>
-            @for (member of activeMembers(); track trackByMember($index, member)) {
-              <th class="member-header" [pTooltip]="member.email || ''">
-                {{ member.displayName }}
-              </th>
-            }
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of matrixRows(); track trackByTopic($index, row)) {
-            <tr [class.orphan-row]="row.isOrphan">
-              <td class="topic-cell">
-                <div class="topic-name">{{ row.topic.header }}</div>
-                @if (row.isOrphan) {
-                  <p-tag value="Verwaist" severity="danger" styleClass="orphan-tag"></p-tag>
-                }
-                @if (row.topic.tags && row.topic.tags.length > 0) {
-                  <div class="topic-tags">
-                    @for (tag of row.topic.tags; track tag) {
-                      <span class="mini-tag">{{ tag }}</span>
-                    }
-                  </div>
-                }
-              </td>
-              @for (member of activeMembers(); track trackByMember($index, member)) {
-                <td class="role-cell">
-                  @for (role of getRoles(row, member.id); track role) {
-                    <p-tag 
-                      [value]="role" 
-                      [severity]="getRoleSeverity(role)"
-                      [pTooltip]="getRoleTooltip(role)"
-                      styleClass="role-tag">
-                    </p-tag>
-                  }
-                </td>
-              }
-            </tr>
-          }
-          @if (matrixRows().length === 0) {
-            <tr>
-              <td [attr.colspan]="activeMembers().length + 1" class="empty-message">
-                <i class="pi pi-inbox empty-icon"></i>
-                <p>Keine Themen gefunden</p>
-              </td>
-            </tr>
-          }
-        </tbody>
-      </table>
+    <!-- Member Selection -->
+    <div class="member-selection">
+      <label for="memberSelect" class="selection-label">
+        <i class="pi pi-user"></i>
+        Teammitglied auswählen:
+      </label>
+      <p-select
+        id="memberSelect"
+        [options]="activeMemberOptions()"
+        [(ngModel)]="selectedMemberId"
+        optionLabel="displayName"
+        optionValue="id"
+        placeholder="Bitte Teammitglied wählen..."
+        [showClear]="true"
+        styleClass="member-select">
+      </p-select>
     </div>
+
+    @if (selectedMemberId()) {
+      <!-- Filters Toolbar -->
+      <p-toolbar styleClass="filters-toolbar">
+        <div class="toolbar-left">
+          <span class="filter-label">Filter:</span>
+          
+          <!-- Role Filter -->
+          <p-multiselect
+            [options]="roleOptions"
+            [(ngModel)]="filterRoles"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Rolle"
+            [showClear]="true"
+            display="chip"
+            styleClass="filter-multiselect">
+          </p-multiselect>
+
+          <!-- Tag Filter -->
+          <p-multiselect
+            [options]="availableTagNames()"
+            [(ngModel)]="filterTags"
+            placeholder="Tags"
+            [showClear]="true"
+            display="chip"
+            [filter]="true"
+            styleClass="filter-multiselect">
+          </p-multiselect>
+
+          <!-- Super-Tag Toggle -->
+          <p-button
+            [label]="'Super-Tags'"
+            [outlined]="!filterSuperTagOnly()"
+            [severity]="filterSuperTagOnly() ? 'success' : 'secondary'"
+            size="small"
+            (onClick)="filterSuperTagOnly.set(!filterSuperTagOnly())">
+          </p-button>
+
+          <!-- GVPL-Tag Toggle -->
+          <p-button
+            [label]="'GVPL-Tags'"
+            [outlined]="!filterGvplTagOnly()"
+            [severity]="filterGvplTagOnly() ? 'success' : 'secondary'"
+            size="small"
+            (onClick)="filterGvplTagOnly.set(!filterGvplTagOnly())">
+          </p-button>
+
+          <!-- Priority Filter -->
+          <div class="priority-filter">
+            <p-select
+              [options]="priorityOptions"
+              [(ngModel)]="filterPriorityMin"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Min Prio"
+              [showClear]="true"
+              styleClass="priority-select">
+            </p-select>
+            <span class="priority-separator">-</span>
+            <p-select
+              [options]="priorityOptions"
+              [(ngModel)]="filterPriorityMax"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Max Prio"
+              [showClear]="true"
+              styleClass="priority-select">
+            </p-select>
+          </div>
+
+          <!-- Size Filter -->
+          <p-multiselect
+            [options]="sizeOptions"
+            [(ngModel)]="filterSizes"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Größe"
+            [showClear]="true"
+            display="chip"
+            styleClass="filter-multiselect">
+          </p-multiselect>
+
+          <!-- Validity Filter -->
+          <p-multiselect
+            [options]="validityOptions"
+            [(ngModel)]="filterValidity"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Gültigkeit"
+            [showClear]="true"
+            display="chip"
+            styleClass="filter-multiselect">
+          </p-multiselect>
+        </div>
+
+        <div class="toolbar-right">
+          <p-button
+            label="Filter zurücksetzen"
+            icon="pi pi-filter-slash"
+            [outlined]="true"
+            severity="secondary"
+            size="small"
+            (onClick)="clearFilters()">
+          </p-button>
+        </div>
+      </p-toolbar>
+
+      <!-- Topics Count -->
+      <div class="topics-count">
+        <i class="pi pi-list"></i>
+        <span>{{ filteredTopics().length }} Thema(en) für {{ selectedMemberName() }}</span>
+      </div>
+
+      <!-- Topics Table -->
+      <p-table
+        [value]="filteredTopics()"
+        [rowTrackBy]="trackByTopicId"
+        [paginator]="true"
+        [rows]="25"
+        [rowsPerPageOptions]="[10, 25, 50, 100]"
+        [globalFilterFields]="['topic.header', 'topic.description']"
+        styleClass="topics-table"
+        responsiveLayout="scroll"
+        [sortField]="'topic.header'"
+        [sortOrder]="1">
+        
+        <ng-template pTemplate="header">
+          <tr>
+            <th pSortableColumn="topic.header">
+              Thema
+              <p-sortIcon field="topic.header"></p-sortIcon>
+            </th>
+            <th>Rolle(n)</th>
+            <th pSortableColumn="topic.priority">
+              Priorität
+              <p-sortIcon field="topic.priority"></p-sortIcon>
+            </th>
+            <th pSortableColumn="topic.size">
+              Größe
+              <p-sortIcon field="topic.size"></p-sortIcon>
+            </th>
+            <th>Tags</th>
+            <th>Gültigkeit</th>
+            <th>Beschreibung</th>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-item>
+          <tr>
+            <!-- Topic Header -->
+            <td>
+              <div class="topic-header-cell">
+                <span class="topic-name">{{ item.topic.header }}</span>
+              </div>
+            </td>
+
+            <!-- Roles -->
+            <td>
+              <div class="roles-cell">
+                @for (role of item.roles; track role) {
+                  <p-tag 
+                    [value]="role" 
+                    [severity]="getRoleSeverity(role)"
+                    [pTooltip]="getRoleTooltip(role)">
+                  </p-tag>
+                }
+              </div>
+            </td>
+
+            <!-- Priority -->
+            <td>
+              @if (item.topic.priority) {
+                <div class="priority-cell">
+                  <p-rating 
+                    [ngModel]="item.topic.priority" 
+                    [readonly]="true" 
+                    [stars]="10">
+                  </p-rating>
+                  <span class="priority-number">({{ item.topic.priority }})</span>
+                </div>
+              } @else {
+                <span class="no-data">-</span>
+              }
+            </td>
+
+            <!-- Size -->
+            <td>
+              @if (item.topic.size) {
+                <p-tag 
+                  [value]="item.topic.size" 
+                  [severity]="getSizeSeverity(item.topic.size)">
+                </p-tag>
+              } @else {
+                <span class="no-data">-</span>
+              }
+            </td>
+
+            <!-- Tags -->
+            <td>
+              <div class="tags-cell">
+                @if (item.topic.tags && item.topic.tags.length > 0) {
+                  @for (tag of item.topic.tags; track tag) {
+                    <span class="topic-tag">{{ tag }}</span>
+                  }
+                } @else {
+                  <span class="no-data">-</span>
+                }
+              </div>
+            </td>
+
+            <!-- Validity -->
+            <td>
+              <p-tag 
+                [value]="getValidityLabel(item.topic)" 
+                [severity]="getValiditySeverity(item.topic)">
+              </p-tag>
+            </td>
+
+            <!-- Description -->
+            <td>
+              <span 
+                class="description-cell" 
+                [pTooltip]="item.topic.description || ''"
+                tooltipPosition="top">
+                {{ truncateDescription(item.topic.description) }}
+              </span>
+            </td>
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td colspan="7" class="empty-message">
+              <i class="pi pi-inbox empty-icon"></i>
+              <p>Keine Themen gefunden</p>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    }
+
+    @if (!selectedMemberId()) {
+      <div class="no-selection-message">
+        <i class="pi pi-arrow-up"></i>
+        <p>Bitte wählen Sie ein Teammitglied aus, um dessen Themen anzuzeigen.</p>
+      </div>
+    }
   }
 </div>
