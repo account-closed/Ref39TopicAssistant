@@ -390,4 +390,8 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
   trackByTopicId(_index: number, item: TopicWithRoles): string {
     return item.topic.id;
   }
+
+  printTopics(): void {
+    window.print();
+  }
 }

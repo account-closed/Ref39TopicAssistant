@@ -134,7 +134,18 @@
             [outlined]="true"
             severity="secondary"
             size="small"
-            (onClick)="clearFilters()">
+            (onClick)="clearFilters()"
+            class="no-print">
+          </p-button>
+          <p-button
+            label="Drucken"
+            icon="pi pi-print"
+            [outlined]="true"
+            severity="info"
+            size="small"
+            (onClick)="printTopics()"
+            [disabled]="filteredTopics().length === 0"
+            class="no-print">
           </p-button>
         </div>
       </p-toolbar>
