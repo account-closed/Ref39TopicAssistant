@@ -68,6 +68,27 @@
   }
 }
 
+// Respect user's preference for reduced motion (accessibility)
+@media (prefers-reduced-motion: reduce) {
+  .save-button-container {
+    .save-badge {
+      animation: none;
+    }
+
+    :host ::ng-deep .p-button {
+      transition: none;
+
+      &:not(:disabled):hover {
+        transform: none;
+      }
+
+      &.p-button-loading .p-button-icon {
+        animation: none;
+      }
+    }
+  }
+}
+
 // Spinner animation for loading state
 @keyframes spin {
   from {

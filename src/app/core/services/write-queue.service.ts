@@ -92,6 +92,11 @@ export interface UpdateMultipleTopicsPayload {
  * Service to queue write operations and batch them before committing.
  * Provides auto-save functionality and operation consolidation.
  */
+/**
+ * Auto-save interval in milliseconds. Default: 60 seconds.
+ */
+const AUTO_SAVE_INTERVAL_MS = 60000;
+
 @Injectable({
   providedIn: 'root'
 })
@@ -111,10 +116,10 @@ export class WriteQueueService {
   }
 
   /**
-   * Start the auto-save timer that triggers every 60 seconds.
+   * Start the auto-save timer that triggers periodically.
    */
   private startAutoSaveTimer(): void {
-    interval(60000) // 60 seconds
+    interval(AUTO_SAVE_INTERVAL_MS)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
         if (this.hasUnsavedChanges() && !this.isSaving()) {
@@ -265,9 +270,10 @@ export class WriteQueueService {
   /**
    * Consolidate operations to minimize writes.
    * - Multiple updates to the same entity are merged (keep only latest)
-   * - If entity is added then deleted, remove both operations
+   * - If entity is added then deleted, remove both operations (net effect is no change)
    * - If entity is updated then deleted, only keep delete
-   * - If entity is deleted then added with same id, treat as update
+   * - delete + add with same ID: keep both operations (safer for data integrity)
+   * - add + updates: merge into single add with combined data
    */
   private consolidateOperations(operations: QueuedOperation[]): QueuedOperation[] {
     const consolidated: QueuedOperation[] = [];
@@ -300,7 +306,7 @@ export class WriteQueueService {
       const firstOp = ops[0];
       const lastOp = ops[ops.length - 1];
 
-      // Rule: add + delete = no operation
+      // Rule: add + delete = no operation (entity was never persisted)
       if (firstOp.type.startsWith('add-') && lastOp.type.startsWith('delete-')) {
         continue; // Skip both operations
       }
@@ -311,52 +317,29 @@ export class WriteQueueService {
         continue;
       }
 
-      // Rule: delete + add = update (merge the data)
-      // Note: When an entity is deleted then re-added with the same ID,
-      // we treat this as an update operation with the new entity data.
+      // Rule: delete + add with same ID = keep both operations
+      // This is safer for data integrity as deleting and re-creating may have
+      // different effects than updating (e.g., cascading deletes, foreign keys)
       if (firstOp.type.startsWith('delete-') && lastOp.type.startsWith('add-')) {
-        const [entityType, entityId] = entityKey.split(':');
-        const idField = `${entityType}Id`;
-        
-        // Create update operation from add payload
-        const updateOp: QueuedOperation = {
-          id: lastOp.id,
-          type: `update-${entityType}` as QueuedOperationType,
-          timestamp: lastOp.timestamp,
-          payload: {
-            [idField]: entityId,
-            updates: lastOp.payload
-          },
-          description: `${entityType} aktualisieren: ${entityId}`
-        };
-        consolidated.push(updateOp);
+        consolidated.push(firstOp);
+        consolidated.push(lastOp);
         continue;
       }
 
       // Rule: multiple updates = merge into single update
       if (ops.every(op => op.type.startsWith('update-'))) {
-        const [entityType, entityId] = entityKey.split(':');
-        const idField = `${entityType}Id`;
-        const mergedUpdates: Record<string, unknown> = {};
-        
-        for (const op of ops) {
-          const payload = op.payload as { [key: string]: unknown };
-          const updates = payload['updates'] as Record<string, unknown>;
-          Object.assign(mergedUpdates, updates);
+        const mergedUpdates = this.mergeUpdatePayloads(ops);
+        if (mergedUpdates) {
+          const mergedOp: QueuedOperation = {
+            id: lastOp.id,
+            type: lastOp.type,
+            timestamp: lastOp.timestamp,
+            payload: mergedUpdates.payload,
+            description: `${mergedUpdates.entityType} aktualisieren (konsolidiert)`
+          };
+          consolidated.push(mergedOp);
+          continue;
         }
-
-        const mergedOp: QueuedOperation = {
-          id: lastOp.id,
-          type: lastOp.type,
-          timestamp: lastOp.timestamp,
-          payload: {
-            [idField]: entityId,
-            updates: mergedUpdates
-          },
-          description: `${entityType} aktualisieren (konsolidiert)`
-        };
-        consolidated.push(mergedOp);
-        continue;
       }
 
       // Rule: add + updates = single add with merged data
@@ -364,9 +347,10 @@ export class WriteQueueService {
         const addPayload = { ...(firstOp.payload as Record<string, unknown>) };
         
         for (const op of ops.slice(1)) {
-          const payload = op.payload as { [key: string]: unknown };
-          const updates = payload['updates'] as Record<string, unknown>;
-          Object.assign(addPayload, updates);
+          const updatePayload = this.getUpdatePayload(op);
+          if (updatePayload) {
+            Object.assign(addPayload, updatePayload.updates);
+          }
         }
 
         const mergedOp: QueuedOperation = {
@@ -385,6 +369,68 @@ export class WriteQueueService {
     }
 
     return consolidated;
+  }
+
+  /**
+   * Safely extract update payload from an operation.
+   */
+  private getUpdatePayload(op: QueuedOperation): { entityId: string; updates: Record<string, unknown> } | null {
+    const payload = op.payload;
+    if (typeof payload !== 'object' || payload === null) {
+      return null;
+    }
+    
+    const payloadObj = payload as Record<string, unknown>;
+    const updates = payloadObj['updates'];
+    
+    if (typeof updates !== 'object' || updates === null) {
+      return null;
+    }
+
+    // Find the entity ID field
+    const idFields = ['topicId', 'memberId', 'tagId'];
+    for (const field of idFields) {
+      if (typeof payloadObj[field] === 'string') {
+        return {
+          entityId: payloadObj[field] as string,
+          updates: updates as Record<string, unknown>
+        };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Merge multiple update operation payloads into one.
+   */
+  private mergeUpdatePayloads(ops: QueuedOperation[]): { payload: unknown; entityType: string } | null {
+    if (ops.length === 0) return null;
+
+    const firstPayload = this.getUpdatePayload(ops[0]);
+    if (!firstPayload) return null;
+
+    const mergedUpdates: Record<string, unknown> = {};
+    
+    for (const op of ops) {
+      const updatePayload = this.getUpdatePayload(op);
+      if (updatePayload) {
+        Object.assign(mergedUpdates, updatePayload.updates);
+      }
+    }
+
+    // Determine entity type from operation type
+    const opType = ops[0].type;
+    const entityType = opType.replace('update-', '');
+    const idField = `${entityType}Id`;
+
+    return {
+      payload: {
+        [idField]: firstPayload.entityId,
+        updates: mergedUpdates
+      },
+      entityType
+    };
   }
 
   /**

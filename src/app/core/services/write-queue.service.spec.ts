@@ -404,7 +404,7 @@ describe('WriteQueueService', () => {
       expect(result.consolidatedOperationsCount).toBe(1);
     });
 
-    it('should convert delete + add to update', async () => {
+    it('should keep delete + add as separate operations for data integrity', async () => {
       service.queueDeleteTopic('topic-1');
       const newTopic = createTopic('topic-1', 'New Topic', 'member-1');
       service.queueAddTopic(newTopic);
@@ -414,7 +414,8 @@ describe('WriteQueueService', () => {
       const result = await service.saveNow();
       
       expect(result.savedOperationsCount).toBe(2);
-      expect(result.consolidatedOperationsCount).toBe(1);
+      // Both operations are preserved for data integrity
+      expect(result.consolidatedOperationsCount).toBe(2);
     });
 
     it('should not consolidate operations for different entities', async () => {
