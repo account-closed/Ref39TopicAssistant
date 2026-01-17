@@ -11,3 +11,4 @@ export * from './rest-backend.service';
 export * from './checksum';
 export * from './search-engine.service';
 export * from './index-monitor.service';
+export * from './write-queue.service';

@@ -11,6 +11,7 @@ import { UserSelectorDialogComponent } from './shared/components/user-selector-d
 import { HeaderUserSelectorComponent } from './shared/components/header-user-selector/header-user-selector.component';
 import { ThemeToggleComponent } from './shared/components/theme-toggle/theme-toggle.component';
 import { SyncIndicatorComponent } from './shared/components/sync-indicator/sync-indicator.component';
+import { SaveButtonComponent } from './shared/components/save-button/save-button.component';
 import { BackendService } from './core/services/backend.service';
 import { IndexMonitorService } from './core/services/index-monitor.service';
 import { Subscription } from 'rxjs';
@@ -29,7 +30,8 @@ import { Subscription } from 'rxjs';
     UserSelectorDialogComponent,
     HeaderUserSelectorComponent,
     ThemeToggleComponent,
-    SyncIndicatorComponent
+    SyncIndicatorComponent,
+    SaveButtonComponent
   ],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'

@@ -12,22 +12,30 @@
         <span class="status-label">Verbindungsstatus:</span>
         <p-tag [value]="isConnected ? 'Verbunden' : 'Nicht verbunden'" [severity]="isConnected ? 'success' : 'danger'"></p-tag>
       </div>
-      <div class="status-row" *ngIf="dataDirectoryName">
-        <span class="status-label">Datenverzeichnis:</span>
-        <span class="status-value">{{ dataDirectoryName }}</span>
-      </div>
-      <div class="status-row" *ngIf="datastoreInfo">
-        <span class="status-label">Datenstand:</span>
-        <span class="status-value">{{ datastoreInfo }}</span>
-      </div>
-      <div class="status-row" *ngIf="topicsCount !== null">
-        <span class="status-label">Themen:</span>
-        <span class="status-value">{{ topicsCount }}</span>
-      </div>
-      <div class="status-row" *ngIf="membersCount !== null">
-        <span class="status-label">Teammitglieder:</span>
-        <span class="status-value">{{ membersCount }}</span>
-      </div>
+      @if (dataDirectoryName) {
+        <div class="status-row">
+          <span class="status-label">Datenverzeichnis:</span>
+          <span class="status-value">{{ dataDirectoryName }}</span>
+        </div>
+      }
+      @if (datastoreInfo) {
+        <div class="status-row">
+          <span class="status-label">Datenstand:</span>
+          <span class="status-value">{{ datastoreInfo }}</span>
+        </div>
+      }
+      @if (topicsCount !== null) {
+        <div class="status-row">
+          <span class="status-label">Themen:</span>
+          <span class="status-value">{{ topicsCount }}</span>
+        </div>
+      }
+      @if (membersCount !== null) {
+        <div class="status-row">
+          <span class="status-label">Teammitglieder:</span>
+          <span class="status-value">{{ membersCount }}</span>
+        </div>
+      }
     </div>
   </p-card>
 
@@ -46,15 +54,19 @@
         [loading]="isConnecting"
         severity="primary">
       </p-button>
-      <span class="current-dir" *ngIf="dataDirectoryName">
-        <i class="pi pi-check-circle check-icon"></i>
-        {{ dataDirectoryName }}
-      </span>
+      @if (dataDirectoryName) {
+        <span class="current-dir">
+          <i class="pi pi-check-circle check-icon"></i>
+          {{ dataDirectoryName }}
+        </span>
+      }
     </div>
 
-    <p-message *ngIf="!isConnected" severity="info">
-      Bitte wählen Sie ein Datenverzeichnis aus, um die Anwendung zu verwenden.
-    </p-message>
+    @if (!isConnected) {
+      <p-message severity="info">
+        Bitte wählen Sie ein Datenverzeichnis aus, um die Anwendung zu verwenden.
+      </p-message>
+    }
 
     <p-divider></p-divider>
 
@@ -72,12 +84,16 @@
       severity="secondary">
     </p-button>
     
-    <p-message *ngIf="isConnected && !canBootstrap" severity="warn" styleClass="mt-3">
-      Das Verzeichnis enthält bereits Daten. Ein Bootstrap würde diese überschreiben.
-    </p-message>
-    <p-message *ngIf="bootstrapMessage" [severity]="bootstrapMessageSeverity" styleClass="mt-3">
-      {{ bootstrapMessage }}
-    </p-message>
+    @if (isConnected && !canBootstrap) {
+      <p-message severity="warn" styleClass="mt-3">
+        Das Verzeichnis enthält bereits Daten. Ein Bootstrap würde diese überschreiben.
+      </p-message>
+    }
+    @if (bootstrapMessage) {
+      <p-message [severity]="bootstrapMessageSeverity" styleClass="mt-3">
+        {{ bootstrapMessage }}
+      </p-message>
+    }
   </p-card>
 
   <!-- Backend Type Selection Card -->
@@ -140,4 +156,74 @@
       </div>
     </div>
   </p-card>
+
+  <!-- Queue Card -->
+  <p-card header="Warteschlange" styleClass="mb-4">
+    <div class="queue-summary mb-3">
+      <div class="status-row">
+        <span class="status-label">Ausstehende Änderungen:</span>
+        <p-tag [value]="pendingChangesCount().toString()" [severity]="pendingChangesCount() > 0 ? 'warn' : 'success'"></p-tag>
+      </div>
+      @if (lastSaveTime()) {
+        <div class="status-row">
+          <span class="status-label">Letzte Speicherung:</span>
+          <span class="status-value-muted">{{ formatLastSaveTime(lastSaveTime()) }}</span>
+        </div>
+      }
+      @if (isSaving()) {
+        <div class="status-row">
+          <span class="status-label">Status:</span>
+          <p-tag value="Wird gespeichert..." severity="info" icon="pi pi-spin pi-spinner"></p-tag>
+        </div>
+      }
+    </div>
+
+    <p-divider></p-divider>
+
+    @if (pendingChangesCount() === 0) {
+      <p-message severity="success" styleClass="mb-3">
+        Keine ausstehenden Änderungen
+      </p-message>
+    } @else {
+      <div class="queue-list mb-3">
+        <h4>Ausstehende Operationen</h4>
+        @for (operation of queuedOperations(); track operation.id) {
+          <div class="queue-item">
+            <div class="queue-item-header">
+              <p-tag 
+                [value]="getOperationTypeLabel(operation.type)" 
+                [severity]="getOperationTypeInfo(operation.type).severity"
+                [icon]="'pi ' + getOperationTypeInfo(operation.type).icon">
+              </p-tag>
+              <span class="queue-item-timestamp">{{ formatTimestamp(operation.timestamp) }}</span>
+            </div>
+            <div class="queue-item-description">
+              {{ operation.description }}
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <div class="queue-actions">
+      <p-button 
+        label="Jetzt speichern" 
+        icon="pi pi-save" 
+        (onClick)="saveNow()"
+        [disabled]="pendingChangesCount() === 0 || isSaving()"
+        [loading]="isSaving()"
+        severity="primary">
+      </p-button>
+      <p-button 
+        label="Warteschlange leeren" 
+        icon="pi pi-trash" 
+        (onClick)="clearQueue()"
+        [disabled]="pendingChangesCount() === 0 || isSaving()"
+        severity="danger"
+        [outlined]="true">
+      </p-button>
+    </div>
+  </p-card>
+
+  <p-confirmDialog></p-confirmDialog>
 </div>

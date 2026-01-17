@@ -1,0 +1,16 @@
+<div class="save-button-container" [pTooltip]="tooltipText()" tooltipPosition="bottom">
+  <p-button
+    [label]="buttonLabel()"
+    icon="pi pi-save"
+    [disabled]="isDisabled()"
+    [loading]="isSaving()"
+    (onClick)="onSaveClick()"
+    [attr.aria-label]="ariaLabel()"
+    styleClass="p-button-sm"
+  />
+  @if (pendingCount() > 0 && !isSaving()) {
+    <span class="save-badge" [attr.aria-label]="pendingCount() + ' ausstehende Änderungen'">
+      {{ pendingCount() }}
+    </span>
+  }
+</div>

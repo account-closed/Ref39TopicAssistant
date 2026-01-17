@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Card } from 'primeng/card';
@@ -7,10 +7,12 @@ import { SelectButton } from 'primeng/selectbutton';
 import { Divider } from 'primeng/divider';
 import { Tag } from 'primeng/tag';
 import { Message } from 'primeng/message';
-import { MessageService } from 'primeng/api';
+import { ConfirmDialog } from 'primeng/confirmdialog';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
 import { FileConnectionService } from '../../core/services/file-connection.service';
+import { WriteQueueService } from '../../core/services/write-queue.service';
 import { Datastore } from '../../core/models';
 
 type BackendType = 'filesystem' | 'rest';
@@ -22,12 +24,18 @@ interface BackendOption {
 
 @Component({
   selector: 'app-settings',
-  standalone: true,
-  imports: [CommonModule, FormsModule, Card, Button, SelectButton, Divider, Tag, Message],
+  imports: [CommonModule, FormsModule, Card, Button, SelectButton, Divider, Tag, Message, ConfirmDialog],
+  providers: [ConfirmationService],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss'
 })
 export class SettingsComponent implements OnInit, OnDestroy {
+  private backend = inject(BackendService);
+  private fileConnection = inject(FileConnectionService);
+  private messageService = inject(MessageService);
+  private confirmationService = inject(ConfirmationService);
+  private writeQueueService = inject(WriteQueueService);
+
   isConnected = false;
   isConnecting = false;
   dataDirectoryName = '';
@@ -50,13 +58,13 @@ export class SettingsComponent implements OnInit, OnDestroy {
   browserInfo = '';
   hasFileSystemAPI = false;
 
-  private subscriptions: Subscription[] = [];
+  // Queue-related properties
+  queuedOperations = this.writeQueueService.queuedOperations;
+  isSaving = this.writeQueueService.isSaving;
+  lastSaveTime = this.writeQueueService.lastSaveTime;
+  pendingChangesCount = this.writeQueueService.pendingChangesCount;
 
-  constructor(
-    private backend: BackendService,
-    private fileConnection: FileConnectionService,
-    private messageService: MessageService
-  ) {}
+  private subscriptions: Subscription[] = [];
 
   ngOnInit(): void {
     this.hasFileSystemAPI = 'showDirectoryPicker' in window;
@@ -203,5 +211,109 @@ export class SettingsComponent implements OnInit, OnDestroy {
     } else {
       this.canBootstrap = true;
     }
+  }
+
+  /**
+   * Get operation type info for display (icon and severity).
+   */
+  getOperationTypeInfo(type: string): { icon: string; severity: 'success' | 'info' | 'danger' } {
+    if (type.startsWith('add-')) {
+      return { icon: 'pi-plus', severity: 'success' };
+    } else if (type.startsWith('update-')) {
+      return { icon: 'pi-pencil', severity: 'info' };
+    } else if (type.startsWith('delete-')) {
+      return { icon: 'pi-trash', severity: 'danger' };
+    }
+    return { icon: 'pi-question', severity: 'info' };
+  }
+
+  /**
+   * Get a human-readable label for operation type.
+   */
+  getOperationTypeLabel(type: string): string {
+    if (type.startsWith('add-')) {
+      return 'Hinzufügen';
+    } else if (type.startsWith('update-')) {
+      return 'Aktualisieren';
+    } else if (type.startsWith('delete-')) {
+      return 'Löschen';
+    }
+    return type;
+  }
+
+  /**
+   * Format timestamp for display.
+   */
+  formatTimestamp(timestamp: string): string {
+    const date = new Date(timestamp);
+    return date.toLocaleString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  }
+
+  /**
+   * Format last save time for display.
+   */
+  formatLastSaveTime(timestamp: string | null): string {
+    if (!timestamp) {
+      return 'Nie';
+    }
+    const date = new Date(timestamp);
+    return date.toLocaleString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  }
+
+  /**
+   * Save all queued operations immediately.
+   */
+  async saveNow(): Promise<void> {
+    const result = await this.writeQueueService.saveNow();
+    
+    if (result.success) {
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Erfolgreich gespeichert',
+        detail: result.germanMessage
+      });
+    } else {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Fehler beim Speichern',
+        detail: result.germanMessage
+      });
+    }
+  }
+
+  /**
+   * Clear the queue with confirmation.
+   */
+  clearQueue(): void {
+    this.confirmationService.confirm({
+      message: `Möchten Sie wirklich alle ${this.pendingChangesCount()} ausstehenden Änderungen verwerfen?`,
+      header: 'Warteschlange leeren',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Ja, verwerfen',
+      rejectLabel: 'Abbrechen',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: () => {
+        this.writeQueueService.clearQueue();
+        this.messageService.add({
+          severity: 'info',
+          summary: 'Warteschlange geleert',
+          detail: 'Alle ausstehenden Änderungen wurden verworfen.'
+        });
+      }
+    });
   }
 }
