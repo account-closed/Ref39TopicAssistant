@@ -1,6 +1,6 @@
-import { Component, signal, OnInit, OnDestroy } from '@angular/core';
+import { Component, signal, OnInit, OnDestroy, inject, DestroyRef, ChangeDetectionStrategy } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Button } from 'primeng/button';
 import { Menu } from 'primeng/menu';
 import { MenuItem } from 'primeng/api';
@@ -14,13 +14,10 @@ import { SyncIndicatorComponent } from './shared/components/sync-indicator/sync-
 import { SaveButtonComponent } from './shared/components/save-button/save-button.component';
 import { BackendService } from './core/services/backend.service';
 import { IndexMonitorService } from './core/services/index-monitor.service';
-import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-root',
-  standalone: true,
   imports: [
-    CommonModule,
     RouterOutlet, 
     Button, 
     Menu,
@@ -34,22 +31,22 @@ import { Subscription } from 'rxjs';
     SaveButtonComponent
   ],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  styleUrl: './app.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class App implements OnInit, OnDestroy {
+export class AppComponent implements OnInit, OnDestroy {
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly router = inject(Router);
+  private readonly backend = inject(BackendService);
+  private readonly indexMonitor = inject(IndexMonitorService);
+
   protected readonly title = signal('RACI Topic Finder');
-  sidebarVisible: boolean = true;
-  menuItems: MenuItem[] = [];
-  isConnected = false;
+  protected sidebarVisible = signal(true);
+  protected menuItems = signal<MenuItem[]>([]);
+  protected isConnected = signal(false);
+
   private stopIndexMonitor: (() => void) | null = null;
   private allMenuItems: MenuItem[] = [];
-  private subscriptions: Subscription[] = [];
-
-  constructor(
-    private router: Router,
-    private backend: BackendService,
-    private indexMonitor: IndexMonitorService
-  ) {}
 
   ngOnInit(): void {
     // Define all menu items with IDs for robust filtering
@@ -98,13 +95,13 @@ export class App implements OnInit, OnDestroy {
       }
     ];
 
-    // Subscribe to connection status and filter menu items accordingly
-    this.subscriptions.push(
-      this.backend.connectionStatus$.subscribe(connected => {
-        this.isConnected = connected;
+    // Subscribe to connection status using takeUntilDestroyed
+    this.backend.connectionStatus$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(connected => {
+        this.isConnected.set(connected);
         this.updateMenuItems();
-      })
-    );
+      });
 
     // Initialize menu items based on current connection state
     this.updateMenuItems();
@@ -125,13 +122,13 @@ export class App implements OnInit, OnDestroy {
   private readonly ALWAYS_VISIBLE_MENU_IDS = ['search', 'settings'];
 
   private updateMenuItems(): void {
-    if (this.isConnected) {
+    if (this.isConnected()) {
       // Show all menu items when connected
-      this.menuItems = [...this.allMenuItems];
+      this.menuItems.set([...this.allMenuItems]);
     } else {
       // Show only search (welcome screen) and settings when not connected
-      this.menuItems = this.allMenuItems.filter(
-        item => this.ALWAYS_VISIBLE_MENU_IDS.includes(item.id || '')
+      this.menuItems.set(
+        this.allMenuItems.filter(item => this.ALWAYS_VISIBLE_MENU_IDS.includes(item.id || ''))
       );
     }
   }
@@ -140,10 +137,9 @@ export class App implements OnInit, OnDestroy {
     if (this.stopIndexMonitor) {
       this.stopIndexMonitor();
     }
-    this.subscriptions.forEach(sub => sub.unsubscribe());
   }
 
   toggleSidebar(): void {
-    this.sidebarVisible = !this.sidebarVisible;
+    this.sidebarVisible.update(v => !v);
   }
 }
