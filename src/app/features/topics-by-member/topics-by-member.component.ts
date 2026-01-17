@@ -392,6 +392,309 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
   }
 
   printTopics(): void {
-    window.print();
+    const topics = this.filteredTopics();
+    const memberName = this.selectedMemberName();
+    const currentDate = new Date().toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
+    // Build table rows HTML
+    const tableRows = topics.map((item, index) => {
+      const rolesHtml = item.roles.map(role => 
+        `<span class="role-badge role-${role.toLowerCase()}">${role}</span>`
+      ).join(' ');
+
+      const tagsHtml = item.topic.tags && item.topic.tags.length > 0
+        ? item.topic.tags.map(tag => `<span class="tag">${this.escapeHtml(tag)}</span>`).join(' ')
+        : '<span class="no-data">-</span>';
+
+      const priorityHtml = item.topic.priority 
+        ? `<span class="priority">${item.topic.priority}</span>`
+        : '<span class="no-data">-</span>';
+
+      const sizeHtml = item.topic.size 
+        ? `<span class="size size-${item.topic.size.toLowerCase()}">${item.topic.size}</span>`
+        : '<span class="no-data">-</span>';
+
+      const validityLabel = this.getValidityLabel(item.topic);
+      const validityStatus = this.getValidityStatus(item.topic);
+
+      return `
+        <tr class="${index % 2 === 0 ? 'even' : 'odd'}">
+          <td class="topic-name">${this.escapeHtml(item.topic.header)}</td>
+          <td class="roles">${rolesHtml}</td>
+          <td class="priority-col">${priorityHtml}</td>
+          <td class="size-col">${sizeHtml}</td>
+          <td class="tags">${tagsHtml}</td>
+          <td class="validity validity-${validityStatus}">${validityLabel}</td>
+          <td class="description">${this.escapeHtml(item.topic.description || '-')}</td>
+        </tr>
+      `;
+    }).join('');
+
+    // Generate the print-optimized HTML
+    const printHtml = `
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Themen für ${this.escapeHtml(memberName || '')}</title>
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 12mm;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      font-size: 9pt;
+      line-height: 1.4;
+      color: #000;
+      background: #fff;
+      padding: 0;
+    }
+    
+    .print-container {
+      max-width: 100%;
+      padding: 0;
+    }
+    
+    .print-header {
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #333;
+    }
+    
+    .print-header h1 {
+      font-size: 16pt;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #000;
+    }
+    
+    .print-header .subtitle {
+      font-size: 11pt;
+      color: #333;
+      margin-bottom: 2px;
+    }
+    
+    .print-header .meta {
+      font-size: 9pt;
+      color: #666;
+    }
+    
+    .topics-count {
+      font-size: 10pt;
+      font-weight: 600;
+      margin-bottom: 10px;
+      padding: 6px 10px;
+      background: #f0f0f0;
+      border-left: 3px solid #333;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8pt;
+    }
+    
+    th {
+      background: #e0e0e0;
+      color: #000;
+      font-weight: 700;
+      text-align: left;
+      padding: 6px 8px;
+      border: 1px solid #999;
+      white-space: nowrap;
+    }
+    
+    td {
+      padding: 5px 8px;
+      border: 1px solid #ccc;
+      vertical-align: top;
+    }
+    
+    tr.odd {
+      background: #fff;
+    }
+    
+    tr.even {
+      background: #f8f8f8;
+    }
+    
+    .topic-name {
+      font-weight: 600;
+      min-width: 150px;
+    }
+    
+    .roles {
+      white-space: nowrap;
+    }
+    
+    .role-badge {
+      display: inline-block;
+      padding: 2px 5px;
+      margin-right: 2px;
+      border-radius: 3px;
+      font-size: 7pt;
+      font-weight: 600;
+      color: #fff;
+    }
+    
+    .role-r1 { background: #22c55e; }
+    .role-r2 { background: #3b82f6; }
+    .role-r3 { background: #6b7280; }
+    .role-c { background: #f59e0b; }
+    .role-i { background: #1f2937; }
+    
+    .priority-col, .size-col {
+      text-align: center;
+      white-space: nowrap;
+    }
+    
+    .priority {
+      font-weight: 600;
+    }
+    
+    .size {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 7pt;
+      font-weight: 600;
+    }
+    
+    .size-xxs, .size-xs { background: #dcfce7; color: #166534; }
+    .size-s, .size-m { background: #dbeafe; color: #1e40af; }
+    .size-l, .size-xl { background: #fef3c7; color: #92400e; }
+    .size-xxl { background: #fee2e2; color: #991b1b; }
+    
+    .tags {
+      max-width: 150px;
+    }
+    
+    .tag {
+      display: inline-block;
+      padding: 1px 4px;
+      margin: 1px;
+      background: #e5e7eb;
+      border-radius: 2px;
+      font-size: 7pt;
+    }
+    
+    .validity {
+      white-space: nowrap;
+      font-weight: 500;
+    }
+    
+    .validity-always { color: #16a34a; }
+    .validity-valid { color: #16a34a; }
+    .validity-future { color: #2563eb; }
+    .validity-expired { color: #dc2626; }
+    
+    .description {
+      max-width: 200px;
+      font-size: 7pt;
+      color: #333;
+    }
+    
+    .no-data {
+      color: #9ca3af;
+      font-style: italic;
+    }
+    
+    .footer {
+      margin-top: 15px;
+      padding-top: 8px;
+      border-top: 1px solid #ccc;
+      font-size: 8pt;
+      color: #666;
+      text-align: right;
+    }
+    
+    @media print {
+      body {
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+      
+      tr {
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="print-container">
+    <div class="print-header">
+      <h1>Themen pro Teammitglied</h1>
+      <div class="subtitle">Teammitglied: <strong>${this.escapeHtml(memberName || '')}</strong></div>
+      <div class="meta">Erstellt am: ${currentDate}</div>
+    </div>
+    
+    <div class="topics-count">
+      ${topics.length} Thema(en) gefunden
+    </div>
+    
+    <table>
+      <thead>
+        <tr>
+          <th>Thema</th>
+          <th>Rolle(n)</th>
+          <th>Priorität</th>
+          <th>Größe</th>
+          <th>Tags</th>
+          <th>Gültigkeit</th>
+          <th>Beschreibung</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${tableRows}
+      </tbody>
+    </table>
+    
+    <div class="footer">
+      RACI Topic Finder - Themenübersicht für ${this.escapeHtml(memberName || '')}
+    </div>
+  </div>
+  
+  <script>
+    window.onload = function() {
+      window.print();
+    };
+  </script>
+</body>
+</html>
+    `;
+
+    // Open new window with print-optimized content
+    const printWindow = window.open('', '_blank', 'width=1100,height=800');
+    if (printWindow) {
+      printWindow.document.write(printHtml);
+      printWindow.document.close();
+    } else {
+      // Popup was blocked - fall back to printing current page
+      alert('Popup wurde blockiert. Bitte erlauben Sie Popups für diese Seite oder verwenden Sie Strg+P zum Drucken.');
+    }
+  }
+
+  private escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
   }
 }
