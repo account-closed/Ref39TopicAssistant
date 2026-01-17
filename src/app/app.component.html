@@ -10,10 +10,10 @@
   </div>
 
   <div class="app-body">
-    @if (sidebarVisible) {
+    @if (sidebarVisible()) {
       <aside class="app-sidebar">
         <nav>
-          <p-menu [model]="menuItems" [style]="{width:'100%', border: 'none'}"></p-menu>
+          <p-menu [model]="menuItems()" [style]="{width:'100%', border: 'none'}"></p-menu>
         </nav>
       </aside>
     }

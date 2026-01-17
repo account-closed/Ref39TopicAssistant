@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { MessageService, ConfirmationService } from 'primeng/api';
-import { App } from './app';
+import { AppComponent } from './app.component';
 import { BackendService } from './core/services/backend.service';
 import { BehaviorSubject, of } from 'rxjs';
 
@@ -20,7 +20,7 @@ Object.defineProperty(window, 'matchMedia', {
   }),
 });
 
-describe('App', () => {
+describe('AppComponent', () => {
   let mockBackendService: Partial<BackendService>;
 
   beforeEach(async () => {
@@ -33,7 +33,7 @@ describe('App', () => {
     };
 
     await TestBed.configureTestingModule({
-      imports: [App],
+      imports: [AppComponent],
       providers: [
         provideRouter([]),
         MessageService,
@@ -44,13 +44,13 @@ describe('App', () => {
   });
 
   it('should create the app', () => {
-    const fixture = TestBed.createComponent(App);
+    const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
     expect(app).toBeTruthy();
   });
 
   it('should render title', async () => {
-    const fixture = TestBed.createComponent(App);
+    const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;

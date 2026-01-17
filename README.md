@@ -2,6 +2,12 @@
 
 A browser-only Angular 21 + PrimeNG 21 application for finding responsible persons for organizational topics using a RACI model. The application runs directly from a UNC path and uses shared JSON files on an SMB share for multi-user collaboration.
 
+## Documentation
+
+- [Architecture](./ARCHITECTURE.md) - System architecture and design decisions
+- [UI Guide](./UI_GUIDE.md) - Component usage and styling guidelines
+- [Contributing](./CONTRIBUTING.md) - Development setup and code standards
+
 ## Features
 
 - **Browser-only**: No backend server required - runs directly from `\\server\share\app\index.html`
@@ -18,6 +24,23 @@ A browser-only Angular 21 + PrimeNG 21 application for finding responsible perso
 - **FlexSearch** for high-performance search
 - **File System Access API** for SMB file access
 - **Hash-based routing** for UNC compatibility
+- **Vitest** for unit testing
+
+## Quick Start
+
+```bash
+# Install dependencies
+npm ci
+
+# Start development server
+npm start
+
+# Run tests
+npm test
+
+# Build for production
+npm run build
+```
 
 ## Project Structure
 
@@ -35,18 +58,10 @@ src/app/
 │   └── settings/        # Settings and diagnostics
 └── shared/
     ├── components/      # Reusable components (StatusBar, UserSelectorDialog)
-    ├── pipes/           # Custom pipes
     └── utils/           # Utility functions
 ```
 
 ## Deployment
-
-### 1. Build the Application
-
-```bash
-npm install
-npm run build
-```
 
 The build output is in `server/share/app/`.
 
