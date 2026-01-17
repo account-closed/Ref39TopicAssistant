@@ -1,16 +1,20 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { Card } from 'primeng/card';
 import { Button } from 'primeng/button';
 import { SelectButton } from 'primeng/selectbutton';
 import { Divider } from 'primeng/divider';
 import { Tag } from 'primeng/tag';
 import { Message } from 'primeng/message';
-import { MessageService } from 'primeng/api';
+import { ConfirmDialog } from 'primeng/confirmdialog';
+import { MessageService, ConfirmationService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
 import { FileConnectionService } from '../../core/services/file-connection.service';
+import { CacheService, CacheState } from '../../core/services/cache.service';
+import { PersistenceService } from '../../core/services/persistence.service';
 import { Datastore } from '../../core/models';
 
 type BackendType = 'filesystem' | 'rest';
@@ -22,12 +26,19 @@ interface BackendOption {
 
 @Component({
   selector: 'app-settings',
-  standalone: true,
-  imports: [CommonModule, FormsModule, Card, Button, SelectButton, Divider, Tag, Message],
+  imports: [CommonModule, FormsModule, Card, Button, SelectButton, Divider, Tag, Message, ConfirmDialog],
+  providers: [ConfirmationService],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss'
 })
 export class SettingsComponent implements OnInit, OnDestroy {
+  private backend = inject(BackendService);
+  private fileConnection = inject(FileConnectionService);
+  private messageService = inject(MessageService);
+  private confirmationService = inject(ConfirmationService);
+  private cache = inject(CacheService);
+  private persistence = inject(PersistenceService);
+
   isConnected = false;
   isConnecting = false;
   dataDirectoryName = '';
@@ -50,13 +61,20 @@ export class SettingsComponent implements OnInit, OnDestroy {
   browserInfo = '';
   hasFileSystemAPI = false;
 
-  private subscriptions: Subscription[] = [];
+  // Cache state signals
+  private readonly cacheState = toSignal(this.cache.cacheState$, {
+    initialValue: { datastore: null, isDirty: false, lastSyncTime: null, revisionId: 0 } as CacheState
+  });
+  
+  readonly isSaving = this.persistence.isSaving;
+  readonly lastSaveTime = this.persistence.lastSaveTime;
+  readonly pendingChangesCount = this.cache.pendingChangesCount;
+  readonly hasUnsavedChanges = computed(() => this.cacheState().isDirty);
+  
+  // For backwards compatibility with template
+  readonly queuedOperations = signal<Array<{ id: string; type: string; timestamp: string; description: string }>>([]);
 
-  constructor(
-    private backend: BackendService,
-    private fileConnection: FileConnectionService,
-    private messageService: MessageService
-  ) {}
+  private subscriptions: Subscription[] = [];
 
   ngOnInit(): void {
     this.hasFileSystemAPI = 'showDirectoryPicker' in window;
@@ -203,5 +221,121 @@ export class SettingsComponent implements OnInit, OnDestroy {
     } else {
       this.canBootstrap = true;
     }
+  }
+
+  /**
+   * Get operation type info for display (icon and severity).
+   */
+  getOperationTypeInfo(type: string): { icon: string; severity: 'success' | 'info' | 'danger' } {
+    if (type.startsWith('add-')) {
+      return { icon: 'pi-plus', severity: 'success' };
+    } else if (type.startsWith('update-')) {
+      return { icon: 'pi-pencil', severity: 'info' };
+    } else if (type.startsWith('delete-')) {
+      return { icon: 'pi-trash', severity: 'danger' };
+    }
+    return { icon: 'pi-question', severity: 'info' };
+  }
+
+  /**
+   * Get a human-readable label for operation type.
+   */
+  getOperationTypeLabel(type: string): string {
+    if (type.startsWith('add-')) {
+      return 'Hinzufügen';
+    } else if (type.startsWith('update-')) {
+      return 'Aktualisieren';
+    } else if (type.startsWith('delete-')) {
+      return 'Löschen';
+    }
+    return type;
+  }
+
+  /**
+   * Format timestamp for display.
+   */
+  formatTimestamp(timestamp: string): string {
+    const date = new Date(timestamp);
+    return date.toLocaleString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  }
+
+  /**
+   * Format last save time for display.
+   */
+  formatLastSaveTime(timestamp: string | null): string {
+    if (!timestamp) {
+      return 'Nie';
+    }
+    const date = new Date(timestamp);
+    return date.toLocaleString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  }
+
+  /**
+   * Save all changes to backend.
+   */
+  async saveNow(): Promise<void> {
+    const result = await this.persistence.saveToBackend();
+    
+    if (result.success) {
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Erfolgreich gespeichert',
+        detail: result.germanMessage
+      });
+    } else {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Fehler beim Speichern',
+        detail: result.germanMessage
+      });
+    }
+  }
+
+  /**
+   * Discard all unsaved changes by reloading from backend.
+   */
+  clearQueue(): void {
+    if (!this.hasUnsavedChanges()) {
+      return;
+    }
+    
+    this.confirmationService.confirm({
+      message: 'Möchten Sie wirklich alle ausstehenden Änderungen verwerfen?',
+      header: 'Änderungen verwerfen',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Ja, verwerfen',
+      rejectLabel: 'Abbrechen',
+      acceptButtonStyleClass: 'p-button-danger',
+      accept: async () => {
+        const result = await this.persistence.forceReload();
+        if (result.success) {
+          this.messageService.add({
+            severity: 'info',
+            summary: 'Änderungen verworfen',
+            detail: 'Alle ausstehenden Änderungen wurden verworfen.'
+          });
+        } else {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Fehler',
+            detail: result.germanMessage
+          });
+        }
+      }
+    });
   }
 }
