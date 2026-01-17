@@ -38,11 +38,6 @@ export interface CacheMutationResult {
 }
 
 /**
- * Auto-save interval in milliseconds. Default: 60 seconds.
- */
-const AUTO_SAVE_INTERVAL_MS = 60000;
-
-/**
  * CacheService - The Single Source of Truth
  * 
  * Architecture:

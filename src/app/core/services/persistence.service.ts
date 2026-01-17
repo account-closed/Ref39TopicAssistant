@@ -44,7 +44,6 @@ export class PersistenceService {
   private destroyRef = inject(DestroyRef);
 
   private refreshSubscription?: Subscription;
-  private autoSaveSubscription?: Subscription;
 
   // State signals
   readonly isSaving = signal(false);
@@ -227,13 +226,5 @@ export class PersistenceService {
    */
   generateUUID(): string {
     return this.cache.generateUUID();
-  }
-
-  /**
-   * Cleanup on service destroy.
-   */
-  ngOnDestroy(): void {
-    this.refreshSubscription?.unsubscribe();
-    this.autoSaveSubscription?.unsubscribe();
   }
 }
