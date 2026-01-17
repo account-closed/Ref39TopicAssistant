@@ -20,6 +20,32 @@ export class FileConnectionError extends Error {
   }
 }
 
+/**
+ * DOM Exception interface for File System Access API errors.
+ */
+interface DOMException {
+  name: string;
+  message: string;
+}
+
+/**
+ * Extended window interface for File System Access API.
+ * This API is not fully typed in TypeScript's lib.dom.d.ts.
+ */
+interface FileSystemAccessWindow extends Window {
+  showDirectoryPicker: (options?: {
+    mode?: 'read' | 'readwrite';
+    startIn?: 'desktop' | 'documents' | 'downloads' | 'music' | 'pictures' | 'videos';
+  }) => Promise<FileSystemDirectoryHandle>;
+}
+
+/**
+ * Extended FileSystemDirectoryHandle with permission methods.
+ */
+interface ExtendedFileSystemHandle extends FileSystemDirectoryHandle {
+  requestPermission: (options: { mode: 'read' | 'readwrite' }) => Promise<'granted' | 'denied' | 'prompt'>;
+}
+
 const INDEXEDDB_NAME = 'RaciTopicFinderDB';
 const INDEXEDDB_STORE = 'fileHandles';
 const INDEXEDDB_VERSION = 1;
@@ -54,7 +80,8 @@ export class FileConnectionService {
       }
 
       // Request directory picker
-      const directoryHandle = await (window as any).showDirectoryPicker({
+      const fsWindow = window as unknown as FileSystemAccessWindow;
+      const directoryHandle = await fsWindow.showDirectoryPicker({
         mode: 'readwrite',
         startIn: 'documents'
       });
@@ -79,11 +106,12 @@ export class FileConnectionService {
       this.saveToIndexedDB(directoryHandle).catch(err => 
         console.warn('Failed to save directory handle to IndexedDB:', err)
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (error instanceof FileConnectionError) {
         throw error;
       }
-      if (error.name === 'AbortError') {
+      const domError = error as DOMException;
+      if (domError.name === 'AbortError') {
         throw new FileConnectionError(
           'User cancelled folder selection',
           'Ordnerauswahl wurde abgebrochen.',
@@ -91,9 +119,10 @@ export class FileConnectionService {
         );
       }
       console.error('Failed to connect to folder:', error);
+      const errorMessage = domError.message || String(error);
       throw new FileConnectionError(
-        'Failed to connect to folder: ' + error.message,
-        'Verbindung zum Ordner fehlgeschlagen: ' + error.message,
+        'Failed to connect to folder: ' + errorMessage,
+        'Verbindung zum Ordner fehlgeschlagen: ' + errorMessage,
         'PERMISSION_DENIED'
       );
     }
@@ -111,9 +140,8 @@ export class FileConnectionService {
       }
 
       // Request permission (requires user gesture)
-      // Use 'any' cast because requestPermission is part of File System Access API
-      // but not fully typed in standard TypeScript definitions
-      const permission = await (directoryHandle as any).requestPermission({ mode: 'readwrite' });
+      const extendedHandle = directoryHandle as unknown as ExtendedFileSystemHandle;
+      const permission = await extendedHandle.requestPermission({ mode: 'readwrite' });
       if (permission !== 'granted') {
         return false;
       }
@@ -156,24 +184,26 @@ export class FileConnectionService {
     try {
       const file = await handle.getFile();
       return await file.text();
-    } catch (error: any) {
-      if (error.name === 'NotAllowedError') {
+    } catch (error: unknown) {
+      const domError = error as DOMException;
+      if (domError.name === 'NotAllowedError') {
         throw new FileConnectionError(
           'Permission denied reading file',
           'Keine Berechtigung zum Lesen der Datei. Bitte verbinden Sie das Verzeichnis erneut.',
           'PERMISSION_DENIED'
         );
       }
-      if (error.name === 'NotFoundError') {
+      if (domError.name === 'NotFoundError') {
         throw new FileConnectionError(
           'File not found',
           'Datei nicht gefunden.',
           'FILE_NOT_FOUND'
         );
       }
+      const errorMessage = domError.message || String(error);
       throw new FileConnectionError(
-        'Failed to read file: ' + error.message,
-        'Fehler beim Lesen der Datei: ' + error.message,
+        'Failed to read file: ' + errorMessage,
+        'Fehler beim Lesen der Datei: ' + errorMessage,
         'READ_ERROR'
       );
     }
@@ -188,17 +218,19 @@ export class FileConnectionService {
       const writable = await handle.createWritable();
       await writable.write(content);
       await writable.close();
-    } catch (error: any) {
-      if (error.name === 'NotAllowedError') {
+    } catch (error: unknown) {
+      const domError = error as DOMException;
+      if (domError.name === 'NotAllowedError') {
         throw new FileConnectionError(
           'Permission denied writing file',
           'Keine Berechtigung zum Schreiben der Datei. Bitte verbinden Sie das Verzeichnis erneut.',
           'PERMISSION_DENIED'
         );
       }
+      const errorMessage = domError.message || String(error);
       throw new FileConnectionError(
-        'Failed to write file: ' + error.message,
-        'Fehler beim Schreiben der Datei: ' + error.message,
+        'Failed to write file: ' + errorMessage,
+        'Fehler beim Schreiben der Datei: ' + errorMessage,
         'WRITE_ERROR'
       );
     }
@@ -269,9 +301,10 @@ export class FileConnectionService {
       await this.writeFile(backupFileHandle, currentContent);
 
       console.log(`[Backup] Created backup: backup/${backupFileName}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       // Log but don't fail the write operation if backup fails
-      console.warn('Failed to create backup:', error.message);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.warn('Failed to create backup:', errorMessage);
     }
   }
 

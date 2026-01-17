@@ -1,12 +1,15 @@
 import { Injectable } from '@angular/core';
 import { Topic, TeamMember, Datastore } from '../models';
-import { Index } from 'flexsearch';
+import { Index, IndexOptions, Encoders } from 'flexsearch';
 
 export interface SearchResult {
   topic: Topic;
   score: number;
   matchType: 'header-exact' | 'header-prefix' | 'tag' | 'keyword' | 'description' | 'notes';
 }
+
+/** FlexSearch search result ID type */
+type FlexSearchId = string | number;
 
 @Injectable({
   providedIn: 'root'
@@ -22,8 +25,8 @@ export class SearchIndexService {
 
   constructor() {
     // Initialize FlexSearch indexes with German language support
-    const indexConfig: any = {
-      charset: 'latin:extra',
+    const indexConfig: IndexOptions = {
+      encoder: 'LatinExtra' as Encoders,
       tokenize: 'forward',
       resolution: 9
     };
@@ -88,9 +91,10 @@ export class SearchIndexService {
     const resultsMap = new Map<string, SearchResult>();
 
     // Search in header (highest priority)
-    const headerResults = this.headerIndex.search(normalizedQuery, { limit: maxResults });
-    headerResults.forEach((id: any) => {
-      const topic = this.topicsMap.get(id as string);
+    const headerResults = this.headerIndex.search(normalizedQuery, { limit: maxResults }) as FlexSearchId[];
+    headerResults.forEach((id: FlexSearchId) => {
+      const idStr = String(id);
+      const topic = this.topicsMap.get(idStr);
       if (topic) {
         const normalizedHeader = this.normalizeGerman(topic.header);
         let score = 1000;
@@ -105,18 +109,19 @@ export class SearchIndexService {
           matchType = 'header-prefix';
         }
 
-        resultsMap.set(id as string, { topic, score, matchType });
+        resultsMap.set(idStr, { topic, score, matchType });
       }
     });
 
     // Search in tags
-    const tagResults = this.tagsIndex.search(normalizedQuery, { limit: maxResults });
-    tagResults.forEach((id: any) => {
-      const topic = this.topicsMap.get(id as string);
+    const tagResults = this.tagsIndex.search(normalizedQuery, { limit: maxResults }) as FlexSearchId[];
+    tagResults.forEach((id: FlexSearchId) => {
+      const idStr = String(id);
+      const topic = this.topicsMap.get(idStr);
       if (topic) {
-        const existing = resultsMap.get(id as string);
+        const existing = resultsMap.get(idStr);
         if (!existing) {
-          resultsMap.set(id as string, { topic, score: 200, matchType: 'tag' });
+          resultsMap.set(idStr, { topic, score: 200, matchType: 'tag' });
         } else if (existing.score < 200) {
           existing.score = 200;
           existing.matchType = 'tag';
@@ -125,13 +130,14 @@ export class SearchIndexService {
     });
 
     // Search in keywords
-    const keywordResults = this.keywordsIndex.search(normalizedQuery, { limit: maxResults });
-    keywordResults.forEach((id: any) => {
-      const topic = this.topicsMap.get(id as string);
+    const keywordResults = this.keywordsIndex.search(normalizedQuery, { limit: maxResults }) as FlexSearchId[];
+    keywordResults.forEach((id: FlexSearchId) => {
+      const idStr = String(id);
+      const topic = this.topicsMap.get(idStr);
       if (topic) {
-        const existing = resultsMap.get(id as string);
+        const existing = resultsMap.get(idStr);
         if (!existing) {
-          resultsMap.set(id as string, { topic, score: 150, matchType: 'keyword' });
+          resultsMap.set(idStr, { topic, score: 150, matchType: 'keyword' });
         } else if (existing.score < 150) {
           existing.score = 150;
           existing.matchType = 'keyword';
@@ -140,13 +146,14 @@ export class SearchIndexService {
     });
 
     // Search in description
-    const descResults = this.descriptionIndex.search(normalizedQuery, { limit: maxResults });
-    descResults.forEach((id: any) => {
-      const topic = this.topicsMap.get(id as string);
+    const descResults = this.descriptionIndex.search(normalizedQuery, { limit: maxResults }) as FlexSearchId[];
+    descResults.forEach((id: FlexSearchId) => {
+      const idStr = String(id);
+      const topic = this.topicsMap.get(idStr);
       if (topic) {
-        const existing = resultsMap.get(id as string);
+        const existing = resultsMap.get(idStr);
         if (!existing) {
-          resultsMap.set(id as string, { topic, score: 100, matchType: 'description' });
+          resultsMap.set(idStr, { topic, score: 100, matchType: 'description' });
         } else if (existing.score < 100) {
           existing.score = 100;
           existing.matchType = 'description';
@@ -155,13 +162,14 @@ export class SearchIndexService {
     });
 
     // Search in notes
-    const notesResults = this.notesIndex.search(normalizedQuery, { limit: maxResults });
-    notesResults.forEach((id: any) => {
-      const topic = this.topicsMap.get(id as string);
+    const notesResults = this.notesIndex.search(normalizedQuery, { limit: maxResults }) as FlexSearchId[];
+    notesResults.forEach((id: FlexSearchId) => {
+      const idStr = String(id);
+      const topic = this.topicsMap.get(idStr);
       if (topic) {
-        const existing = resultsMap.get(id as string);
+        const existing = resultsMap.get(idStr);
         if (!existing) {
-          resultsMap.set(id as string, { topic, score: 50, matchType: 'notes' });
+          resultsMap.set(idStr, { topic, score: 50, matchType: 'notes' });
         } else if (existing.score < 50) {
           existing.score = 50;
           existing.matchType = 'notes';
