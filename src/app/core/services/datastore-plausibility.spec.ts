@@ -5,9 +5,10 @@ import {
   validateTopicFields,
   validateMemberColors,
   validateTagColors,
+  removeInvalidTopicConnections,
   runPlausibilityChecks,
 } from './datastore-plausibility';
-import { Datastore, Topic, TeamMember, Tag, TShirtSize } from '../models';
+import { Datastore, Topic, TeamMember, Tag, TShirtSize, TopicConnectionType } from '../models';
 
 const createMember = (id: string, name: string): TeamMember => ({
   id,
@@ -654,5 +655,191 @@ describe('validateTagColors', () => {
     const result = validateTagColors(datastore);
 
     expect(result.correctedCount).toBe(0);
+  });
+});
+
+describe('removeInvalidTopicConnections', () => {
+  it('should not modify topics without connections', () => {
+    const datastore = createDatastore({
+      topics: [
+        createTopic('topic-1', 'Test Topic', 'member-1'),
+      ],
+    });
+
+    const result = removeInvalidTopicConnections(datastore);
+
+    expect(result.removedCount).toBe(0);
+    expect(result.datastore.topics[0].connections).toBeUndefined();
+    expect(result.changeLog).toHaveLength(0);
+  });
+
+  it('should not modify topics with valid connections', () => {
+    const datastore = createDatastore({
+      topics: [
+        createTopic('topic-1', 'Topic 1', 'member-1', {
+          connections: [
+            { targetTopicId: 'topic-2', type: 'dependsOn' },
+            { targetTopicId: 'topic-3', type: 'relatedTo' },
+          ],
+        }),
+        createTopic('topic-2', 'Topic 2', 'member-1'),
+        createTopic('topic-3', 'Topic 3', 'member-1'),
+      ],
+    });
+
+    const result = removeInvalidTopicConnections(datastore);
+
+    expect(result.removedCount).toBe(0);
+    expect(result.datastore.topics[0].connections).toHaveLength(2);
+    expect(result.changeLog).toHaveLength(0);
+  });
+
+  it('should remove connections to non-existent topics', () => {
+    const datastore = createDatastore({
+      topics: [
+        createTopic('topic-1', 'Topic 1', 'member-1', {
+          connections: [
+            { targetTopicId: 'topic-2', type: 'dependsOn' },
+            { targetTopicId: 'non-existent', type: 'relatedTo' },
+          ],
+        }),
+        createTopic('topic-2', 'Topic 2', 'member-1'),
+      ],
+    });
+
+    const result = removeInvalidTopicConnections(datastore);
+
+    expect(result.removedCount).toBe(1);
+    expect(result.datastore.topics[0].connections).toHaveLength(1);
+    expect(result.datastore.topics[0].connections![0].targetTopicId).toBe('topic-2');
+    expect(result.changeLog).toHaveLength(1);
+    expect(result.changeLog[0]).toContain('non-existent');
+  });
+
+  it('should remove self-referencing connections', () => {
+    const datastore = createDatastore({
+      topics: [
+        createTopic('topic-1', 'Topic 1', 'member-1', {
+          connections: [
+            { targetTopicId: 'topic-1', type: 'dependsOn' }, // self-reference
+            { targetTopicId: 'topic-2', type: 'relatedTo' },
+          ],
+        }),
+        createTopic('topic-2', 'Topic 2', 'member-1'),
+      ],
+    });
+
+    const result = removeInvalidTopicConnections(datastore);
+
+    expect(result.removedCount).toBe(1);
+    expect(result.datastore.topics[0].connections).toHaveLength(1);
+    expect(result.datastore.topics[0].connections![0].targetTopicId).toBe('topic-2');
+    expect(result.changeLog).toHaveLength(1);
+    expect(result.changeLog[0]).toContain('self-reference');
+  });
+
+  it('should remove duplicate connections', () => {
+    const datastore = createDatastore({
+      topics: [
+        createTopic('topic-1', 'Topic 1', 'member-1', {
+          connections: [
+            { targetTopicId: 'topic-2', type: 'dependsOn' },
+            { targetTopicId: 'topic-2', type: 'dependsOn' }, // duplicate
+            { targetTopicId: 'topic-2', type: 'relatedTo' }, // different type, not duplicate
+          ],
+        }),
+        createTopic('topic-2', 'Topic 2', 'member-1'),
+      ],
+    });
+
+    const result = removeInvalidTopicConnections(datastore);
+
+    expect(result.removedCount).toBe(1);
+    expect(result.datastore.topics[0].connections).toHaveLength(2);
+    expect(result.changeLog).toHaveLength(1);
+    expect(result.changeLog[0]).toContain('duplicate');
+  });
+
+  it('should remove connections with invalid type', () => {
+    const datastore = createDatastore({
+      topics: [
+        createTopic('topic-1', 'Topic 1', 'member-1', {
+          connections: [
+            { targetTopicId: 'topic-2', type: 'dependsOn' },
+            { targetTopicId: 'topic-3', type: 'invalidType' as TopicConnectionType },
+          ],
+        }),
+        createTopic('topic-2', 'Topic 2', 'member-1'),
+        createTopic('topic-3', 'Topic 3', 'member-1'),
+      ],
+    });
+
+    const result = removeInvalidTopicConnections(datastore);
+
+    expect(result.removedCount).toBe(1);
+    expect(result.datastore.topics[0].connections).toHaveLength(1);
+    expect(result.datastore.topics[0].connections![0].type).toBe('dependsOn');
+    expect(result.changeLog).toHaveLength(1);
+    expect(result.changeLog[0]).toContain('invalid type');
+  });
+
+  it('should accept all valid connection types', () => {
+    const validTypes: TopicConnectionType[] = ['dependsOn', 'blocks', 'relatedTo'];
+    
+    const datastore = createDatastore({
+      topics: [
+        createTopic('topic-1', 'Topic 1', 'member-1', {
+          connections: validTypes.map((type, index) => ({
+            targetTopicId: `topic-${index + 2}`,
+            type,
+          })),
+        }),
+        createTopic('topic-2', 'Topic 2', 'member-1'),
+        createTopic('topic-3', 'Topic 3', 'member-1'),
+        createTopic('topic-4', 'Topic 4', 'member-1'),
+      ],
+    });
+
+    const result = removeInvalidTopicConnections(datastore);
+
+    expect(result.removedCount).toBe(0);
+    expect(result.datastore.topics[0].connections).toHaveLength(3);
+  });
+
+  it('should handle multiple invalid connections in one topic', () => {
+    const datastore = createDatastore({
+      topics: [
+        createTopic('topic-1', 'Topic 1', 'member-1', {
+          connections: [
+            { targetTopicId: 'topic-1', type: 'dependsOn' }, // self-reference
+            { targetTopicId: 'non-existent', type: 'relatedTo' }, // non-existent
+            { targetTopicId: 'topic-2', type: 'dependsOn' },
+            { targetTopicId: 'topic-2', type: 'dependsOn' }, // duplicate
+          ],
+        }),
+        createTopic('topic-2', 'Topic 2', 'member-1'),
+      ],
+    });
+
+    const result = removeInvalidTopicConnections(datastore);
+
+    expect(result.removedCount).toBe(3);
+    expect(result.datastore.topics[0].connections).toHaveLength(1);
+    expect(result.datastore.topics[0].connections![0].targetTopicId).toBe('topic-2');
+  });
+
+  it('should handle empty connections array', () => {
+    const datastore = createDatastore({
+      topics: [
+        createTopic('topic-1', 'Topic 1', 'member-1', {
+          connections: [],
+        }),
+      ],
+    });
+
+    const result = removeInvalidTopicConnections(datastore);
+
+    expect(result.removedCount).toBe(0);
+    expect(result.datastore.topics[0].connections).toEqual([]);
   });
 });

@@ -21,13 +21,18 @@ import { Rating } from 'primeng/rating';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
-import { Topic, TeamMember, Datastore, Tag as TagModel, TShirtSize } from '../../core/models';
+import { Topic, TeamMember, Datastore, Tag as TagModel, TShirtSize, TopicConnection, TopicConnectionType } from '../../core/models';
 import { getPriorityStars, getSizeSeverity } from '../../shared/utils/topic-display.utils';
 import { isValidKeyword, sanitizeKeyword } from '../../shared/utils/validation.utils';
 
 interface MemberOption {
   id: string;
   displayName: string;
+}
+
+interface TopicOption {
+  id: string;
+  header: string;
 }
 
 @Component({
@@ -116,6 +121,14 @@ export class TopicsComponent implements OnInit, OnDestroy {
     { label: '10', value: 10 }
   ];
 
+  connectionTypeOptions: { label: string; value: TopicConnectionType }[] = [
+    { label: 'Abhängig von', value: 'dependsOn' },
+    { label: 'Blockiert', value: 'blocks' },
+    { label: 'Verwandt mit', value: 'relatedTo' }
+  ];
+
+  topicOptions: TopicOption[] = [];
+
   managedTags: TagModel[] = [];
   managedTagsExist: boolean = false;
 
@@ -163,6 +176,9 @@ export class TopicsComponent implements OnInit, OnDestroy {
       r1MemberId: topic.raci.r1MemberId,
       tagsString: topic.tags?.join(' ') || ''
     }));
+
+    // Build topic options for connection selection (excluding current topic when editing)
+    this.topicOptions = datastore.topics.map(t => ({ id: t.id, header: t.header }));
 
     this.allTags = this.managedTags.map(t => t.name).sort();
 
@@ -269,7 +285,8 @@ export class TopicsComponent implements OnInit, OnDestroy {
       fileNumber: '',
       hasSharedFilePath: false,
       sharedFilePath: '',
-      size: undefined
+      size: undefined,
+      connections: []
     };
   }
 
@@ -292,7 +309,8 @@ export class TopicsComponent implements OnInit, OnDestroy {
         ...topic.raci,
         cMemberIds: [...topic.raci.cMemberIds],
         iMemberIds: [...topic.raci.iMemberIds]
-      }
+      },
+      connections: topic.connections ? topic.connections.map(c => ({ ...c })) : []
     };
     
     this.validFromDate = topic.validity.validFrom ? new Date(topic.validity.validFrom) : null;
@@ -554,5 +572,57 @@ export class TopicsComponent implements OnInit, OnDestroy {
 
   getSizeSeverity(size: TShirtSize | undefined): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
     return getSizeSeverity(size);
+  }
+
+  /**
+   * Get available topics for connection selection (excludes current topic).
+   */
+  getAvailableTopicsForConnection(): TopicOption[] {
+    return this.topicOptions.filter(t => t.id !== this.topic.id);
+  }
+
+  /**
+   * Add a new empty connection to the current topic.
+   */
+  addConnection(): void {
+    if (!this.topic.connections) {
+      this.topic.connections = [];
+    }
+    this.topic.connections.push({
+      targetTopicId: '',
+      type: 'relatedTo'
+    });
+  }
+
+  /**
+   * Remove a connection at the specified index.
+   */
+  removeConnection(index: number): void {
+    if (this.topic.connections) {
+      this.topic.connections.splice(index, 1);
+    }
+  }
+
+  /**
+   * Get the header/title of a topic by its ID.
+   */
+  getTopicHeader(topicId: string): string {
+    const topic = this.topicOptions.find(t => t.id === topicId);
+    return topic?.header || 'Unbekannt';
+  }
+
+  /**
+   * Get the label for a connection type.
+   */
+  getConnectionTypeLabel(type: TopicConnectionType): string {
+    const option = this.connectionTypeOptions.find(o => o.value === type);
+    return option?.label || type;
+  }
+
+  /**
+   * Get the count of connections for a topic.
+   */
+  getConnectionCount(topic: Topic): number {
+    return topic.connections?.length || 0;
   }
 }
