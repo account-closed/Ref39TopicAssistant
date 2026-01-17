@@ -471,7 +471,7 @@
             <div class="connection-item" *ngFor="let connection of topic.connections; let i = index">
               <div class="connection-fields">
                 <p-select 
-                  [options]="getAvailableTopicsForConnection()"
+                  [options]="availableTopicsForConnection"
                   [(ngModel)]="connection.targetTopicId"
                   optionLabel="header"
                   optionValue="id"
@@ -505,9 +505,9 @@
             icon="pi pi-plus" 
             [text]="true" 
             (onClick)="addConnection()"
-            [disabled]="getAvailableTopicsForConnection().length === 0">
+            [disabled]="availableTopicsForConnection.length === 0">
           </p-button>
-          <small class="hint" *ngIf="getAvailableTopicsForConnection().length === 0">
+          <small class="hint" *ngIf="availableTopicsForConnection.length === 0">
             Keine anderen Themen zum Verknüpfen vorhanden.
           </small>
         </div>

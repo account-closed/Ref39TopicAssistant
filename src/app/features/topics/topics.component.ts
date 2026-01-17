@@ -127,7 +127,11 @@ export class TopicsComponent implements OnInit, OnDestroy {
     { label: 'Verwandt mit', value: 'relatedTo' }
   ];
 
+  /** All topics available for connection selection. Filtered by getAvailableTopicsForConnection() to exclude current topic. */
   topicOptions: TopicOption[] = [];
+
+  /** Cached list of available topics for connection (excludes current topic). Updated when dialog opens. */
+  availableTopicsForConnection: TopicOption[] = [];
 
   managedTags: TagModel[] = [];
   managedTagsExist: boolean = false;
@@ -177,7 +181,7 @@ export class TopicsComponent implements OnInit, OnDestroy {
       tagsString: topic.tags?.join(' ') || ''
     }));
 
-    // Build topic options for connection selection (excluding current topic when editing)
+    // Build all topic options for connection selection
     this.topicOptions = datastore.topics.map(t => ({ id: t.id, header: t.header }));
 
     this.allTags = this.managedTags.map(t => t.name).sort();
@@ -296,6 +300,7 @@ export class TopicsComponent implements OnInit, OnDestroy {
     this.validToDate = null;
     this.submitted = false;
     this.editMode = false;
+    this.updateAvailableTopicsForConnection();
     this.topicDialog = true;
   }
 
@@ -318,6 +323,7 @@ export class TopicsComponent implements OnInit, OnDestroy {
     
     this.submitted = false;
     this.editMode = true;
+    this.updateAvailableTopicsForConnection();
     this.topicDialog = true;
   }
 
@@ -578,7 +584,15 @@ export class TopicsComponent implements OnInit, OnDestroy {
    * Get available topics for connection selection (excludes current topic).
    */
   getAvailableTopicsForConnection(): TopicOption[] {
-    return this.topicOptions.filter(t => t.id !== this.topic.id);
+    return this.availableTopicsForConnection;
+  }
+
+  /**
+   * Update the cached list of available topics for connection.
+   * Called when dialog opens to exclude current topic.
+   */
+  private updateAvailableTopicsForConnection(): void {
+    this.availableTopicsForConnection = this.topicOptions.filter(t => t.id !== this.topic.id);
   }
 
   /**
