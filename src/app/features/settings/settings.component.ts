@@ -1,6 +1,7 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { Card } from 'primeng/card';
 import { Button } from 'primeng/button';
 import { SelectButton } from 'primeng/selectbutton';
@@ -12,7 +13,8 @@ import { MessageService, ConfirmationService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
 import { FileConnectionService } from '../../core/services/file-connection.service';
-import { WriteQueueService } from '../../core/services/write-queue.service';
+import { CacheService, CacheState } from '../../core/services/cache.service';
+import { PersistenceService } from '../../core/services/persistence.service';
 import { Datastore } from '../../core/models';
 
 type BackendType = 'filesystem' | 'rest';
@@ -34,7 +36,8 @@ export class SettingsComponent implements OnInit, OnDestroy {
   private fileConnection = inject(FileConnectionService);
   private messageService = inject(MessageService);
   private confirmationService = inject(ConfirmationService);
-  private writeQueueService = inject(WriteQueueService);
+  private cache = inject(CacheService);
+  private persistence = inject(PersistenceService);
 
   isConnected = false;
   isConnecting = false;
@@ -58,11 +61,18 @@ export class SettingsComponent implements OnInit, OnDestroy {
   browserInfo = '';
   hasFileSystemAPI = false;
 
-  // Queue-related properties
-  queuedOperations = this.writeQueueService.queuedOperations;
-  isSaving = this.writeQueueService.isSaving;
-  lastSaveTime = this.writeQueueService.lastSaveTime;
-  pendingChangesCount = this.writeQueueService.pendingChangesCount;
+  // Cache state signals
+  private readonly cacheState = toSignal(this.cache.cacheState$, {
+    initialValue: { datastore: null, isDirty: false, lastSyncTime: null, revisionId: 0 } as CacheState
+  });
+  
+  readonly isSaving = this.persistence.isSaving;
+  readonly lastSaveTime = this.persistence.lastSaveTime;
+  readonly pendingChangesCount = this.cache.pendingChangesCount;
+  readonly hasUnsavedChanges = computed(() => this.cacheState().isDirty);
+  
+  // For backwards compatibility with template
+  readonly queuedOperations = signal<Array<{ id: string; type: string; timestamp: string; description: string }>>([]);
 
   private subscriptions: Subscription[] = [];
 
@@ -275,10 +285,10 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Save all queued operations immediately.
+   * Save all changes to backend.
    */
   async saveNow(): Promise<void> {
-    const result = await this.writeQueueService.saveNow();
+    const result = await this.persistence.saveToBackend();
     
     if (result.success) {
       this.messageService.add({
@@ -296,23 +306,35 @@ export class SettingsComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Clear the queue with confirmation.
+   * Discard all unsaved changes by reloading from backend.
    */
   clearQueue(): void {
+    if (!this.hasUnsavedChanges()) {
+      return;
+    }
+    
     this.confirmationService.confirm({
-      message: `Möchten Sie wirklich alle ${this.pendingChangesCount()} ausstehenden Änderungen verwerfen?`,
-      header: 'Warteschlange leeren',
+      message: 'Möchten Sie wirklich alle ausstehenden Änderungen verwerfen?',
+      header: 'Änderungen verwerfen',
       icon: 'pi pi-exclamation-triangle',
       acceptLabel: 'Ja, verwerfen',
       rejectLabel: 'Abbrechen',
       acceptButtonStyleClass: 'p-button-danger',
-      accept: () => {
-        this.writeQueueService.clearQueue();
-        this.messageService.add({
-          severity: 'info',
-          summary: 'Warteschlange geleert',
-          detail: 'Alle ausstehenden Änderungen wurden verworfen.'
-        });
+      accept: async () => {
+        const result = await this.persistence.forceReload();
+        if (result.success) {
+          this.messageService.add({
+            severity: 'info',
+            summary: 'Änderungen verworfen',
+            detail: 'Alle ausstehenden Änderungen wurden verworfen.'
+          });
+        } else {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Fehler',
+            detail: result.germanMessage
+          });
+        }
       }
     });
   }

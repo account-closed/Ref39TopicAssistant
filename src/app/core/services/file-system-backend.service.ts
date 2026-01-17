@@ -1,62 +1,45 @@
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, Subscription, combineLatest } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { toObservable } from '@angular/core/rxjs-interop';
+import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 import { BackendService } from './backend.service';
-import { Datastore, Topic, TeamMember, Tag, LockPurpose } from '../models';
+import { Datastore, Topic, TeamMember, Tag } from '../models';
 import { FileConnectionService } from './file-connection.service';
-import { DatastoreCommitService } from './datastore-commit.service';
-import { RefreshService } from './refresh.service';
-import { WriteQueueService, QueuedOperation } from './write-queue.service';
+import { CacheService } from './cache.service';
+import { PersistenceService } from './persistence.service';
 
 /**
  * File System Access API implementation of the backend.
- * Uses shared JSON files on SMB with lockfile-based concurrency control.
- * All write operations are queued and batched before committing to disk.
+ * 
+ * Architecture:
+ *   UI + Index  <-->  Cache  <-->  PersistenceService  <-->  Backend (File)
+ * 
+ * Core Principles:
+ * - The cache (CacheService) is the single source of truth
+ * - All reads come from the cache
+ * - All writes go to the cache first
+ * - Backend persistence is asynchronous via PersistenceService
  */
 @Injectable({
   providedIn: 'root'
 })
 export class FileSystemBackendService extends BackendService {
+  /**
+   * Observable of the current datastore from cache.
+   * This is the ONLY source of truth for the UI.
+   */
   public datastore$: Observable<Datastore | null>;
   
   private connectionStatusSubject = new BehaviorSubject<boolean>(false);
   public connectionStatus$: Observable<boolean> = this.connectionStatusSubject.asObservable();
-  
-  private refreshSubscription?: Subscription;
 
   private fileConnection = inject(FileConnectionService);
-  private datastoreCommit = inject(DatastoreCommitService);
-  private refreshService = inject(RefreshService);
-  private writeQueue = inject(WriteQueueService);
+  private cache = inject(CacheService);
+  private persistence = inject(PersistenceService);
 
   constructor() {
     super();
     
-    // Convert signal to observable for combining with datastore state
-    const queuedOps$ = toObservable(this.writeQueue.queuedOperations);
-    
-    // Combine the committed datastore with pending queue operations
-    // to provide an optimistic view of the data
-    this.datastore$ = combineLatest([
-      this.datastoreCommit.datastoreState$,
-      queuedOps$
-    ]).pipe(
-      map(([state, queuedOps]) => {
-        if (!state.datastore) {
-          return null;
-        }
-        // Apply pending operations to show optimistic updates in UI
-        return this.applyPendingOperations(state.datastore, queuedOps);
-      })
-    );
-    
-    // Listen for refresh triggers - reload datastore and rebuild index
-    this.refreshSubscription = this.refreshService.refreshTrigger$.subscribe(signal => {
-      if (signal && this.isConnected()) {
-        this.loadDatastore();
-      }
-    });
+    // The datastore observable comes directly from the cache
+    this.datastore$ = this.cache.datastore$;
 
     // Listen for connection changes
     this.fileConnection.connection$.subscribe(connection => {
@@ -64,176 +47,94 @@ export class FileSystemBackendService extends BackendService {
     });
   }
 
-  /**
-   * Apply pending queue operations to the datastore for optimistic UI updates.
-   */
-  private applyPendingOperations(datastore: Datastore, operations: QueuedOperation[]): Datastore {
-    let result = { ...datastore };
-    const timestamp = new Date().toISOString();
-
-    for (const op of operations) {
-      switch (op.type) {
-        case 'add-topic': {
-          const topic = op.payload as Topic;
-          result = { ...result, topics: [...result.topics, topic] };
-          break;
-        }
-        case 'update-topic': {
-          const { topicId, updates } = op.payload as { topicId: string; updates: Partial<Topic> };
-          result = {
-            ...result,
-            topics: result.topics.map(t => t.id === topicId ? { ...t, ...updates, updatedAt: timestamp } : t)
-          };
-          break;
-        }
-        case 'delete-topic': {
-          const { topicId } = op.payload as { topicId: string };
-          result = { ...result, topics: result.topics.filter(t => t.id !== topicId) };
-          break;
-        }
-        case 'add-member': {
-          const member = op.payload as TeamMember;
-          result = { ...result, members: [...result.members, member] };
-          break;
-        }
-        case 'update-member': {
-          const { memberId, updates } = op.payload as { memberId: string; updates: Partial<TeamMember> };
-          result = {
-            ...result,
-            members: result.members.map(m => m.id === memberId ? { ...m, ...updates, updatedAt: timestamp } : m)
-          };
-          break;
-        }
-        case 'delete-member': {
-          const { memberId } = op.payload as { memberId: string };
-          result = { ...result, members: result.members.filter(m => m.id !== memberId) };
-          break;
-        }
-        case 'add-tag': {
-          const tag = op.payload as Tag;
-          result = { ...result, tags: [...(result.tags || []), tag] };
-          break;
-        }
-        case 'update-tag': {
-          const { tagId, updates } = op.payload as { tagId: string; updates: Partial<Tag> };
-          if (result.tags) {
-            result = {
-              ...result,
-              tags: result.tags.map(t => t.id === tagId ? { ...t, ...updates, modifiedAt: timestamp } : t)
-            };
-          }
-          break;
-        }
-        case 'delete-tag': {
-          const { tagId } = op.payload as { tagId: string };
-          if (result.tags) {
-            result = { ...result, tags: result.tags.filter(t => t.id !== tagId) };
-          }
-          break;
-        }
-        case 'update-multiple-topics': {
-          const updates = op.payload as Array<{ topicId: string; changes: Partial<Topic> }>;
-          const updateMap = new Map(updates.map(u => [u.topicId, u.changes]));
-          result = {
-            ...result,
-            topics: result.topics.map(topic => {
-              const changes = updateMap.get(topic.id);
-              return changes ? { ...topic, ...changes, updatedAt: timestamp } : topic;
-            })
-          };
-          break;
-        }
-      }
-    }
-
-    return result;
-  }
-
   async connect(): Promise<void> {
-    await this.fileConnection.connectToFolder();
-    await this.loadDatastore();
+    const result = await this.persistence.connect();
+    if (!result.success) {
+      console.error('Failed to connect:', result.germanMessage);
+    }
   }
 
   isConnected(): boolean {
-    return this.fileConnection.isConnected();
+    return this.persistence.isConnected();
   }
 
   setCurrentUser(memberId: string, displayName: string): void {
-    this.datastoreCommit.setCurrentUser(memberId, displayName);
+    this.persistence.setCurrentUser(memberId, displayName);
   }
 
   async loadDatastore(): Promise<void> {
-    const result = await this.datastoreCommit.loadDatastore();
+    const result = await this.persistence.loadFromBackend();
     if (!result.success) {
       console.error('Failed to load datastore:', result.germanMessage);
-      // Don't throw - the service keeps last valid state
     }
   }
 
+  /**
+   * Get current datastore from cache.
+   * This always returns the current cache state.
+   */
   getDatastore(): Datastore | null {
-    // Return the optimistic datastore that includes pending queue changes
-    const baseDatastore = this.datastoreCommit.getDatastore();
-    if (!baseDatastore) return null;
-    
-    const queuedOps = this.writeQueue.queuedOperations();
-    return this.applyPendingOperations(baseDatastore, queuedOps);
+    return this.cache.getDatastore();
   }
 
-  // All write operations now queue instead of immediately committing
-  // The UI sees optimistic updates via datastore$ observable
-  // Actual file writes happen when saveNow() is called
+  // ==================== TOPIC OPERATIONS ====================
+  // All writes go to cache first, then persist asynchronously
 
   async addTopic(topic: Topic): Promise<boolean> {
-    this.writeQueue.queueAddTopic(topic);
-    return true; // Optimistically return success
+    const result = this.cache.addTopic(topic);
+    return result.success;
   }
 
   async updateTopic(topicId: string, updates: Partial<Topic>): Promise<boolean> {
-    this.writeQueue.queueUpdateTopic(topicId, updates);
-    return true;
+    const result = this.cache.updateTopic(topicId, updates);
+    return result.success;
   }
 
   async deleteTopic(topicId: string): Promise<boolean> {
-    this.writeQueue.queueDeleteTopic(topicId);
-    return true;
-  }
-
-  async addMember(member: TeamMember): Promise<boolean> {
-    this.writeQueue.queueAddMember(member);
-    return true;
-  }
-
-  async updateMember(memberId: string, updates: Partial<TeamMember>): Promise<boolean> {
-    this.writeQueue.queueUpdateMember(memberId, updates);
-    return true;
-  }
-
-  async deleteMember(memberId: string): Promise<boolean> {
-    this.writeQueue.queueDeleteMember(memberId);
-    return true;
-  }
-
-  async addTag(tag: Tag): Promise<boolean> {
-    this.writeQueue.queueAddTag(tag);
-    return true;
-  }
-
-  async updateTag(tagId: string, updates: Partial<Tag>): Promise<boolean> {
-    this.writeQueue.queueUpdateTag(tagId, updates);
-    return true;
-  }
-
-  async deleteTag(tagId: string): Promise<boolean> {
-    this.writeQueue.queueDeleteTag(tagId);
-    return true;
+    const result = this.cache.deleteTopic(topicId);
+    return result.success;
   }
 
   async updateMultipleTopics(updates: Array<{ topicId: string; changes: Partial<Topic> }>): Promise<boolean> {
-    this.writeQueue.queueUpdateMultipleTopics(updates);
-    return true;
+    const result = this.cache.updateMultipleTopics(updates);
+    return result.success;
+  }
+
+  // ==================== MEMBER OPERATIONS ====================
+
+  async addMember(member: TeamMember): Promise<boolean> {
+    const result = this.cache.addMember(member);
+    return result.success;
+  }
+
+  async updateMember(memberId: string, updates: Partial<TeamMember>): Promise<boolean> {
+    const result = this.cache.updateMember(memberId, updates);
+    return result.success;
+  }
+
+  async deleteMember(memberId: string): Promise<boolean> {
+    const result = this.cache.deleteMember(memberId);
+    return result.success;
+  }
+
+  // ==================== TAG OPERATIONS ====================
+
+  async addTag(tag: Tag): Promise<boolean> {
+    const result = this.cache.addTag(tag);
+    return result.success;
+  }
+
+  async updateTag(tagId: string, updates: Partial<Tag>): Promise<boolean> {
+    const result = this.cache.updateTag(tagId, updates);
+    return result.success;
+  }
+
+  async deleteTag(tagId: string): Promise<boolean> {
+    const result = this.cache.deleteTag(tagId);
+    return result.success;
   }
 
   generateUUID(): string {
-    return this.datastoreCommit.generateUUID();
+    return this.persistence.generateUUID();
   }
 }

@@ -1,8 +1,10 @@
-import { Component, ChangeDetectionStrategy, inject, computed } from '@angular/core';
+import { Component, ChangeDetectionStrategy, inject, computed, signal } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { Button } from 'primeng/button';
 import { Tooltip } from 'primeng/tooltip';
 import { MessageService } from 'primeng/api';
-import { WriteQueueService } from '../../../core/services/write-queue.service';
+import { CacheService } from '../../../core/services/cache.service';
+import { PersistenceService } from '../../../core/services/persistence.service';
 
 @Component({
   selector: 'app-save-button',
@@ -12,14 +14,21 @@ import { WriteQueueService } from '../../../core/services/write-queue.service';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SaveButtonComponent {
-  private writeQueueService = inject(WriteQueueService);
+  private cache = inject(CacheService);
+  private persistence = inject(PersistenceService);
   private messageService = inject(MessageService);
 
-  // Local state
-  protected readonly isSaving = this.writeQueueService.isSaving;
-  protected readonly pendingCount = this.writeQueueService.pendingChangesCount;
-  protected readonly hasChanges = this.writeQueueService.hasUnsavedChanges;
-  protected readonly lastSaveTime = this.writeQueueService.lastSaveTime;
+  // State from services
+  protected readonly isSaving = this.persistence.isSaving;
+  protected readonly pendingCount = this.cache.pendingChangesCount;
+  protected readonly lastSaveTime = this.persistence.lastSaveTime;
+  
+  // Convert cache state to signal
+  private readonly cacheState = toSignal(this.cache.cacheState$, { 
+    initialValue: { datastore: null, isDirty: false, lastSyncTime: null, revisionId: 0 } 
+  });
+  
+  protected readonly hasChanges = computed(() => this.cacheState().isDirty);
   
   // Computed state
   protected readonly isDisabled = computed(() => 
@@ -39,6 +48,8 @@ export class SaveButtonComponent {
     const count = this.pendingCount();
     if (count > 0) {
       parts.push(`${count} ausstehende ${count === 1 ? 'Änderung' : 'Änderungen'}`);
+    } else if (this.hasChanges()) {
+      parts.push('Änderungen ausstehend');
     } else {
       parts.push('Keine ausstehenden Änderungen');
     }
@@ -88,7 +99,7 @@ export class SaveButtonComponent {
    * Handle save button click
    */
   protected async onSaveClick(): Promise<void> {
-    const result = await this.writeQueueService.saveNow();
+    const result = await this.persistence.saveToBackend();
     
     if (result.success) {
       this.messageService.add({

@@ -157,12 +157,13 @@
     </div>
   </p-card>
 
-  <!-- Queue Card -->
-  <p-card header="Warteschlange" styleClass="mb-4">
+  <!-- Cache Status Card -->
+  <p-card header="Cache Status" styleClass="mb-4">
     <div class="queue-summary mb-3">
       <div class="status-row">
-        <span class="status-label">Ausstehende Änderungen:</span>
-        <p-tag [value]="pendingChangesCount().toString()" [severity]="pendingChangesCount() > 0 ? 'warn' : 'success'"></p-tag>
+        <span class="status-label">Status:</span>
+        <p-tag [value]="hasUnsavedChanges() ? 'Ungespeicherte Änderungen' : 'Synchronisiert'" 
+               [severity]="hasUnsavedChanges() ? 'warn' : 'success'"></p-tag>
       </div>
       @if (lastSaveTime()) {
         <div class="status-row">
@@ -172,7 +173,7 @@
       }
       @if (isSaving()) {
         <div class="status-row">
-          <span class="status-label">Status:</span>
+          <span class="status-label">Vorgang:</span>
           <p-tag value="Wird gespeichert..." severity="info" icon="pi pi-spin pi-spinner"></p-tag>
         </div>
       }
@@ -180,29 +181,14 @@
 
     <p-divider></p-divider>
 
-    @if (pendingChangesCount() === 0) {
+    @if (!hasUnsavedChanges()) {
       <p-message severity="success" styleClass="mb-3">
-        Keine ausstehenden Änderungen
+        Alle Änderungen sind gespeichert
       </p-message>
     } @else {
-      <div class="queue-list mb-3">
-        <h4>Ausstehende Operationen</h4>
-        @for (operation of queuedOperations(); track operation.id) {
-          <div class="queue-item">
-            <div class="queue-item-header">
-              <p-tag 
-                [value]="getOperationTypeLabel(operation.type)" 
-                [severity]="getOperationTypeInfo(operation.type).severity"
-                [icon]="'pi ' + getOperationTypeInfo(operation.type).icon">
-              </p-tag>
-              <span class="queue-item-timestamp">{{ formatTimestamp(operation.timestamp) }}</span>
-            </div>
-            <div class="queue-item-description">
-              {{ operation.description }}
-            </div>
-          </div>
-        }
-      </div>
+      <p-message severity="warn" styleClass="mb-3">
+        Es gibt ungespeicherte Änderungen. Klicken Sie auf "Jetzt speichern" oder warten Sie auf die automatische Speicherung (alle 60 Sekunden).
+      </p-message>
     }
 
     <div class="queue-actions">
@@ -210,15 +196,15 @@
         label="Jetzt speichern" 
         icon="pi pi-save" 
         (onClick)="saveNow()"
-        [disabled]="pendingChangesCount() === 0 || isSaving()"
+        [disabled]="!hasUnsavedChanges() || isSaving()"
         [loading]="isSaving()"
         severity="primary">
       </p-button>
       <p-button 
-        label="Warteschlange leeren" 
+        label="Änderungen verwerfen" 
         icon="pi pi-trash" 
         (onClick)="clearQueue()"
-        [disabled]="pendingChangesCount() === 0 || isSaving()"
+        [disabled]="!hasUnsavedChanges() || isSaving()"
         severity="danger"
         [outlined]="true">
       </p-button>
