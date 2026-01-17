@@ -24,6 +24,10 @@ const INDEXEDDB_NAME = 'RaciTopicFinderDB';
 const INDEXEDDB_STORE = 'fileHandles';
 const INDEXEDDB_VERSION = 1;
 
+// File operation retry configuration
+const FILE_READ_WRITE_MAX_RETRIES = 3;
+const FILE_READ_WRITE_BASE_DELAY_MS = 200;
+
 @Injectable({
   providedIn: 'root'
 })
@@ -150,58 +154,114 @@ export class FileConnectionService {
   }
 
   /**
-   * Read file content with consistent error handling.
+   * Read file content with consistent error handling and retry mechanism.
+   * Retries up to 3 times with exponential backoff for transient errors.
    */
   async readFile(handle: FileSystemFileHandle): Promise<string> {
-    try {
-      const file = await handle.getFile();
-      return await file.text();
-    } catch (error: any) {
-      if (error.name === 'NotAllowedError') {
-        throw new FileConnectionError(
-          'Permission denied reading file',
-          'Keine Berechtigung zum Lesen der Datei. Bitte verbinden Sie das Verzeichnis erneut.',
-          'PERMISSION_DENIED'
-        );
+    let lastError: any;
+    
+    for (let attempt = 0; attempt < FILE_READ_WRITE_MAX_RETRIES; attempt++) {
+      try {
+        const file = await handle.getFile();
+        const content = await file.text();
+        
+        // Success - log if it wasn't the first attempt
+        if (attempt > 0) {
+          console.log(`[FileConnection] Read succeeded after ${attempt + 1} attempts`);
+        }
+        return content;
+      } catch (error: any) {
+        lastError = error;
+        
+        // Non-retriable errors
+        if (error.name === 'NotAllowedError') {
+          throw new FileConnectionError(
+            'Permission denied reading file',
+            'Keine Berechtigung zum Lesen der Datei. Bitte verbinden Sie das Verzeichnis erneut.',
+            'PERMISSION_DENIED'
+          );
+        }
+        if (error.name === 'NotFoundError') {
+          throw new FileConnectionError(
+            'File not found',
+            'Datei nicht gefunden.',
+            'FILE_NOT_FOUND'
+          );
+        }
+        
+        // If this was the last attempt, don't retry
+        if (attempt === FILE_READ_WRITE_MAX_RETRIES - 1) {
+          break;
+        }
+        
+        // Calculate delay with exponential backoff
+        const delayMs = FILE_READ_WRITE_BASE_DELAY_MS * Math.pow(2, attempt);
+        console.warn(`[FileConnection] Read failed (attempt ${attempt + 1}/${FILE_READ_WRITE_MAX_RETRIES}), retrying in ${delayMs}ms:`, error.message);
+        
+        // Wait before retrying
+        await this.sleep(delayMs);
       }
-      if (error.name === 'NotFoundError') {
-        throw new FileConnectionError(
-          'File not found',
-          'Datei nicht gefunden.',
-          'FILE_NOT_FOUND'
-        );
-      }
-      throw new FileConnectionError(
-        'Failed to read file: ' + error.message,
-        'Fehler beim Lesen der Datei: ' + error.message,
-        'READ_ERROR'
-      );
     }
+    
+    // All retries exhausted
+    throw new FileConnectionError(
+      'Failed to read file: ' + lastError.message,
+      'Fehler beim Lesen der Datei: ' + lastError.message,
+      'READ_ERROR'
+    );
   }
 
   /**
-   * Write file content with consistent error handling.
+   * Write file content with consistent error handling and retry mechanism.
    * Uses createWritable, write full JSON, close pattern.
+   * Retries up to 3 times with exponential backoff for transient errors.
    */
   async writeFile(handle: FileSystemFileHandle, content: string): Promise<void> {
-    try {
-      const writable = await handle.createWritable();
-      await writable.write(content);
-      await writable.close();
-    } catch (error: any) {
-      if (error.name === 'NotAllowedError') {
-        throw new FileConnectionError(
-          'Permission denied writing file',
-          'Keine Berechtigung zum Schreiben der Datei. Bitte verbinden Sie das Verzeichnis erneut.',
-          'PERMISSION_DENIED'
-        );
+    let lastError: any;
+    
+    for (let attempt = 0; attempt < FILE_READ_WRITE_MAX_RETRIES; attempt++) {
+      try {
+        const writable = await handle.createWritable();
+        await writable.write(content);
+        await writable.close();
+        
+        // Success - log if it wasn't the first attempt
+        if (attempt > 0) {
+          console.log(`[FileConnection] Write succeeded after ${attempt + 1} attempts`);
+        }
+        return;
+      } catch (error: any) {
+        lastError = error;
+        
+        // Non-retriable errors
+        if (error.name === 'NotAllowedError') {
+          throw new FileConnectionError(
+            'Permission denied writing file',
+            'Keine Berechtigung zum Schreiben der Datei. Bitte verbinden Sie das Verzeichnis erneut.',
+            'PERMISSION_DENIED'
+          );
+        }
+        
+        // If this was the last attempt, don't retry
+        if (attempt === FILE_READ_WRITE_MAX_RETRIES - 1) {
+          break;
+        }
+        
+        // Calculate delay with exponential backoff
+        const delayMs = FILE_READ_WRITE_BASE_DELAY_MS * Math.pow(2, attempt);
+        console.warn(`[FileConnection] Write failed (attempt ${attempt + 1}/${FILE_READ_WRITE_MAX_RETRIES}), retrying in ${delayMs}ms:`, error.message);
+        
+        // Wait before retrying
+        await this.sleep(delayMs);
       }
-      throw new FileConnectionError(
-        'Failed to write file: ' + error.message,
-        'Fehler beim Schreiben der Datei: ' + error.message,
-        'WRITE_ERROR'
-      );
     }
+    
+    // All retries exhausted
+    throw new FileConnectionError(
+      'Failed to write file: ' + lastError.message,
+      'Fehler beim Schreiben der Datei: ' + lastError.message,
+      'WRITE_ERROR'
+    );
   }
 
   async readDatastore(): Promise<string> {
@@ -337,6 +397,13 @@ export class FileConnectionService {
   async disconnect(): Promise<void> {
     this.connectionSubject.next({ connected: false });
     await this.clearIndexedDB();
+  }
+
+  /**
+   * Sleep for a specified number of milliseconds.
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 
   // IndexedDB persistence methods

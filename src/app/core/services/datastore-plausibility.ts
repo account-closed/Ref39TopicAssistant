@@ -88,11 +88,12 @@ export function removeInvalidMemberReferences(datastore: Datastore): {
     let updatedRaci = { ...topic.raci };
     let hasChanges = false;
 
-    // Check r1MemberId (required field - skip removal as it would break validation)
-    // NOTE: r1MemberId is mandatory per schema. Invalid r1MemberId indicates data corruption
-    // that requires manual intervention. We log it but don't auto-fix to avoid breaking topics.
-    if (!validMemberIds.has(updatedRaci.r1MemberId)) {
-      changes.push(`r1MemberId "${updatedRaci.r1MemberId}" is invalid (keeping as required field)`);
+    // Check r1MemberId (now optional - topics without R1 are orphan topics)
+    if (updatedRaci.r1MemberId && !validMemberIds.has(updatedRaci.r1MemberId)) {
+      changes.push(`removed invalid r1MemberId "${updatedRaci.r1MemberId}"`);
+      updatedRaci.r1MemberId = undefined;
+      hasChanges = true;
+      removedCount++;
     }
 
     // Check r2MemberId (optional)

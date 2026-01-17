@@ -73,74 +73,183 @@ export class FileSystemBackendService extends BackendService {
   }
 
   async addTopic(topic: Topic): Promise<boolean> {
-    const result = await this.datastoreCommit.addTopic(topic);
-    if (!result.success) {
-      console.error('Failed to add topic:', result.germanMessage);
-    }
-    return result.success;
+    console.log('[FileSystemBackend] addTopic called for topic:', topic.id, topic.header);
+    
+    // Fire-and-forget: don't wait for completion
+    this.datastoreCommit.addTopic(topic).then(result => {
+      if (!result.success) {
+        console.error('[FileSystemBackend] Failed to add topic:', result.germanMessage);
+      } else {
+        console.log('[FileSystemBackend] Topic added successfully');
+      }
+    }).catch(error => {
+      console.error('[FileSystemBackend] Unexpected error adding topic:', error);
+    });
+    
+    // Return immediately - success is optimistic
+    return true;
   }
 
   async updateTopic(topicId: string, updates: Partial<Topic>): Promise<boolean> {
-    const result = await this.datastoreCommit.updateTopic(topicId, updates);
-    if (!result.success) {
-      console.error('Failed to update topic:', result.germanMessage);
-    }
-    return result.success;
+    console.log('[FileSystemBackend] updateTopic called for topic:', topicId);
+    
+    // Fire-and-forget: don't wait for completion
+    this.datastoreCommit.updateTopic(topicId, updates).then(result => {
+      if (!result.success) {
+        console.error('[FileSystemBackend] Failed to update topic:', result.germanMessage);
+      } else {
+        console.log('[FileSystemBackend] Topic updated successfully');
+      }
+    }).catch(error => {
+      console.error('[FileSystemBackend] Unexpected error updating topic:', error);
+    });
+    
+    // Return immediately - success is optimistic
+    return true;
   }
 
   async deleteTopic(topicId: string): Promise<boolean> {
-    const result = await this.datastoreCommit.deleteTopic(topicId);
-    if (!result.success) {
-      console.error('Failed to delete topic:', result.germanMessage);
-    }
-    return result.success;
+    console.log('[FileSystemBackend] deleteTopic called for topic:', topicId);
+    
+    // Fire-and-forget: don't wait for completion
+    this.datastoreCommit.deleteTopic(topicId).then(result => {
+      if (!result.success) {
+        console.error('[FileSystemBackend] Failed to delete topic:', result.germanMessage);
+      } else {
+        console.log('[FileSystemBackend] Topic deleted successfully');
+      }
+    }).catch(error => {
+      console.error('[FileSystemBackend] Unexpected error deleting topic:', error);
+    });
+    
+    // Return immediately - success is optimistic
+    return true;
   }
 
   async addMember(member: TeamMember): Promise<boolean> {
-    const result = await this.datastoreCommit.addMember(member);
-    if (!result.success) {
-      console.error('Failed to add member:', result.germanMessage);
-    }
-    return result.success;
+    console.log('[FileSystemBackend] addMember called for member:', member.id, member.displayName);
+    
+    // Fire-and-forget: don't wait for completion
+    this.datastoreCommit.addMember(member).then(result => {
+      if (!result.success) {
+        console.error('[FileSystemBackend] Failed to add member:', result.germanMessage);
+      } else {
+        console.log('[FileSystemBackend] Member added successfully');
+      }
+    }).catch(error => {
+      console.error('[FileSystemBackend] Unexpected error adding member:', error);
+    });
+    
+    // Return immediately - success is optimistic
+    return true;
   }
 
   async updateMember(memberId: string, updates: Partial<TeamMember>): Promise<boolean> {
-    const result = await this.datastoreCommit.updateMember(memberId, updates);
-    if (!result.success) {
-      console.error('Failed to update member:', result.germanMessage);
-    }
-    return result.success;
+    console.log('[FileSystemBackend] updateMember called for member:', memberId);
+    
+    // Fire-and-forget: don't wait for completion
+    this.datastoreCommit.updateMember(memberId, updates).then(result => {
+      if (!result.success) {
+        console.error('[FileSystemBackend] Failed to update member:', result.germanMessage);
+      } else {
+        console.log('[FileSystemBackend] Member updated successfully');
+      }
+    }).catch(error => {
+      console.error('[FileSystemBackend] Unexpected error updating member:', error);
+    });
+    
+    // Return immediately - success is optimistic
+    return true;
   }
 
   async deleteMember(memberId: string): Promise<boolean> {
-    const result = await this.datastoreCommit.deleteMember(memberId);
-    if (!result.success) {
-      console.error('Failed to delete member:', result.germanMessage);
-    }
-    return result.success;
+    console.log('[FileSystemBackend] deleteMember called for member:', memberId);
+    
+    // Fire-and-forget: don't wait for completion
+    this.datastoreCommit.deleteMember(memberId).then(result => {
+      if (!result.success) {
+        console.error('[FileSystemBackend] Failed to delete member:', result.germanMessage);
+      } else {
+        console.log('[FileSystemBackend] Member deleted successfully');
+      }
+    }).catch(error => {
+      console.error('[FileSystemBackend] Unexpected error deleting member:', error);
+    });
+    
+    // Return immediately - success is optimistic
+    return true;
   }
 
   async addTag(tag: Tag): Promise<boolean> {
-    const result = await this.datastoreCommit.addTag(tag);
-    return result.success;
+    console.log('[FileSystemBackend] addTag called for tag:', tag.id, tag.name);
+    
+    // Fire-and-forget: don't wait for completion
+    this.datastoreCommit.addTag(tag).then(result => {
+      if (!result.success) {
+        console.error('[FileSystemBackend] Failed to add tag:', result.germanMessage);
+      } else {
+        console.log('[FileSystemBackend] Tag added successfully');
+      }
+    }).catch(error => {
+      console.error('[FileSystemBackend] Unexpected error adding tag:', error);
+    });
+    
+    // Return immediately - success is optimistic
+    return true;
   }
 
   async updateTag(tagId: string, updates: Partial<Tag>): Promise<boolean> {
-    const result = await this.datastoreCommit.updateTag(tagId, updates);
-    return result.success;
+    console.log('[FileSystemBackend] updateTag called for tag:', tagId);
+    
+    // Fire-and-forget: don't wait for completion
+    this.datastoreCommit.updateTag(tagId, updates).then(result => {
+      if (!result.success) {
+        console.error('[FileSystemBackend] Failed to update tag:', result.germanMessage);
+      } else {
+        console.log('[FileSystemBackend] Tag updated successfully');
+      }
+    }).catch(error => {
+      console.error('[FileSystemBackend] Unexpected error updating tag:', error);
+    });
+    
+    // Return immediately - success is optimistic
+    return true;
   }
 
   async deleteTag(tagId: string): Promise<boolean> {
-    const result = await this.datastoreCommit.deleteTag(tagId);
-    return result.success;
+    console.log('[FileSystemBackend] deleteTag called for tag:', tagId);
+    
+    // Fire-and-forget: don't wait for completion
+    this.datastoreCommit.deleteTag(tagId).then(result => {
+      if (!result.success) {
+        console.error('[FileSystemBackend] Failed to delete tag:', result.germanMessage);
+      } else {
+        console.log('[FileSystemBackend] Tag deleted successfully');
+      }
+    }).catch(error => {
+      console.error('[FileSystemBackend] Unexpected error deleting tag:', error);
+    });
+    
+    // Return immediately - success is optimistic
+    return true;
   }
 
   async updateMultipleTopics(updates: Array<{ topicId: string; changes: Partial<Topic> }>): Promise<boolean> {
-    const result = await this.datastoreCommit.updateMultipleTopics(updates);
-    if (!result.success) {
-      console.error('Failed to update multiple topics:', result.germanMessage);
-    }
-    return result.success;
+    console.log('[FileSystemBackend] updateMultipleTopics called for', updates.length, 'topics');
+    
+    // Fire-and-forget: don't wait for completion
+    this.datastoreCommit.updateMultipleTopics(updates).then(result => {
+      if (!result.success) {
+        console.error('[FileSystemBackend] Failed to update multiple topics:', result.germanMessage);
+      } else {
+        console.log('[FileSystemBackend] Multiple topics updated successfully');
+      }
+    }).catch(error => {
+      console.error('[FileSystemBackend] Unexpected error updating multiple topics:', error);
+    });
+    
+    // Return immediately - success is optimistic
+    return true;
   }
 
   generateUUID(): string {

@@ -20,7 +20,15 @@ export interface LockAcquireResult {
 const LOCK_TTL_SECONDS = 120;
 const LOCK_RENEWAL_INTERVAL_MS = 30000; // 30 seconds
 const LOCK_STATUS_POLL_INTERVAL_MS = 1000; // 1 second
-const LOCK_VERIFICATION_DELAY_MS = 1000; // Wait 1 second before verifying lock acquisition
+const LOCK_VERIFICATION_DELAY_MS = 2000; // Wait 2 seconds before verifying lock acquisition (increased for antivirus delays)
+
+// Lock acquisition retry configuration (more critical, longer delays)
+const LOCK_ACQUIRE_MAX_RETRIES = 3; // Maximum number of lock acquisition attempts
+const LOCK_ACQUIRE_BASE_DELAY_MS = 500; // Base delay for lock acquisition retries
+
+// Lock release/renewal retry configuration (less critical, shorter delays)
+const LOCK_RELEASE_RENEW_MAX_RETRIES = 3; // Maximum retries for lock release/renewal
+const LOCK_RELEASE_RENEW_BASE_DELAY_MS = 200; // Base delay for lock release/renewal retries
 
 @Injectable({
   providedIn: 'root'
@@ -66,7 +74,9 @@ export class LockService implements OnDestroy {
    * Acquire lock following the specification:
    * 1. Read lock.json (if missing: treat as unlocked)
    * 2. If now minus lockedAt is less than ttlSeconds: block editing
-   * 3. If unlocked or stale: write lock, wait 1000ms, re-read and verify
+   * 3. If unlocked or stale: write lock, wait, re-read and verify
+   * 
+   * Retries with exponential backoff for transient errors.
    */
   async acquireLock(purpose: LockPurpose, lockHolder?: LockHolder): Promise<LockAcquireResult> {
     const holder = lockHolder || {
@@ -74,112 +84,184 @@ export class LockService implements OnDestroy {
       displayName: this.currentMemberName
     };
 
-    try {
-      // Step 1: Read current lock
-      const existingLock = await this.readLockFile();
+    let lastError: any;
 
-      // Step 2: Check if locked and not stale
-      if (existingLock && !this.isLockStale(existingLock)) {
-        const remainingSeconds = this.getRemainingSeconds(existingLock);
+    for (let attempt = 0; attempt < LOCK_ACQUIRE_MAX_RETRIES; attempt++) {
+      try {
+        // Step 1: Read current lock
+        const existingLock = await this.readLockFile();
+
+        // Step 2: Check if locked and not stale
+        if (existingLock && !this.isLockStale(existingLock)) {
+          // Check if this is our own lock (avoid self-blocking)
+          if (existingLock.clientId === this.clientId) {
+            // We already hold the lock - just renew it and return success
+            existingLock.lockedAt = new Date().toISOString();
+            await this.fileConnection.writeLock(JSON.stringify(existingLock, null, 2));
+            await this.updateLockStatus();
+            
+            if (attempt > 0) {
+              console.log(`[Lock] Re-acquired own lock after ${attempt + 1} attempts`);
+            }
+            
+            return {
+              success: true,
+              germanMessage: 'Sperre erfolgreich erworben (bereits vorhanden).'
+            };
+          }
+          
+          // Lock is held by another client
+          const remainingSeconds = this.getRemainingSeconds(existingLock);
+          return {
+            success: false,
+            germanMessage: `Sperre aktiv von ${existingLock.lockedBy.displayName}. Noch ${remainingSeconds} Sekunden.`,
+            lockHolder: existingLock.lockedBy,
+            remainingSeconds
+          };
+        }
+
+        // Step 3: Write new lock
+        const newLock: Lock = {
+          lockedAt: new Date().toISOString(),
+          ttlSeconds: LOCK_TTL_SECONDS,
+          lockedBy: holder,
+          clientId: this.clientId,
+          purpose
+        };
+
+        await this.fileConnection.writeLock(JSON.stringify(newLock, null, 2));
+
+        // Step 4: Wait before verification to detect race conditions (increased delay for antivirus)
+        await this.sleep(LOCK_VERIFICATION_DELAY_MS);
+
+        // Step 5: Re-read and verify
+        const verifyLock = await this.readLockFile();
+
+        if (verifyLock && verifyLock.clientId === this.clientId) {
+          // Successfully acquired lock
+          await this.updateLockStatus();
+          this.startRenewal(purpose, holder);
+          
+          if (attempt > 0) {
+            console.log(`[Lock] Lock acquired after ${attempt + 1} attempts`);
+          }
+          
+          return {
+            success: true,
+            germanMessage: 'Sperre erfolgreich erworben.'
+          };
+        }
+
+        // Another client won the race - this is expected behavior, not an error to retry
         return {
           success: false,
-          germanMessage: `Sperre aktiv von ${existingLock.lockedBy.displayName}. Noch ${remainingSeconds} Sekunden.`,
-          lockHolder: existingLock.lockedBy,
-          remainingSeconds
+          germanMessage: 'Ein anderer Benutzer hat die Sperre erworben. Bitte versuchen Sie es erneut.',
+          lockHolder: verifyLock?.lockedBy,
+          remainingSeconds: verifyLock ? this.getRemainingSeconds(verifyLock) : undefined
         };
+      } catch (error) {
+        lastError = error;
+        
+        // If this was the last attempt, don't retry
+        if (attempt === LOCK_ACQUIRE_MAX_RETRIES - 1) {
+          break;
+        }
+        
+        // Calculate delay with exponential backoff
+        const delayMs = LOCK_ACQUIRE_BASE_DELAY_MS * Math.pow(2, attempt);
+        console.warn(`[Lock] Lock acquisition failed (attempt ${attempt + 1}/${LOCK_ACQUIRE_MAX_RETRIES}), retrying in ${delayMs}ms:`, error);
+        
+        // Wait before retrying
+        await this.sleep(delayMs);
       }
-
-      // Step 3: Write new lock
-      const newLock: Lock = {
-        lockedAt: new Date().toISOString(),
-        ttlSeconds: LOCK_TTL_SECONDS,
-        lockedBy: holder,
-        clientId: this.clientId,
-        purpose
-      };
-
-      await this.fileConnection.writeLock(JSON.stringify(newLock, null, 2));
-
-      // Step 4: Wait before verification to detect race conditions
-      await this.sleep(LOCK_VERIFICATION_DELAY_MS);
-
-      // Step 5: Re-read and verify
-      const verifyLock = await this.readLockFile();
-
-      if (verifyLock && verifyLock.clientId === this.clientId) {
-        // Successfully acquired lock
-        await this.updateLockStatus();
-        this.startRenewal(purpose, holder);
-        return {
-          success: true,
-          germanMessage: 'Sperre erfolgreich erworben.'
-        };
-      }
-
-      // Another client won the race
+    }
+    
+    // All retries exhausted
+    console.error('Failed to acquire lock after all attempts:', lastError);
+    if (lastError instanceof FileConnectionError) {
       return {
         success: false,
-        germanMessage: 'Ein anderer Benutzer hat die Sperre erworben. Bitte versuchen Sie es erneut.',
-        lockHolder: verifyLock?.lockedBy,
-        remainingSeconds: verifyLock ? this.getRemainingSeconds(verifyLock) : undefined
-      };
-    } catch (error) {
-      console.error('Failed to acquire lock:', error);
-      if (error instanceof FileConnectionError) {
-        return {
-          success: false,
-          germanMessage: error.germanMessage
-        };
-      }
-      return {
-        success: false,
-        germanMessage: 'Fehler beim Erwerben der Sperre: ' + (error as Error).message
+        germanMessage: lastError.germanMessage
       };
     }
+    return {
+      success: false,
+      germanMessage: 'Fehler beim Erwerben der Sperre: ' + (lastError as Error).message
+    };
   }
 
   /**
    * Release lock by writing a stale lock (lockedAt = 1970-01-01T00:00:00Z).
+   * Retries to ensure the lock is released even with transient errors.
    */
   async releaseLock(): Promise<void> {
-    try {
-      this.stopRenewal();
-      
-      // Write stale lock to unlock reliably
-      const staleLock: Lock = {
-        lockedAt: '1970-01-01T00:00:00Z',
-        ttlSeconds: LOCK_TTL_SECONDS,
-        lockedBy: { memberId: '', displayName: '' },
-        clientId: '',
-        purpose: 'topic-save'
-      };
+    this.stopRenewal();
+    
+    for (let attempt = 0; attempt < LOCK_RELEASE_RENEW_MAX_RETRIES; attempt++) {
+      try {
+        // Write stale lock to unlock reliably
+        const staleLock: Lock = {
+          lockedAt: '1970-01-01T00:00:00Z',
+          ttlSeconds: LOCK_TTL_SECONDS,
+          lockedBy: { memberId: '', displayName: '' },
+          clientId: '',
+          purpose: 'topic-save'
+        };
 
-      await this.fileConnection.writeLock(JSON.stringify(staleLock, null, 2));
-      await this.updateLockStatus();
-    } catch (error) {
-      console.error('Failed to release lock:', error);
-      // Don't throw - best effort release
+        await this.fileConnection.writeLock(JSON.stringify(staleLock, null, 2));
+        await this.updateLockStatus();
+        
+        if (attempt > 0) {
+          console.log(`[Lock] Lock released after ${attempt + 1} attempts`);
+        }
+        return;
+      } catch (error) {
+        if (attempt === LOCK_RELEASE_RENEW_MAX_RETRIES - 1) {
+          console.error('Failed to release lock after all attempts:', error);
+          // Don't throw - best effort release
+          return;
+        }
+        
+        const delayMs = LOCK_RELEASE_RENEW_BASE_DELAY_MS * Math.pow(2, attempt);
+        console.warn(`[Lock] Lock release failed (attempt ${attempt + 1}/${LOCK_RELEASE_RENEW_MAX_RETRIES}), retrying in ${delayMs}ms:`, error);
+        await this.sleep(delayMs);
+      }
     }
   }
 
   /**
    * Renew the lock (extend lock periodically while editing).
+   * Retries with exponential backoff for transient errors.
    */
   async renewLock(): Promise<boolean> {
-    try {
-      const currentLock = await this.readLockFile();
+    for (let attempt = 0; attempt < LOCK_RELEASE_RENEW_MAX_RETRIES; attempt++) {
+      try {
+        const currentLock = await this.readLockFile();
 
-      if (currentLock && currentLock.clientId === this.clientId) {
-        currentLock.lockedAt = new Date().toISOString();
-        await this.fileConnection.writeLock(JSON.stringify(currentLock, null, 2));
-        await this.updateLockStatus();
-        return true;
+        if (currentLock && currentLock.clientId === this.clientId) {
+          currentLock.lockedAt = new Date().toISOString();
+          await this.fileConnection.writeLock(JSON.stringify(currentLock, null, 2));
+          await this.updateLockStatus();
+          
+          if (attempt > 0) {
+            console.log(`[Lock] Lock renewed after ${attempt + 1} attempts`);
+          }
+          return true;
+        }
+        return false;
+      } catch (error) {
+        if (attempt === LOCK_RELEASE_RENEW_MAX_RETRIES - 1) {
+          console.error('Failed to renew lock after all attempts:', error);
+          return false;
+        }
+        
+        const delayMs = LOCK_RELEASE_RENEW_BASE_DELAY_MS * Math.pow(2, attempt);
+        console.warn(`[Lock] Lock renewal failed (attempt ${attempt + 1}/${LOCK_RELEASE_RENEW_MAX_RETRIES}), retrying in ${delayMs}ms:`, error);
+        await this.sleep(delayMs);
       }
-      return false;
-    } catch (error) {
-      console.error('Failed to renew lock:', error);
-      return false;
     }
+    
+    return false;
   }
 
   /**

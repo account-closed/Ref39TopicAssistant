@@ -257,7 +257,7 @@ export class TopicsComponent implements OnInit, OnDestroy {
       },
       notes: '',
       raci: {
-        r1MemberId: '',
+        r1MemberId: undefined,
         r2MemberId: undefined,
         r3MemberId: undefined,
         cMemberIds: [],
@@ -477,7 +477,10 @@ export class TopicsComponent implements OnInit, OnDestroy {
     }
   }
 
-  getMemberName(memberId: string): string {
+  getMemberName(memberId: string | undefined): string {
+    if (!memberId) {
+      return 'Nicht zugewiesen';
+    }
     const member = this.members.find(m => m.id === memberId);
     return member?.displayName || 'Unbekannt';
   }
