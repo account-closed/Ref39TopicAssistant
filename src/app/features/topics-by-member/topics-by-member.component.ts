@@ -26,6 +26,7 @@ interface TopicWithRoles {
 
 @Component({
   selector: 'app-topics-by-member',
+  standalone: true,
   imports: [
     CommonModule,
     FormsModule,
@@ -297,10 +298,6 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
       default:
         return '';
     }
-  }
-
-  getPriorityStars(priority: number | undefined): string {
-    return getPriorityStars(priority);
   }
 
   getSizeSeverity(size: TShirtSize | undefined): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
