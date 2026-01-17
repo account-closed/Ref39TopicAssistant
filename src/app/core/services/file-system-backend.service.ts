@@ -25,9 +25,6 @@ export class FileSystemBackendService extends BackendService {
   
   private refreshSubscription?: Subscription;
 
-  // Local in-memory datastore that includes pending queue changes
-  private localDatastoreSubject = new BehaviorSubject<Datastore | null>(null);
-
   private fileConnection = inject(FileConnectionService);
   private datastoreCommit = inject(DatastoreCommitService);
   private refreshService = inject(RefreshService);
