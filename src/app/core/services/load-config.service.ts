@@ -10,6 +10,12 @@ import { FileConnectionService } from './file-connection.service';
 const LOAD_CONFIG_FILENAME = 'load_config.json';
 
 /**
+ * Maximum allowed overhead factor (exclusive upper bound).
+ * Values at or above this are rejected during validation.
+ */
+export const MAX_OVERHEAD_FACTOR = 0.8;
+
+/**
  * Service for managing load configuration stored in `datadir/load_config.json`.
  * Creates the config file with defaults if it doesn't exist.
  */
@@ -188,9 +194,9 @@ export class LoadConfigService {
       if (
         typeof overheadFactor !== 'number' ||
         overheadFactor < 0 ||
-        overheadFactor >= 0.8
+        overheadFactor >= MAX_OVERHEAD_FACTOR
       ) {
-        errors.push('overheadFactor must be between 0 and 0.8 (exclusive)');
+        errors.push(`overheadFactor must be between 0 and ${MAX_OVERHEAD_FACTOR} (exclusive)`);
       }
     }
 

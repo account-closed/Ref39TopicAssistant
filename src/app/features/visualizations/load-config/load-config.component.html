@@ -73,11 +73,11 @@
               id="overheadFactor"
               [(ngModel)]="overheadFactor"
               [min]="0"
-              [max]="0.79"
+              [max]="maxOverheadFactor - 0.01"
               [step]="0.05"
               [minFractionDigits]="2"
               [maxFractionDigits]="2"
-              pTooltip="Anteil für Meetings, Admin etc. (max 79%)"
+              [pTooltip]="'Anteil für Meetings, Admin etc. (max ' + (maxOverheadPercent - 1) + '%)'"
               tooltipPosition="top"></p-inputNumber>
             <span class="percent-display">= {{ overheadPercent() }}%</span>
           </div>

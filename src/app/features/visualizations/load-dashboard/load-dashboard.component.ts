@@ -175,7 +175,7 @@ export class LoadDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  protected getLoadBarColor(capacityRatio: number): string {
+  protected getCapacityBarColor(capacityRatio: number): string {
     if (capacityRatio < 0.3) return 'var(--p-blue-500)';
     if (capacityRatio <= 0.9) return 'var(--p-green-500)';
     if (capacityRatio <= 1.0) return 'var(--p-orange-500)';

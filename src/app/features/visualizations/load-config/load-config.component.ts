@@ -20,7 +20,7 @@ import { Toast } from 'primeng/toast';
 import { MessageService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../../core/services/backend.service';
-import { LoadConfigService } from '../../../core/services/load-config.service';
+import { LoadConfigService, MAX_OVERHEAD_FACTOR } from '../../../core/services/load-config.service';
 import { LoadCalculationService } from '../../../core/services/load-calculation.service';
 import { LoadConfig, DEFAULT_LOAD_CONFIG, BaseLoadComponent, Datastore, TeamMember } from '../../../core/models';
 
@@ -53,6 +53,10 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
   protected readonly config = signal<LoadConfig | null>(null);
   protected readonly members = signal<TeamMember[]>([]);
   protected readonly isSaving = signal(false);
+
+  // Constants for template
+  protected readonly maxOverheadFactor = MAX_OVERHEAD_FACTOR;
+  protected readonly maxOverheadPercent = Math.round(MAX_OVERHEAD_FACTOR * 100);
 
   // Editable values
   protected contractHours = signal(41);
