@@ -21,6 +21,7 @@ import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
 import { Tag, TeamMember, Datastore } from '../../core/models';
 import { isValidKeyword, sanitizeKeyword } from '../../shared/utils/validation.utils';
+import { TAG_WEIGHT_RECOMMENDED_MIN, TAG_WEIGHT_RECOMMENDED_MAX } from '../../core/services/load-calculation.service';
 
 @Component({
   selector: 'app-tags',
@@ -376,11 +377,11 @@ export class TagsComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Checks if the tag's tagWeight is outside the recommended range (-1.0 to +2.0).
+   * Checks if the tag's tagWeight is outside the recommended range.
    */
   isExtremeTagWeight(): boolean {
     const weight = this.tag.tagWeight;
     if (weight === null || weight === undefined) return false;
-    return weight < -1.0 || weight > 2.0;
+    return weight < TAG_WEIGHT_RECOMMENDED_MIN || weight > TAG_WEIGHT_RECOMMENDED_MAX;
   }
 }

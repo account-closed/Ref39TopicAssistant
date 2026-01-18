@@ -36,6 +36,12 @@ export const COMPLEXITY_CONSTANTS = {
  */
 export const TAG_WEIGHT_MAX_ABSOLUTE = 3.0;
 
+/**
+ * Recommended range for tagWeight values (for UI guidance).
+ */
+export const TAG_WEIGHT_RECOMMENDED_MIN = -1.0;
+export const TAG_WEIGHT_RECOMMENDED_MAX = 2.0;
+
 export type RoleType = 'R1' | 'R2' | 'R3' | 'C' | 'I';
 
 /**
