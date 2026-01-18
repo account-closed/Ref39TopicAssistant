@@ -4,6 +4,7 @@ import { QuickAssignmentComponent } from './features/quick-assignment/quick-assi
 import { TopicsComponent } from './features/topics/topics.component';
 import { MembersComponent } from './features/members/members.component';
 import { TopicsByMemberComponent } from './features/topics-by-member/topics-by-member.component';
+import { RaciMatrixComponent } from './features/raci-matrix/raci-matrix.component';
 import { TagsComponent } from './features/tags/tags.component';
 import { SettingsComponent } from './features/settings/settings.component';
 import { VisualizationsComponent } from './features/visualizations/visualizations.component';
@@ -20,6 +21,7 @@ export const routes: Routes = [
   { path: 'topics', component: TopicsComponent },
   { path: 'members', component: MembersComponent },
   { path: 'topics-by-member', component: TopicsByMemberComponent },
+  { path: 'raci-matrix', component: RaciMatrixComponent },
   { path: 'tags', component: TagsComponent },
   { path: 'visualizations', component: VisualizationsComponent },
   { path: 'visualizations/sunburst', component: SunburstComponent },

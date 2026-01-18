@@ -82,6 +82,12 @@ export class AppComponent implements OnInit, OnDestroy {
         command: () => this.router.navigate(['/topics-by-member'])
       },
       {
+        id: 'raci-matrix',
+        label: 'RACI-Matrix',
+        icon: 'pi pi-table',
+        command: () => this.router.navigate(['/raci-matrix'])
+      },
+      {
         id: 'tags',
         label: 'Tags verwalten',
         icon: 'pi pi-tags',

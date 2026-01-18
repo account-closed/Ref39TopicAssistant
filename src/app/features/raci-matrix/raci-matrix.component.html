@@ -1,0 +1,123 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>RACI-Matrix</h1>
+    <p>Übersicht aller Themen und Zuständigkeiten</p>
+  </div>
+
+  @if (!isConnected()) {
+    <div class="card">
+      <p class="text-center text-secondary">
+        <i class="pi pi-info-circle"></i>
+        Bitte verbinden Sie zuerst ein Datenverzeichnis über die Einstellungen.
+      </p>
+    </div>
+  }
+
+  @if (isConnected()) {
+    <div class="matrix-info">
+      <i class="pi pi-info-circle"></i>
+      <span>{{ topics().length }} Themen × {{ activeMembers().length }} Aktive Teammitglieder</span>
+    </div>
+
+    <div class="matrix-container">
+      <p-table
+        [value]="matrixData()"
+        [rowTrackBy]="trackByTopicId"
+        [scrollable]="true"
+        scrollHeight="calc(100vh - var(--matrix-scroll-offset))"
+        styleClass="raci-table"
+        [sortField]="'topic.header'"
+        [sortOrder]="1">
+        
+        <ng-template pTemplate="header">
+          <tr>
+            <!-- Sticky column: Topic name -->
+            <th class="topic-column" pSortableColumn="topic.header">
+              <div class="header-content">
+                <span>Thema</span>
+                <p-sortIcon field="topic.header"></p-sortIcon>
+              </div>
+            </th>
+            
+            <!-- Member columns -->
+            @for (member of activeMembers(); track trackByMemberId($index, member)) {
+              <th class="member-column">
+                <div class="member-header">
+                  <span class="member-name">{{ member.displayName }}</span>
+                </div>
+              </th>
+            }
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="body" let-row>
+          <tr>
+            <!-- Sticky column: Topic name -->
+            <td class="topic-cell">
+              <span class="topic-name">{{ row.topic.header }}</span>
+            </td>
+
+            <!-- Member role cells -->
+            @for (member of activeMembers(); track trackByMemberId($index, member)) {
+              <td class="role-cell">
+                @if (getCellRoles(row, member.id).length > 0) {
+                  <div class="role-tags">
+                    @for (role of getCellRoles(row, member.id); track role) {
+                      <p-tag 
+                        [value]="role" 
+                        [severity]="getRoleSeverity(role)"
+                        [pTooltip]="getRoleTooltip(role)"
+                        tooltipPosition="top">
+                      </p-tag>
+                    }
+                  </div>
+                } @else {
+                  <span class="no-role">-</span>
+                }
+              </td>
+            }
+          </tr>
+        </ng-template>
+
+        <ng-template pTemplate="emptymessage">
+          <tr>
+            <td [attr.colspan]="activeMembers().length + 1" class="empty-message">
+              <i class="pi pi-inbox empty-icon"></i>
+              <p>Keine Themen gefunden</p>
+            </td>
+          </tr>
+        </ng-template>
+      </p-table>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend">
+      <div class="legend-title">
+        <i class="pi pi-info-circle"></i>
+        <span>Legende</span>
+      </div>
+      <div class="legend-items">
+        <div class="legend-item">
+          <p-tag value="R1" severity="success"></p-tag>
+          <span>Hauptverantwortlich</span>
+        </div>
+        <div class="legend-item">
+          <p-tag value="R2" severity="info"></p-tag>
+          <span>Stellvertretung</span>
+        </div>
+        <div class="legend-item">
+          <p-tag value="R3" severity="secondary"></p-tag>
+          <span>Weitere Stellvertretung</span>
+        </div>
+        <div class="legend-item">
+          <p-tag value="C" severity="warn"></p-tag>
+          <span>Consulted (wird konsultiert)</span>
+        </div>
+        <div class="legend-item">
+          <p-tag value="I" severity="contrast"></p-tag>
+          <span>Informed (wird informiert)</span>
+        </div>
+      </div>
+    </div>
+  }
+</div>
