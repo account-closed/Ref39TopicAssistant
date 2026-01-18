@@ -159,6 +159,47 @@
   color: var(--p-text-muted-color);
 }
 
+.connection-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--p-primary-color);
+}
+
+.connections-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.connection-item {
+  display: flex;
+  align-items: center;
+}
+
+.connection-fields {
+  display: flex;
+  gap: 0.5rem;
+  flex: 1;
+  align-items: center;
+}
+
+:host ::ng-deep .connection-target {
+  flex: 2;
+  min-width: 200px;
+}
+
+:host ::ng-deep .connection-type {
+  flex: 1;
+  min-width: 120px;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}
+
 :host ::ng-deep .p-datatable .p-datatable-header {
   padding: 1rem;
 }

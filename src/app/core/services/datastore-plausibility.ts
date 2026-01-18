@@ -1,7 +1,8 @@
-import { Datastore, Topic, TShirtSize } from '../models';
+import { Datastore, Topic, TShirtSize, TopicConnectionType } from '../models';
 import { isValidHexColor, normalizeHexColor } from '../../shared/utils/validation.utils';
 
 const VALID_SIZES: TShirtSize[] = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL'];
+const VALID_CONNECTION_TYPES: TopicConnectionType[] = ['dependsOn', 'blocks', 'relatedTo'];
 
 /**
  * Result of plausibility checks showing what was cleaned up.
@@ -19,6 +20,8 @@ export interface PlausibilityResult {
   correctedMemberColors: number;
   /** Number of tag color corrections made */
   correctedTagColors: number;
+  /** Number of invalid topic connections removed */
+  removedTopicConnections: number;
   /** Detailed log of changes for debugging */
   changeLog: string[];
 }
@@ -305,6 +308,82 @@ export function validateTagColors(datastore: Datastore): {
 }
 
 /**
+ * Remove invalid topic connections.
+ * A connection is invalid if:
+ * - The target topic ID doesn't exist
+ * - The connection type is not valid
+ * - The connection is a self-reference (topic connected to itself)
+ * - The connection is a duplicate
+ * @param datastore The datastore to check
+ * @returns Updated datastore with invalid connections removed
+ */
+export function removeInvalidTopicConnections(datastore: Datastore): {
+  datastore: Datastore;
+  removedCount: number;
+  changeLog: string[];
+} {
+  const validTopicIds = new Set(datastore.topics.map((t) => t.id));
+  let removedCount = 0;
+  const changeLog: string[] = [];
+
+  const updatedTopics = datastore.topics.map((topic) => {
+    if (!topic.connections || topic.connections.length === 0) {
+      return topic;
+    }
+
+    const changes: string[] = [];
+    const seenConnections = new Set<string>();
+    const validConnections = topic.connections.filter((connection) => {
+      const connectionKey = `${connection.targetTopicId}:${connection.type}`;
+
+      // Check for self-reference
+      if (connection.targetTopicId === topic.id) {
+        changes.push(`self-reference removed`);
+        removedCount++;
+        return false;
+      }
+
+      // Check for duplicate
+      if (seenConnections.has(connectionKey)) {
+        changes.push(`duplicate connection to "${connection.targetTopicId}" (${connection.type}) removed`);
+        removedCount++;
+        return false;
+      }
+      seenConnections.add(connectionKey);
+
+      // Check for invalid target topic
+      if (!validTopicIds.has(connection.targetTopicId)) {
+        changes.push(`connection to non-existent topic "${connection.targetTopicId}" removed`);
+        removedCount++;
+        return false;
+      }
+
+      // Check for invalid connection type
+      if (!VALID_CONNECTION_TYPES.includes(connection.type)) {
+        changes.push(`connection with invalid type "${connection.type}" removed`);
+        removedCount++;
+        return false;
+      }
+
+      return true;
+    });
+
+    if (changes.length > 0) {
+      changeLog.push(`Topic "${topic.header}" (${topic.id}): ${changes.join('; ')}`);
+      return { ...topic, connections: validConnections };
+    }
+
+    return topic;
+  });
+
+  return {
+    datastore: { ...datastore, topics: updatedTopics },
+    removedCount,
+    changeLog,
+  };
+}
+
+/**
  * Run all plausibility checks on the datastore and return a cleaned version.
  * This function should be called before each save to ensure data consistency.
  * @param datastore The datastore to check
@@ -321,6 +400,7 @@ export function runPlausibilityChecks(datastore: Datastore): {
   let totalCorrectedFields = 0;
   let totalCorrectedMemberColors = 0;
   let totalCorrectedTagColors = 0;
+  let totalRemovedConnections = 0;
 
   // 1. Remove invalid tag references
   const tagResult = removeInvalidTagReferences(currentDatastore);
@@ -352,7 +432,13 @@ export function runPlausibilityChecks(datastore: Datastore): {
   totalCorrectedTagColors = tagColorResult.correctedCount;
   allChangeLogs.push(...tagColorResult.changeLog);
 
-  const hasChanges = totalRemovedTags > 0 || totalRemovedMembers > 0 || totalCorrectedFields > 0 || totalCorrectedMemberColors > 0 || totalCorrectedTagColors > 0;
+  // 6. Remove invalid topic connections
+  const connectionResult = removeInvalidTopicConnections(currentDatastore);
+  currentDatastore = connectionResult.datastore;
+  totalRemovedConnections = connectionResult.removedCount;
+  allChangeLogs.push(...connectionResult.changeLog);
+
+  const hasChanges = totalRemovedTags > 0 || totalRemovedMembers > 0 || totalCorrectedFields > 0 || totalCorrectedMemberColors > 0 || totalCorrectedTagColors > 0 || totalRemovedConnections > 0;
 
   if (hasChanges) {
     console.log('[Plausibility] Cleaned up datastore:', {
@@ -361,6 +447,7 @@ export function runPlausibilityChecks(datastore: Datastore): {
       correctedTopicFields: totalCorrectedFields,
       correctedMemberColors: totalCorrectedMemberColors,
       correctedTagColors: totalCorrectedTagColors,
+      removedTopicConnections: totalRemovedConnections,
       changeLog: allChangeLogs,
     });
   }
@@ -374,6 +461,7 @@ export function runPlausibilityChecks(datastore: Datastore): {
       correctedTopicFields: totalCorrectedFields,
       correctedMemberColors: totalCorrectedMemberColors,
       correctedTagColors: totalCorrectedTagColors,
+      removedTopicConnections: totalRemovedConnections,
       changeLog: allChangeLogs,
     },
   };

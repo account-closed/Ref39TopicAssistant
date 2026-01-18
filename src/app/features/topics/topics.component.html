@@ -48,7 +48,7 @@
     [sortField]="'updatedAt'"
     [sortOrder]="-1"
     styleClass="p-datatable-striped"
-    [tableStyle]="{'min-width': '60rem'}">
+    [tableStyle]="{'min-width': '64rem'}">
     
     <ng-template pTemplate="header">
       <tr>
@@ -65,6 +65,7 @@
         <th pSortableColumn="size" style="min-width:5rem">
           Größe <p-sortIcon field="size"></p-sortIcon>
         </th>
+        <th style="min-width:4rem" title="Verknüpfungen">Verkn.</th>
         <th style="min-width:8rem">Gültigkeit</th>
         <th pSortableColumn="updatedAt" style="min-width:10rem">
           Aktualisiert <p-sortIcon field="updatedAt"></p-sortIcon>
@@ -102,6 +103,7 @@
             styleClass="w-full">
           </p-multiSelect>
         </th>
+        <th></th>
         <th></th>
         <th></th>
         <th>
@@ -151,6 +153,12 @@
           <span class="text-secondary" *ngIf="!topic.size">–</span>
         </td>
         <td>
+          <span *ngIf="getConnectionCount(topic) > 0" class="connection-count">
+            <i class="pi pi-link"></i> {{ getConnectionCount(topic) }}
+          </span>
+          <span class="text-secondary" *ngIf="getConnectionCount(topic) === 0">–</span>
+        </td>
+        <td>
           <p-tag [value]="getValidityBadge(topic)" [severity]="getValiditySeverity(topic)"></p-tag>
         </td>
         <td>{{ formatDate(topic.updatedAt) }}</td>
@@ -163,7 +171,7 @@
 
     <ng-template pTemplate="emptymessage">
       <tr>
-        <td colspan="8" class="text-center">
+        <td colspan="9" class="text-center">
           <i class="pi pi-inbox empty-icon"></i>
           <p>Keine Themen gefunden</p>
         </td>
@@ -452,6 +460,56 @@
               filterBy="displayName">
             </p-multiSelect>
           </div>
+        </div>
+
+        <!-- Connections Section -->
+        <div class="field-group">
+          <h4>Verknüpfungen</h4>
+          <small class="hint mb-2">Verbindungen zu anderen Themen (z.B. Abhängigkeiten, Blockaden, Verwandtschaften)</small>
+          
+          <div class="connections-list" *ngIf="topic.connections && topic.connections.length > 0">
+            <div class="connection-item" *ngFor="let connection of topic.connections; let i = index">
+              <div class="connection-fields">
+                <p-select 
+                  [options]="availableTopicsForConnection"
+                  [(ngModel)]="connection.targetTopicId"
+                  optionLabel="header"
+                  optionValue="id"
+                  placeholder="Thema auswählen..."
+                  [filter]="true"
+                  filterBy="header"
+                  styleClass="connection-target">
+                </p-select>
+                <p-select 
+                  [options]="connectionTypeOptions"
+                  [(ngModel)]="connection.type"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Typ..."
+                  styleClass="connection-type">
+                </p-select>
+                <p-button 
+                  icon="pi pi-trash" 
+                  [rounded]="true" 
+                  [text]="true" 
+                  severity="danger" 
+                  (onClick)="removeConnection(i)"
+                  ariaLabel="Verknüpfung entfernen">
+                </p-button>
+              </div>
+            </div>
+          </div>
+
+          <p-button 
+            label="Verknüpfung hinzufügen" 
+            icon="pi pi-plus" 
+            [text]="true" 
+            (onClick)="addConnection()"
+            [disabled]="availableTopicsForConnection.length === 0">
+          </p-button>
+          <small class="hint" *ngIf="availableTopicsForConnection.length === 0">
+            Keine anderen Themen zum Verknüpfen vorhanden.
+          </small>
         </div>
       </div>
     </ng-template>
