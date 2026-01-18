@@ -88,6 +88,12 @@ export class AppComponent implements OnInit, OnDestroy {
         command: () => this.router.navigate(['/tags'])
       },
       {
+        id: 'visualizations',
+        label: 'Visualisierungen',
+        icon: 'pi pi-chart-bar',
+        command: () => this.router.navigate(['/visualizations'])
+      },
+      {
         id: 'settings',
         label: 'Einstellungen',
         icon: 'pi pi-cog',
