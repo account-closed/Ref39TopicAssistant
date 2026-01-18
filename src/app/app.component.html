@@ -1,6 +1,12 @@
 <div class="app-container">
   <div class="app-header">
-    <p-button type="button" icon="pi pi-bars" (click)="toggleSidebar()" [text]="true"></p-button>
+    <p-button 
+      type="button" 
+      icon="pi pi-bars" 
+      (click)="toggleSidebar()" 
+      [text]="true"
+      aria-label="Seitenleiste ein-/ausblenden">
+    </p-button>
     <h2>{{ title() }}</h2>
     <div class="header-spacer"></div>
     <app-sync-indicator></app-sync-indicator>
@@ -12,8 +18,30 @@
   <div class="app-body">
     @if (sidebarVisible()) {
       <aside class="app-sidebar">
-        <nav>
-          <p-menu [model]="menuItems()" [style]="{width:'100%', border: 'none'}"></p-menu>
+        @if (!isConnected()) {
+          <div class="sidebar-info">
+            <i class="pi pi-info-circle"></i>
+            <span>Verzeichnis verbinden um alle Funktionen zu nutzen</span>
+          </div>
+        }
+        <nav class="sidebar-nav" role="navigation" aria-label="Hauptnavigation">
+          @for (item of menuItems(); track item.id) {
+            <a 
+              class="nav-item"
+              [class.nav-item-disabled]="item.disabled"
+              [class.nav-item-active]="isActiveRoute(item.route || '')"
+              [attr.aria-current]="isActiveRoute(item.route || '') ? 'page' : null"
+              [attr.aria-disabled]="item.disabled"
+              [pTooltip]="item.disabled ? 'Verzeichnis verbinden um diese Funktion zu nutzen' : ''"
+              tooltipPosition="right"
+              (click)="onNavigate(item)">
+              <i [class]="item.icon"></i>
+              <span class="nav-item-label">{{ item.label }}</span>
+              @if (item.disabled) {
+                <i class="pi pi-lock nav-item-lock"></i>
+              }
+            </a>
+          }
         </nav>
       </aside>
     }

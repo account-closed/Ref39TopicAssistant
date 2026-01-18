@@ -1,0 +1,16 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="page-header-content">
+      <h1>{{ title() }}</h1>
+      @if (description()) {
+        <p>{{ description() }}</p>
+      }
+    </div>
+    <div class="page-actions">
+      <ng-content select="[actions]"></ng-content>
+    </div>
+  </div>
+  <div class="page-content">
+    <ng-content select="[content]"></ng-content>
+  </div>
+</div>

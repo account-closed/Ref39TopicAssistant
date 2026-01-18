@@ -13,6 +13,7 @@ import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
 import { Topic, TeamMember, Datastore, Tag as TagModel, TShirtSize } from '../../core/models';
 import { getSizeSeverity } from '../../shared/utils/topic-display.utils';
+import { PageWrapperComponent } from '../../shared/components';
 
 interface MemberOption {
   id: string;
@@ -37,7 +38,8 @@ interface TopicWithRoles {
     MultiSelect,
     Rating,
     Toolbar,
-    Button
+    Button,
+    PageWrapperComponent
   ],
   templateUrl: './topics-by-member.component.html',
   styleUrl: './topics-by-member.component.scss',

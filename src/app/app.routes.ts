@@ -12,20 +12,23 @@ import { NetworkDiagramComponent } from './features/visualizations/network-diagr
 import { TreemapComponent } from './features/visualizations/treemap/treemap.component';
 import { LoadDashboardComponent } from './features/visualizations/load-dashboard/load-dashboard.component';
 import { LoadConfigComponent } from './features/visualizations/load-config/load-config.component';
+import { connectionGuard } from './core/guards/connection.guard';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/search', pathMatch: 'full' },
+  // Public routes (accessible when not connected)
   { path: 'search', component: SearchComponent },
-  { path: 'quick-assignment', component: QuickAssignmentComponent },
-  { path: 'topics', component: TopicsComponent },
-  { path: 'members', component: MembersComponent },
-  { path: 'topics-by-member', component: TopicsByMemberComponent },
-  { path: 'tags', component: TagsComponent },
-  { path: 'visualizations', component: VisualizationsComponent },
-  { path: 'visualizations/sunburst', component: SunburstComponent },
-  { path: 'visualizations/network', component: NetworkDiagramComponent },
-  { path: 'visualizations/treemap', component: TreemapComponent },
-  { path: 'visualizations/load', component: LoadDashboardComponent },
-  { path: 'visualizations/load/config', component: LoadConfigComponent },
   { path: 'settings', component: SettingsComponent },
+  // Protected routes (require connection)
+  { path: 'quick-assignment', component: QuickAssignmentComponent, canActivate: [connectionGuard] },
+  { path: 'topics', component: TopicsComponent, canActivate: [connectionGuard] },
+  { path: 'members', component: MembersComponent, canActivate: [connectionGuard] },
+  { path: 'topics-by-member', component: TopicsByMemberComponent, canActivate: [connectionGuard] },
+  { path: 'tags', component: TagsComponent, canActivate: [connectionGuard] },
+  { path: 'visualizations', component: VisualizationsComponent, canActivate: [connectionGuard] },
+  { path: 'visualizations/sunburst', component: SunburstComponent, canActivate: [connectionGuard] },
+  { path: 'visualizations/network', component: NetworkDiagramComponent, canActivate: [connectionGuard] },
+  { path: 'visualizations/treemap', component: TreemapComponent, canActivate: [connectionGuard] },
+  { path: 'visualizations/load', component: LoadDashboardComponent, canActivate: [connectionGuard] },
+  { path: 'visualizations/load/config', component: LoadConfigComponent, canActivate: [connectionGuard] },
 ];

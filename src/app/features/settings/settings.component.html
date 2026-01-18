@@ -1,5 +1,5 @@
-<div class="page-container">
-  <h1>Einstellungen / Status</h1>
+<app-page-wrapper title="Einstellungen / Status">
+  <div content>
 
   <!-- Connection Status Card -->
   <p-card header="Verbindungsstatus" styleClass="mb-4">
@@ -208,8 +208,9 @@
         severity="danger"
         [outlined]="true">
       </p-button>
-    </div>
+      </div>
   </p-card>
 
   <p-confirmDialog></p-confirmDialog>
-</div>
+  </div>
+</app-page-wrapper>
