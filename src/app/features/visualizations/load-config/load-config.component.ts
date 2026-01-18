@@ -81,6 +81,12 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
     this.subscriptions.push(
       this.backend.connectionStatus$.subscribe(connected => {
         this.isConnected.set(connected);
+        // When connected, ensure config is loaded
+        if (connected && !this.loadConfigService.getConfig()) {
+          void this.loadConfigService.loadOrCreate().catch(err => {
+            console.error('[LoadConfig] Failed to load config:', err);
+          });
+        }
       })
     );
 
@@ -92,6 +98,13 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
         }
       })
     );
+
+    // If already connected but config not loaded, load it now
+    const existingConfig = this.loadConfigService.getConfig();
+    if (existingConfig) {
+      this.config.set(existingConfig);
+      this.loadConfigValues(existingConfig);
+    }
   }
 
   ngOnDestroy(): void {

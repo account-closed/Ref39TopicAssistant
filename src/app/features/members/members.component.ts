@@ -117,6 +117,12 @@ export class MembersComponent implements OnInit, OnDestroy {
     this.subscriptions.push(
       this.backend.connectionStatus$.subscribe(connected => {
         this.isConnected = connected;
+        // Ensure load config is loaded when connected
+        if (connected && !this.loadConfigService.getConfig()) {
+          void this.loadConfigService.loadOrCreate().catch(err => {
+            console.error('[Members] Failed to load config:', err);
+          });
+        }
       })
     );
 
@@ -139,6 +145,15 @@ export class MembersComponent implements OnInit, OnDestroy {
         }
       })
     );
+
+    // Load existing config synchronously if already available
+    const existingConfig = this.loadConfigService.getConfig();
+    if (existingConfig) {
+      this.loadConfig = existingConfig;
+      this.defaultBaseLoad = existingConfig.baseLoad.components
+        .filter(c => c.enabled)
+        .reduce((sum, c) => sum + c.hoursPerWeek, 0);
+    }
   }
 
   ngOnDestroy(): void {
