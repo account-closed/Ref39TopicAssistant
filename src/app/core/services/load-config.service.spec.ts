@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
-import { LoadConfigService } from './load-config.service';
+import { LoadConfigService, MAX_OVERHEAD_FACTOR } from './load-config.service';
 import { FileConnectionService } from './file-connection.service';
 import { LoadConfig, DEFAULT_LOAD_CONFIG, SizeLabel } from '../models';
 
@@ -54,8 +54,8 @@ describe('LoadConfigService', () => {
       expect(result.errors).toContainEqual(expect.stringContaining('contractHoursPerWeek'));
     });
 
-    it('should reject overheadFactor >= 0.8', () => {
-      const config = { ...mockConfig, capacity: { ...mockConfig.capacity, overheadFactor: 0.85 } };
+    it(`should reject overheadFactor >= ${MAX_OVERHEAD_FACTOR}`, () => {
+      const config = { ...mockConfig, capacity: { ...mockConfig.capacity, overheadFactor: MAX_OVERHEAD_FACTOR } };
       const result = service.validateConfig(config);
       expect(result.isValid).toBe(false);
       expect(result.errors).toContainEqual(expect.stringContaining('overheadFactor'));
