@@ -374,4 +374,13 @@ export class TagsComponent implements OnInit, OnDestroy {
       minute: '2-digit'
     });
   }
+
+  /**
+   * Checks if the tag's tagWeight is outside the recommended range (-1.0 to +2.0).
+   */
+  isExtremeTagWeight(): boolean {
+    const weight = this.tag.tagWeight;
+    if (weight === null || weight === undefined) return false;
+    return weight < -1.0 || weight > 2.0;
+  }
 }

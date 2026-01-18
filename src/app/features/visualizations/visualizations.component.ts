@@ -85,6 +85,29 @@ import { Button } from 'primeng/button';
             ></p-button>
           </ng-template>
         </p-card>
+        
+        <p-card styleClass="visualization-card">
+          <ng-template #header>
+            <div class="card-icon load">
+              <i class="pi pi-chart-line"></i>
+            </div>
+          </ng-template>
+          <h3>Auslastung & Verantwortung</h3>
+          <p>Transparente Analyse der Arbeitsbelastung basierend auf Rollen, Tag-Gewichtungen und Themenkomplexität.</p>
+          <div class="features">
+            <span><i class="pi pi-check"></i> Auslastungsanzeige</span>
+            <span><i class="pi pi-check"></i> Rollenverteilung</span>
+            <span><i class="pi pi-check"></i> Erklärbare Berechnung</span>
+          </div>
+          <ng-template #footer>
+            <p-button
+              label="Öffnen"
+              icon="pi pi-arrow-right"
+              iconPos="right"
+              routerLink="/visualizations/load"
+            ></p-button>
+          </ng-template>
+        </p-card>
       </div>
     </div>
   `,
@@ -161,6 +184,10 @@ import { Button } from 'primeng/button';
       
       &.treemap {
         background: linear-gradient(135deg, #22c55e, #06b6d4);
+      }
+      
+      &.load {
+        background: linear-gradient(135deg, #ec4899, #f43f5e);
       }
     }
     

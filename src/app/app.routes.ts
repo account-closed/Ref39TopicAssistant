@@ -10,6 +10,7 @@ import { VisualizationsComponent } from './features/visualizations/visualization
 import { SunburstComponent } from './features/visualizations/sunburst/sunburst.component';
 import { NetworkDiagramComponent } from './features/visualizations/network-diagram/network-diagram.component';
 import { TreemapComponent } from './features/visualizations/treemap/treemap.component';
+import { LoadDashboardComponent } from './features/visualizations/load-dashboard/load-dashboard.component';
 
 export const routes: Routes = [
   { path: '', redirectTo: '/search', pathMatch: 'full' },
@@ -23,5 +24,6 @@ export const routes: Routes = [
   { path: 'visualizations/sunburst', component: SunburstComponent },
   { path: 'visualizations/network', component: NetworkDiagramComponent },
   { path: 'visualizations/treemap', component: TreemapComponent },
+  { path: 'visualizations/load', component: LoadDashboardComponent },
   { path: 'settings', component: SettingsComponent },
 ];
