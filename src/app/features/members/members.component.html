@@ -245,7 +245,7 @@
               </p-checkbox>
               <label for="hasBaseLoadOverride" class="ml-2">Individuelle Basislast</label>
               <i class="pi pi-info-circle ml-2" 
-                 pTooltip="Überschreibt die Standard-Basislast ({{ getDefaultBaseLoad() | number:'1.1-1' }} h/Woche) für dieses Mitglied."
+                 pTooltip="Überschreibt die Standard-Basislast ({{ defaultBaseLoad | number:'1.1-1' }} h/Woche) für dieses Mitglied."
                  tooltipPosition="top"></i>
             </div>
             <div *ngIf="hasBaseLoadOverride">
@@ -260,7 +260,7 @@
                 [showButtons]="true"
                 [step]="0.5"
                 inputStyleClass="w-full" />
-              <small class="field-hint">Standard: {{ getDefaultBaseLoad() | number:'1.1-1' }} h/Woche (JF + Dailies)</small>
+              <small class="field-hint">Standard: {{ defaultBaseLoad | number:'1.1-1' }} h/Woche (JF + Dailies)</small>
             </div>
           </div>
         </div>

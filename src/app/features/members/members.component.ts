@@ -102,6 +102,7 @@ export class MembersComponent implements OnInit, OnDestroy {
   memberPartTimePercent: number = 100; // Display as percentage (1-100)
   hasBaseLoadOverride: boolean = false;
   memberBaseLoadOverride: number | null = null;
+  defaultBaseLoad: number = 3.5; // Computed from config
 
   private subscriptions: Subscription[] = [];
 
@@ -130,6 +131,12 @@ export class MembersComponent implements OnInit, OnDestroy {
     this.subscriptions.push(
       this.loadConfigService.config$.subscribe(config => {
         this.loadConfig = config;
+        // Compute default base load when config changes
+        if (config) {
+          this.defaultBaseLoad = config.baseLoad.components
+            .filter(c => c.enabled)
+            .reduce((sum, c) => sum + c.hoursPerWeek, 0);
+        }
       })
     );
   }
@@ -471,8 +478,9 @@ export class MembersComponent implements OnInit, OnDestroy {
     const updatedConfig: LoadConfig = JSON.parse(JSON.stringify(this.loadConfig));
 
     // Update part-time factor
-    const partTimeFactor = this.memberPartTimePercent / 100;
-    if (partTimeFactor < 1.0) {
+    // Round to 2 decimal places for precision
+    const partTimeFactor = Math.round(this.memberPartTimePercent) / 100;
+    if (this.memberPartTimePercent < 100) {
       updatedConfig.members.partTimeFactors[memberId] = partTimeFactor;
     } else {
       // Remove if 100% (default)
