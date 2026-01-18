@@ -109,3 +109,42 @@
   vertical-align: middle;
   border: 1px solid rgba(0, 0, 0, 0.1);
 }
+
+.load-config-section {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--p-content-border-color);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.section-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--p-text-color);
+}
+
+.section-header .pi-info-circle {
+  color: var(--p-text-muted-color);
+  cursor: help;
+}
+
+.part-time-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.field-hint {
+  color: var(--p-text-muted-color);
+  font-size: 0.85rem;
+}
+
+.mb-2 {
+  margin-bottom: 0.5rem;
+}

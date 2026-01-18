@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Table, TableModule } from 'primeng/table';
 import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
+import { InputNumber } from 'primeng/inputnumber';
 import { Dialog } from 'primeng/dialog';
 import { AutoComplete } from 'primeng/autocomplete';
 import { ToggleSwitch } from 'primeng/toggleswitch';
@@ -16,10 +17,13 @@ import { InputIcon } from 'primeng/inputicon';
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
 import { Select } from 'primeng/select';
 import { ColorPicker } from 'primeng/colorpicker';
+import { Checkbox } from 'primeng/checkbox';
+import { Tooltip } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
-import { TeamMember, Topic, Datastore } from '../../core/models';
+import { LoadConfigService } from '../../core/services/load-config.service';
+import { TeamMember, Topic, Datastore, LoadConfig } from '../../core/models';
 
 interface TopicAssignment {
   topic: Topic;
@@ -35,6 +39,7 @@ interface TopicAssignment {
     TableModule,
     Button,
     InputText,
+    InputNumber,
     Dialog,
     AutoComplete,
     ToggleSwitch,
@@ -50,7 +55,9 @@ interface TopicAssignment {
     TabPanels,
     TabPanel,
     Select,
-    ColorPicker
+    ColorPicker,
+    Checkbox,
+    Tooltip
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './members.component.html',
@@ -90,10 +97,17 @@ export class MembersComponent implements OnInit, OnDestroy {
     { label: 'Inaktiv', value: false }
   ];
 
+  // Load config related properties
+  loadConfig: LoadConfig | null = null;
+  memberPartTimePercent: number = 100; // Display as percentage (1-100)
+  hasBaseLoadOverride: boolean = false;
+  memberBaseLoadOverride: number | null = null;
+
   private subscriptions: Subscription[] = [];
 
   constructor(
     private backend: BackendService,
+    private loadConfigService: LoadConfigService,
     private messageService: MessageService,
     private confirmationService: ConfirmationService
   ) {}
@@ -110,6 +124,12 @@ export class MembersComponent implements OnInit, OnDestroy {
         if (datastore) {
           this.loadData(datastore);
         }
+      })
+    );
+
+    this.subscriptions.push(
+      this.loadConfigService.config$.subscribe(config => {
+        this.loadConfig = config;
       })
     );
   }
@@ -177,6 +197,10 @@ export class MembersComponent implements OnInit, OnDestroy {
     this.member = this.createEmptyMember();
     this.submitted = false;
     this.editMode = false;
+    // Reset load config fields for new member
+    this.memberPartTimePercent = 100;
+    this.hasBaseLoadOverride = false;
+    this.memberBaseLoadOverride = null;
     this.memberDialog = true;
   }
 
@@ -187,6 +211,23 @@ export class MembersComponent implements OnInit, OnDestroy {
     };
     this.submitted = false;
     this.editMode = true;
+    // Load load config values for this member
+    if (this.loadConfig) {
+      const partTimeFactor = this.loadConfig.members.partTimeFactors[member.id] ?? 1.0;
+      this.memberPartTimePercent = Math.round(partTimeFactor * 100);
+      const override = this.loadConfig.baseLoad.memberOverrides[member.id];
+      if (override) {
+        this.hasBaseLoadOverride = true;
+        this.memberBaseLoadOverride = override.hoursPerWeek;
+      } else {
+        this.hasBaseLoadOverride = false;
+        this.memberBaseLoadOverride = null;
+      }
+    } else {
+      this.memberPartTimePercent = 100;
+      this.hasBaseLoadOverride = false;
+      this.memberBaseLoadOverride = null;
+    }
     this.memberDialog = true;
   }
 
@@ -206,15 +247,21 @@ export class MembersComponent implements OnInit, OnDestroy {
 
     try {
       let success: boolean;
+      let memberId: string;
       if (this.editMode) {
+        memberId = this.member.id;
         success = await this.backend.updateMember(this.member.id, this.member);
       } else {
-        this.member.id = this.backend.generateUUID();
+        memberId = this.backend.generateUUID();
+        this.member.id = memberId;
         this.member.updatedAt = new Date().toISOString();
         success = await this.backend.addMember(this.member);
       }
 
       if (success) {
+        // Save load config settings for this member
+        await this.saveLoadConfigForMember(memberId);
+        
         this.messageService.add({
           severity: 'success',
           summary: 'Erfolgreich',
@@ -410,5 +457,51 @@ export class MembersComponent implements OnInit, OnDestroy {
     if (!isoString) return '';
     const date = new Date(isoString);
     return date.toLocaleDateString('de-DE');
+  }
+
+  /**
+   * Save load config settings (part-time factor and base load override) for a member.
+   */
+  private async saveLoadConfigForMember(memberId: string): Promise<void> {
+    if (!this.loadConfig) {
+      return;
+    }
+
+    // Create a copy of the config to update
+    const updatedConfig: LoadConfig = JSON.parse(JSON.stringify(this.loadConfig));
+
+    // Update part-time factor
+    const partTimeFactor = this.memberPartTimePercent / 100;
+    if (partTimeFactor < 1.0) {
+      updatedConfig.members.partTimeFactors[memberId] = partTimeFactor;
+    } else {
+      // Remove if 100% (default)
+      delete updatedConfig.members.partTimeFactors[memberId];
+    }
+
+    // Update base load override
+    if (this.hasBaseLoadOverride && this.memberBaseLoadOverride !== null) {
+      updatedConfig.baseLoad.memberOverrides[memberId] = {
+        hoursPerWeek: this.memberBaseLoadOverride
+      };
+    } else {
+      // Remove override if disabled
+      delete updatedConfig.baseLoad.memberOverrides[memberId];
+    }
+
+    // Save the updated config
+    await this.loadConfigService.saveConfig(updatedConfig);
+  }
+
+  /**
+   * Get the default base load from enabled components.
+   */
+  getDefaultBaseLoad(): number {
+    if (!this.loadConfig) {
+      return 3.5; // Default value
+    }
+    return this.loadConfig.baseLoad.components
+      .filter(c => c.enabled)
+      .reduce((sum, c) => sum + c.hoursPerWeek, 0);
   }
 }
