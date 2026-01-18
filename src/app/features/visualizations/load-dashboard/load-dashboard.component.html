@@ -12,6 +12,13 @@
         <p>Transparente Analyse der Arbeitsbelastung basierend auf Rollen und Themenkomplexität</p>
       </div>
     </div>
+    <div class="header-actions">
+      <p-button 
+        label="Konfiguration" 
+        icon="pi pi-cog" 
+        [outlined]="true"
+        routerLink="/visualizations/load/config"></p-button>
+    </div>
   </div>
 
   @if (!isConnected()) {

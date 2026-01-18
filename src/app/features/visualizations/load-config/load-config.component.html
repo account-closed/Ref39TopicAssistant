@@ -1,0 +1,278 @@
+<div class="page-container">
+  <p-toast></p-toast>
+  
+  <div class="page-header">
+    <div class="header-content">
+      <button class="back-button" routerLink="/visualizations/load">
+        <i class="pi pi-arrow-left"></i>
+      </button>
+      <div>
+        <h1>
+          <i class="pi pi-cog"></i>
+          Auslastungs-Konfiguration
+        </h1>
+        <p>Konfiguration der Berechnungsparameter für die Auslastungsanalyse</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <p-button 
+        label="Zurücksetzen" 
+        icon="pi pi-refresh" 
+        severity="secondary"
+        [outlined]="true"
+        (onClick)="resetToDefaults()"></p-button>
+      <p-button 
+        label="Speichern" 
+        icon="pi pi-save" 
+        [loading]="isSaving()"
+        (onClick)="saveConfig()"></p-button>
+    </div>
+  </div>
+
+  @if (!isConnected()) {
+    <div class="card">
+      <p class="text-center text-secondary">
+        <i class="pi pi-info-circle"></i>
+        Bitte verbinden Sie zuerst ein Datenverzeichnis über die Einstellungen.
+      </p>
+    </div>
+  } @else if (!config()) {
+    <div class="card">
+      <p class="text-center text-secondary">
+        <i class="pi pi-spin pi-spinner"></i>
+        Lade Konfiguration...
+      </p>
+    </div>
+  } @else {
+    <div class="config-grid">
+      <!-- Capacity Settings -->
+      <p-card styleClass="config-card">
+        <ng-template #header>
+          <div class="card-header">
+            <h3><i class="pi pi-clock"></i> Kapazität</h3>
+          </div>
+        </ng-template>
+        
+        <div class="config-section">
+          <div class="config-row">
+            <label for="contractHours">Vertragsstunden pro Woche</label>
+            <p-inputNumber 
+              id="contractHours"
+              [(ngModel)]="contractHours"
+              [min]="1"
+              [max]="60"
+              suffix=" h"
+              [showButtons]="true"
+              pTooltip="Wöchentliche Arbeitszeit laut Vertrag"
+              tooltipPosition="top"></p-inputNumber>
+          </div>
+          
+          <div class="config-row">
+            <label for="overheadFactor">Overhead-Faktor</label>
+            <p-inputNumber 
+              id="overheadFactor"
+              [(ngModel)]="overheadFactor"
+              [min]="0"
+              [max]="0.79"
+              [step]="0.05"
+              [minFractionDigits]="2"
+              [maxFractionDigits]="2"
+              pTooltip="Anteil für Meetings, Admin etc. (max 79%)"
+              tooltipPosition="top"></p-inputNumber>
+            <span class="percent-display">= {{ overheadPercent() }}%</span>
+          </div>
+          
+          <div class="summary-box">
+            <strong>Effektive Kapazität (Vollzeit):</strong>
+            <span class="highlight">{{ effectiveCapacity().toFixed(2) }} h/Woche</span>
+            <small>{{ contractHours() }}h × (1 - {{ (overheadFactor() * 100).toFixed(0) }}%)</small>
+          </div>
+        </div>
+      </p-card>
+
+      <!-- Topic Complexity Settings -->
+      <p-card styleClass="config-card">
+        <ng-template #header>
+          <div class="card-header">
+            <h3><i class="pi pi-calculator"></i> Themenkomplexität</h3>
+          </div>
+        </ng-template>
+        
+        <div class="config-section">
+          <p class="formula-text">
+            c(t) = 1 + α × TagWeight + β × Abhängigkeiten
+          </p>
+          
+          <div class="config-row">
+            <label for="alpha">α (Tag-Gewicht-Multiplikator)</label>
+            <p-inputNumber 
+              id="alpha"
+              [(ngModel)]="alpha"
+              [min]="0"
+              [max]="5"
+              [step]="0.1"
+              [minFractionDigits]="1"
+              [maxFractionDigits]="2"
+              [showButtons]="true"
+              pTooltip="Multiplikator für Tag-Gewichtungen"
+              tooltipPosition="top"></p-inputNumber>
+          </div>
+          
+          <div class="config-row">
+            <label for="beta">β (Abhängigkeits-Multiplikator)</label>
+            <p-inputNumber 
+              id="beta"
+              [(ngModel)]="beta"
+              [min]="0"
+              [max]="2"
+              [step]="0.05"
+              [minFractionDigits]="2"
+              [maxFractionDigits]="2"
+              [showButtons]="true"
+              pTooltip="Multiplikator für Themenabhängigkeiten"
+              tooltipPosition="top"></p-inputNumber>
+          </div>
+        </div>
+      </p-card>
+
+      <!-- Base Load Components -->
+      <p-card styleClass="config-card full-width">
+        <ng-template #header>
+          <div class="card-header">
+            <h3><i class="pi pi-calendar"></i> Basis-Auslastung (wiederkehrende Termine)</h3>
+            <p-button 
+              icon="pi pi-plus" 
+              [rounded]="true" 
+              [text]="true"
+              (onClick)="addBaseComponent()"
+              pTooltip="Neuen Termin hinzufügen"
+              tooltipPosition="top"></p-button>
+          </div>
+        </ng-template>
+        
+        <div class="base-load-section">
+          <p-table [value]="baseComponents()" styleClass="p-datatable-sm">
+            <ng-template pTemplate="header">
+              <tr>
+                <th>Aktiv</th>
+                <th>Name</th>
+                <th>Stunden/Woche</th>
+                <th></th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-component let-i="rowIndex">
+              <tr>
+                <td>
+                  <p-toggleSwitch 
+                    [ngModel]="component.enabled"
+                    (ngModelChange)="updateComponentEnabled(i, $event)"></p-toggleSwitch>
+                </td>
+                <td>
+                  <input 
+                    type="text" 
+                    class="p-inputtext p-component"
+                    [value]="component.name"
+                    (change)="updateComponentName(i, $any($event.target).value)">
+                </td>
+                <td>
+                  <p-inputNumber 
+                    [ngModel]="component.hoursPerWeek"
+                    (ngModelChange)="updateComponentHours(i, $event)"
+                    [min]="0"
+                    [max]="10"
+                    [step]="0.5"
+                    [minFractionDigits]="1"
+                    suffix=" h"
+                    [showButtons]="true"></p-inputNumber>
+                </td>
+                <td>
+                  <p-button 
+                    icon="pi pi-trash" 
+                    severity="danger" 
+                    [rounded]="true" 
+                    [text]="true"
+                    (onClick)="removeBaseComponent(i)"></p-button>
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="footer">
+              <tr class="total-row">
+                <td colspan="2"><strong>Summe Basis-Auslastung:</strong></td>
+                <td><strong>{{ totalBaseLoad().toFixed(1) }} h/Woche</strong></td>
+                <td></td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
+      </p-card>
+
+      <!-- Member Settings -->
+      <p-card styleClass="config-card full-width">
+        <ng-template #header>
+          <div class="card-header">
+            <h3><i class="pi pi-users"></i> Mitglieder-Einstellungen</h3>
+          </div>
+        </ng-template>
+        
+        <div class="member-settings-section">
+          <p class="info-text">
+            <i class="pi pi-info-circle"></i>
+            Teilzeitfaktor (1.0 = Vollzeit, 0.8 = 80%). Basis-Überschreibung ersetzt die Standard-Basis-Auslastung.
+          </p>
+          
+          @if (members().length === 0) {
+            <p class="empty-state">Keine Teammitglieder vorhanden</p>
+          } @else {
+            <p-table [value]="members()" styleClass="p-datatable-sm p-datatable-striped">
+              <ng-template pTemplate="header">
+                <tr>
+                  <th>Mitglied</th>
+                  <th pTooltip="Teilzeitfaktor (1.0 = 100%, 0.5 = 50%)" tooltipPosition="top">Teilzeit</th>
+                  <th>Effektive Kapazität</th>
+                  <th pTooltip="Optionale Überschreibung der Basis-Auslastung" tooltipPosition="top">Basis-Überschreibung</th>
+                </tr>
+              </ng-template>
+              <ng-template pTemplate="body" let-member>
+                <tr [class.inactive-member]="!member.active">
+                  <td>
+                    {{ member.displayName }}
+                    @if (!member.active) {
+                      <span class="inactive-badge">Inaktiv</span>
+                    }
+                  </td>
+                  <td>
+                    <p-inputNumber 
+                      [ngModel]="getMemberPartTimeFactor(member.id)"
+                      (ngModelChange)="setMemberPartTimeFactor(member.id, $event)"
+                      [min]="0.1"
+                      [max]="1.0"
+                      [step]="0.1"
+                      [minFractionDigits]="1"
+                      [maxFractionDigits]="2"
+                      [showButtons]="true"></p-inputNumber>
+                    <span class="percent-badge">{{ formatPercent(getMemberPartTimeFactor(member.id)) }}</span>
+                  </td>
+                  <td class="capacity-cell">
+                    {{ getMemberEffectiveCapacity(member.id).toFixed(1) }} h/Wo
+                  </td>
+                  <td>
+                    <p-inputNumber 
+                      [ngModel]="getMemberBaseLoadOverride(member.id)"
+                      (ngModelChange)="setMemberBaseLoadOverride(member.id, $event)"
+                      [min]="0"
+                      [max]="20"
+                      [step]="0.5"
+                      [minFractionDigits]="1"
+                      suffix=" h"
+                      placeholder="Standard"
+                      [showButtons]="true"></p-inputNumber>
+                  </td>
+                </tr>
+              </ng-template>
+            </p-table>
+          }
+        </div>
+      </p-card>
+    </div>
+  }
+</div>
