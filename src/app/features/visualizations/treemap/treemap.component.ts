@@ -352,6 +352,12 @@ export class TreemapComponent implements AfterViewInit, OnDestroy {
   
   private resizeObserver: ResizeObserver | null = null;
   
+  // Constants for minimum label dimensions
+  private readonly MIN_LABEL_WIDTH = 40;
+  private readonly MIN_LABEL_HEIGHT = 20;
+  private readonly MIN_SIZE_LABEL_WIDTH = 50;
+  private readonly MIN_SIZE_LABEL_HEIGHT = 35;
+  
   constructor() {
     effect(() => {
       const topics = this.filteredTopics();
@@ -589,6 +595,12 @@ export class TreemapComponent implements AfterViewInit, OnDestroy {
     const containerElement = this.treemapContainer();
     if (!svgElement || !containerElement) return;
     
+    // Capture constants for use in D3 callbacks
+    const minLabelWidth = this.MIN_LABEL_WIDTH;
+    const minLabelHeight = this.MIN_LABEL_HEIGHT;
+    const minSizeLabelWidth = this.MIN_SIZE_LABEL_WIDTH;
+    const minSizeLabelHeight = this.MIN_SIZE_LABEL_HEIGHT;
+    
     const svg = d3.select(svgElement.nativeElement);
     svg.selectAll('*').remove();
     
@@ -690,7 +702,7 @@ export class TreemapComponent implements AfterViewInit, OnDestroy {
         const availableWidth = d.x1 - d.x0 - 8;
         const availableHeight = d.y1 - d.y0 - 8;
         
-        if (availableWidth < 40 || availableHeight < 20) {
+        if (availableWidth < minLabelWidth || availableHeight < minLabelHeight) {
           self.text('');
           return;
         }
@@ -713,7 +725,7 @@ export class TreemapComponent implements AfterViewInit, OnDestroy {
         const availableWidth = d.x1 - d.x0 - 8;
         const availableHeight = d.y1 - d.y0 - 8;
         
-        if (availableWidth < 50 || availableHeight < 35) {
+        if (availableWidth < minSizeLabelWidth || availableHeight < minSizeLabelHeight) {
           self.text('');
           return;
         }

@@ -369,7 +369,7 @@ export class SunburstComponent implements AfterViewInit, OnDestroy {
     const tagMap = new Map<string, SunburstNode>();
     const rootChildren: SunburstNode[] = [];
     
-    // Group topics by their first tag
+    // Group topics by their tags (topics appear under each of their tags)
     topics.forEach(topic => {
       const tagIds = topic.tags || [];
       
