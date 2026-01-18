@@ -1,8 +1,5 @@
-<div class="page-container">
-  <div class="page-header">
-    <h1>Themen pro Teammitglied</h1>
-    <p>Übersicht aller Themen eines Teammitglieds mit Filteroptionen</p>
-  </div>
+<app-page-wrapper title="Themen pro Teammitglied" description="Übersicht aller Themen eines Teammitglieds mit Filteroptionen">
+  <div content>
 
   @if (!isConnected()) {
     <div class="card">
@@ -289,6 +286,7 @@
         <i class="pi pi-arrow-up"></i>
         <p>Bitte wählen Sie ein Teammitglied aus, um dessen Themen anzuzeigen.</p>
       </div>
-    }
+      }
   }
-</div>
+  </div>
+</app-page-wrapper>

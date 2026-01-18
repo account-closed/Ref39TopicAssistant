@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Table, TableModule } from 'primeng/table';
@@ -24,6 +24,7 @@ import { BackendService } from '../../core/services/backend.service';
 import { Topic, TeamMember, Datastore, Tag as TagModel, TShirtSize, TopicConnection, TopicConnectionType } from '../../core/models';
 import { getPriorityStars, getSizeSeverity } from '../../shared/utils/topic-display.utils';
 import { isValidKeyword, sanitizeKeyword } from '../../shared/utils/validation.utils';
+import { PageWrapperComponent } from '../../shared/components';
 
 interface MemberOption {
   id: string;
@@ -57,11 +58,13 @@ interface TopicOption {
     Toolbar,
     IconField,
     InputIcon,
-    Rating
+    Rating,
+    PageWrapperComponent
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './topics.component.html',
-  styleUrl: './topics.component.scss'
+  styleUrl: './topics.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TopicsComponent implements OnInit, OnDestroy {
   @ViewChild('dt') table!: Table;

@@ -1,46 +1,47 @@
-<div class="page-container">
+<app-page-wrapper title="Themen verwalten" description="Erstellen, bearbeiten und löschen Sie Themen für die RACI-Zuordnung">
   <p-toast></p-toast>
   <p-confirmDialog></p-confirmDialog>
 
-  <div class="page-header">
-    <h1>Themen verwalten</h1>
-    <p>Erstellen, bearbeiten und löschen Sie Themen für die RACI-Zuordnung</p>
+  <div actions>
+    <p-button 
+      label="Neues Thema" 
+      icon="pi pi-plus" 
+      severity="primary" 
+      (onClick)="openNewDialog()"
+      [disabled]="!isConnected"
+      ariaLabel="Neues Thema erstellen">
+    </p-button>
   </div>
 
-  <p-toolbar styleClass="mb-4">
-    <ng-template #start>
-      <p-button 
-        label="Neues Thema" 
-        icon="pi pi-plus" 
-        severity="primary" 
-        (onClick)="openNewDialog()"
-        [disabled]="!isConnected">
-      </p-button>
-    </ng-template>
-    <ng-template #end>
-      <p-iconfield>
-        <p-inputicon styleClass="pi pi-search" />
-        <input 
-          pInputText 
-          type="text" 
-          [(ngModel)]="globalFilter" 
-          (input)="onGlobalFilter($event)" 
-          placeholder="Suche..." />
-      </p-iconfield>
-    </ng-template>
-  </p-toolbar>
+  <div content>
+    <p-toolbar styleClass="mb-4">
+      <ng-template #end>
+        <p-iconfield>
+          <p-inputicon styleClass="pi pi-search" />
+          <input 
+            pInputText 
+            type="text" 
+            [(ngModel)]="globalFilter" 
+            (input)="onGlobalFilter($event)" 
+            placeholder="Suche..."
+            ariaLabel="Globale Suche" />
+        </p-iconfield>
+      </ng-template>
+    </p-toolbar>
 
-  <div class="card" *ngIf="!isConnected">
-    <p class="text-center text-secondary">
-      <i class="pi pi-info-circle"></i>
-      Bitte verbinden Sie zuerst ein Datenverzeichnis über die Einstellungen.
-    </p>
-  </div>
+    @if (!isConnected) {
+      <div class="card">
+        <p class="text-center text-secondary">
+          <i class="pi pi-info-circle"></i>
+          Bitte verbinden Sie zuerst ein Datenverzeichnis über die Einstellungen.
+        </p>
+      </div>
+    }
 
-  <p-table 
-    #dt
-    *ngIf="isConnected"
-    [value]="topics" 
+    @if (isConnected) {
+      <p-table 
+        #dt
+        [value]="topics" 
     [paginator]="true" 
     [rows]="10"
     [rowsPerPageOptions]="[10, 25, 50]"
@@ -125,46 +126,82 @@
       <tr>
         <td>
           <strong>{{ topic.header }}</strong>
-          <div class="text-secondary text-sm" *ngIf="topic.description">
-            {{ topic.description | slice:0:100 }}{{ topic.description.length > 100 ? '...' : '' }}
-          </div>
-          <div class="topic-meta" *ngIf="topic.hasFileNumber || topic.hasSharedFilePath">
-            <span class="meta-item" *ngIf="topic.hasFileNumber && topic.fileNumber">
-              <i class="pi pi-file"></i> {{ topic.fileNumber }}
+          @if (topic.description) {
+            <div class="text-secondary text-sm">
+              {{ topic.description | slice:0:100 }}{{ topic.description.length > 100 ? '...' : '' }}
+            </div>
+          }
+          @if (topic.hasFileNumber || topic.hasSharedFilePath) {
+            <div class="topic-meta">
+              @if (topic.hasFileNumber && topic.fileNumber) {
+                <span class="meta-item">
+                  <i class="pi pi-file"></i> {{ topic.fileNumber }}
+                </span>
+              }
+              @if (topic.hasSharedFilePath && topic.sharedFilePath) {
+                <span class="meta-item">
+                  <i class="pi pi-folder"></i> {{ topic.sharedFilePath }}
+                </span>
+              }
+            </div>
+          }
+        </td>
+        <td>
+          @if (topic.raci.r1MemberId) {
+            <span>{{ getMemberName(topic.raci.r1MemberId) }}</span>
+          } @else {
+            <p-tag value="Verwaist" severity="warn"></p-tag>
+          }
+        </td>
+        <td>
+          @for (tag of topic.tags; track tag) {
+            <p-tag [value]="tag" severity="info" styleClass="mr-1 mb-1" [style]="getTagStyle(tag)"></p-tag>
+          }
+        </td>
+        <td>
+          @if (topic.priority) {
+            <p-rating [(ngModel)]="topic.priority" [stars]="10" [readonly]="true"></p-rating>
+          } @else {
+            <span class="text-secondary">–</span>
+          }
+        </td>
+        <td>
+          @if (topic.size) {
+            <p-tag [value]="topic.size" [severity]="getSizeSeverity(topic.size)"></p-tag>
+          } @else {
+            <span class="text-secondary">–</span>
+          }
+        </td>
+        <td>
+          @if (getConnectionCount(topic) > 0) {
+            <span class="connection-count">
+              <i class="pi pi-link"></i> {{ getConnectionCount(topic) }}
             </span>
-            <span class="meta-item" *ngIf="topic.hasSharedFilePath && topic.sharedFilePath">
-              <i class="pi pi-folder"></i> {{ topic.sharedFilePath }}
-            </span>
-          </div>
-        </td>
-        <td>
-          <span *ngIf="topic.raci.r1MemberId">{{ getMemberName(topic.raci.r1MemberId) }}</span>
-          <p-tag *ngIf="!topic.raci.r1MemberId" value="Verwaist" severity="warn"></p-tag>
-        </td>
-        <td>
-          <p-tag *ngFor="let tag of topic.tags" [value]="tag" severity="info" styleClass="mr-1 mb-1" [style]="getTagStyle(tag)"></p-tag>
-        </td>
-        <td>
-          <p-rating *ngIf="topic.priority" [(ngModel)]="topic.priority" [stars]="10" [readonly]="true"></p-rating>
-          <span class="text-secondary" *ngIf="!topic.priority">–</span>
-        </td>
-        <td>
-          <p-tag *ngIf="topic.size" [value]="topic.size" [severity]="getSizeSeverity(topic.size)"></p-tag>
-          <span class="text-secondary" *ngIf="!topic.size">–</span>
-        </td>
-        <td>
-          <span *ngIf="getConnectionCount(topic) > 0" class="connection-count">
-            <i class="pi pi-link"></i> {{ getConnectionCount(topic) }}
-          </span>
-          <span class="text-secondary" *ngIf="getConnectionCount(topic) === 0">–</span>
+          } @else {
+            <span class="text-secondary">–</span>
+          }
         </td>
         <td>
           <p-tag [value]="getValidityBadge(topic)" [severity]="getValiditySeverity(topic)"></p-tag>
         </td>
         <td>{{ formatDate(topic.updatedAt) }}</td>
         <td>
-          <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" (onClick)="editTopic(topic)"></p-button>
-          <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="confirmDelete(topic)"></p-button>
+          <p-button 
+            icon="pi pi-pencil" 
+            [rounded]="true" 
+            [text]="true" 
+            severity="info" 
+            (onClick)="editTopic(topic)"
+            ariaLabel="Thema bearbeiten">
+          </p-button>
+          <p-button 
+            icon="pi pi-trash" 
+            [rounded]="true" 
+            [text]="true" 
+            severity="danger" 
+            (onClick)="confirmDelete(topic)"
+            ariaLabel="Thema löschen">
+          </p-button>
         </td>
       </tr>
     </ng-template>
@@ -177,346 +214,393 @@
         </td>
       </tr>
     </ng-template>
-  </p-table>
+      </p-table>
+    }
 
-  <!-- Create/Edit Dialog -->
-  <p-dialog 
-    [(visible)]="topicDialog" 
-    [style]="{width: '700px'}" 
-    [header]="editMode ? 'Thema bearbeiten' : 'Neues Thema'" 
-    [modal]="true"
-    [closable]="true"
-    styleClass="p-fluid">
-    
-    <ng-template pTemplate="content">
-      <div class="form-grid">
-        <!-- Header (required) -->
-        <div class="field">
-          <label for="header">Thema *</label>
-          <input 
-            pInputText 
-            id="header" 
-            [(ngModel)]="topic.header" 
-            required 
-            autofocus
-            [class.ng-invalid]="submitted && !topic.header"
-            [class.ng-dirty]="submitted && !topic.header" />
-          <small class="p-error" *ngIf="submitted && !topic.header">Thema ist erforderlich.</small>
-        </div>
+    <!-- Create/Edit Dialog -->
+      <p-dialog 
+      [(visible)]="topicDialog" 
+      [style]="{width: '700px'}" 
+      [header]="editMode ? 'Thema bearbeiten' : 'Neues Thema'" 
+      [modal]="true"
+      [closable]="true"
+      styleClass="p-fluid">
+      
+      <ng-template pTemplate="content">
+        <div class="form-grid">
+          <!-- Header (required) -->
+          <div class="field">
+            <label for="header">Thema *</label>
+            <input 
+              pInputText 
+              id="header" 
+              [(ngModel)]="topic.header" 
+              required 
+              autofocus
+              [class.ng-invalid]="submitted && !topic.header"
+              [class.ng-dirty]="submitted && !topic.header"
+              ariaLabel="Thema" />
+            @if (submitted && !topic.header) {
+              <small class="p-error">Thema ist erforderlich.</small>
+            }
+          </div>
 
-        <!-- Description -->
-        <div class="field">
-          <label for="description">Beschreibung</label>
-          <textarea 
-            pTextarea 
-            id="description" 
-            [(ngModel)]="topic.description" 
-            rows="3"
-            [autoResize]="true">
-          </textarea>
-        </div>
+          <!-- Description -->
+          <div class="field">
+            <label for="description">Beschreibung</label>
+            <textarea 
+              pTextarea 
+              id="description" 
+              [(ngModel)]="topic.description" 
+              rows="3"
+              [autoResize]="true">
+            </textarea>
+          </div>
 
-        <!-- Tags -->
-        <div class="field">
-          <label for="tags">Tags</label>
-          <p-autoComplete 
-            id="tags" 
-            [(ngModel)]="topic.tags"
-            [multiple]="true"
-            [suggestions]="tagSuggestions"
-            (completeMethod)="searchTags($event)"
-            [dropdown]="true"
-            [forceSelection]="managedTagsExist"
-            placeholder="Tags auswählen...">
-            <ng-template let-tag pTemplate="item">
-              <div class="tag-suggestion-item">
-                <span class="tag-name">{{ tag }}</span>
-                <span class="tag-hinweise" *ngIf="getTagHinweise(tag)">{{ getTagHinweise(tag) }}</span>
+          <!-- Tags -->
+          <div class="field">
+            <label for="tags">Tags</label>
+            <p-autoComplete 
+              id="tags" 
+              [(ngModel)]="topic.tags"
+              [multiple]="true"
+              [suggestions]="tagSuggestions"
+              (completeMethod)="searchTags($event)"
+              [dropdown]="true"
+              [forceSelection]="managedTagsExist"
+              placeholder="Tags auswählen...">
+              <ng-template let-tag pTemplate="item">
+                <div class="tag-suggestion-item">
+                  <span class="tag-name">{{ tag }}</span>
+                  @if (getTagHinweise(tag)) {
+                    <span class="tag-hinweise">{{ getTagHinweise(tag) }}</span>
+                  }
+                </div>
+              </ng-template>
+            </p-autoComplete>
+            @if (managedTagsExist) {
+              <small class="hint">Nur verwaltete Tags können zugewiesen werden</small>
+            } @else {
+              <small class="hint">Erstellen Sie Tags unter "Tags verwalten"</small>
+            }
+          </div>
+
+          <!-- Search Keywords -->
+          <div class="field">
+            <label for="searchKeywords">Suchbegriffe</label>
+            <p-autoComplete 
+              id="searchKeywords" 
+              [(ngModel)]="topic.searchKeywords"
+              [multiple]="true"
+              [suggestions]="keywordSuggestions"
+              (completeMethod)="searchKeywords($event)"
+              (onAdd)="onKeywordAdd($event)"
+              [addOnBlur]="true"
+              [addOnTab]="true"
+              [unique]="true"
+              placeholder="Suchbegriffe hinzufügen...">
+            </p-autoComplete>
+            <small class="hint">Keine Leerzeichen oder Sonderzeichen (erlaubt: _ - .)</small>
+          </div>
+
+          <!-- Notes -->
+          <div class="field">
+            <label for="notes">Notizen</label>
+            <textarea 
+              pTextarea 
+              id="notes" 
+              [(ngModel)]="topic.notes" 
+              rows="2"
+              [autoResize]="true">
+            </textarea>
+          </div>
+
+          <!-- Classification Section -->
+          <div class="field-group">
+            <h4>Klassifizierung</h4>
+            
+            <div class="classification-row">
+              <div class="field">
+                <label for="priority">Priorität (1-10)</label>
+                <p-rating 
+                  id="priority"
+                  [(ngModel)]="topic.priority"
+                  [stars]="10">
+                </p-rating>
+                <small class="hint">Sternbewertung von 1 (niedrig) bis 10 (hoch)</small>
               </div>
-            </ng-template>
-          </p-autoComplete>
-          <small class="hint" *ngIf="managedTagsExist">Nur verwaltete Tags können zugewiesen werden</small>
-          <small class="hint" *ngIf="!managedTagsExist">Erstellen Sie Tags unter "Tags verwalten"</small>
-        </div>
 
-        <!-- Search Keywords -->
-        <div class="field">
-          <label for="searchKeywords">Suchbegriffe</label>
-          <p-autoComplete 
-            id="searchKeywords" 
-            [(ngModel)]="topic.searchKeywords"
-            [multiple]="true"
-            [suggestions]="keywordSuggestions"
-            (completeMethod)="searchKeywords($event)"
-            (onAdd)="onKeywordAdd($event)"
-            [addOnBlur]="true"
-            [addOnTab]="true"
-            [unique]="true"
-            placeholder="Suchbegriffe hinzufügen...">
-          </p-autoComplete>
-          <small class="hint">Keine Leerzeichen oder Sonderzeichen (erlaubt: _ - .)</small>
-        </div>
+              <div class="field">
+                <label for="size">Größe (T-Shirt)</label>
+                <p-select 
+                  id="size"
+                  [options]="sizeOptions" 
+                  [(ngModel)]="topic.size"
+                  optionLabel="label" 
+                  optionValue="value"
+                  placeholder="Größe wählen..."
+                  [showClear]="true">
+                </p-select>
+                <small class="hint">Klassifizierung nach Aufwand (XXS bis XXL)</small>
+              </div>
+            </div>
+          </div>
 
-        <!-- Notes -->
-        <div class="field">
-          <label for="notes">Notizen</label>
-          <textarea 
-            pTextarea 
-            id="notes" 
-            [(ngModel)]="topic.notes" 
-            rows="2"
-            [autoResize]="true">
-          </textarea>
-        </div>
-
-        <!-- Classification Section -->
-        <div class="field-group">
-          <h4>Klassifizierung</h4>
-          
-          <div class="classification-row">
-            <div class="field">
-              <label for="priority">Priorität (1-10)</label>
-              <p-rating 
-                id="priority"
-                [(ngModel)]="topic.priority"
-                [stars]="10">
-              </p-rating>
-              <small class="hint">Sternbewertung von 1 (niedrig) bis 10 (hoch)</small>
+          <!-- File Reference Section -->
+          <div class="field-group">
+            <h4>Referenzen</h4>
+            
+            <div class="field-checkbox">
+              <p-toggleswitch 
+                [(ngModel)]="topic.hasFileNumber" 
+                inputId="hasFileNumber"
+                (onChange)="onHasFileNumberChange()">
+              </p-toggleswitch>
+              <label for="hasFileNumber" class="ml-2">Hat Aktenzeichen</label>
             </div>
 
+            @if (topic.hasFileNumber) {
+              <div class="field">
+                <label for="fileNumber">Aktenzeichen</label>
+                <input 
+                  pInputText 
+                  id="fileNumber" 
+                  [(ngModel)]="topic.fileNumber" 
+                  placeholder="Aktenzeichen eingeben..."
+                  ariaLabel="Aktenzeichen" />
+              </div>
+            }
+
+            <div class="field-checkbox">
+              <p-toggleswitch 
+                [(ngModel)]="topic.hasSharedFilePath" 
+                inputId="hasSharedFilePath"
+                (onChange)="onHasSharedFilePathChange()">
+              </p-toggleswitch>
+              <label for="hasSharedFilePath" class="ml-2">Hat Ablageort</label>
+            </div>
+
+            @if (topic.hasSharedFilePath) {
+              <div class="field">
+                <label for="sharedFilePath">Ablageort (Dateipfad)</label>
+                <input 
+                  pInputText 
+                  id="sharedFilePath" 
+                  [(ngModel)]="topic.sharedFilePath" 
+                  placeholder="z.B. \\server\share\ordner"
+                  ariaLabel="Ablageort" />
+              </div>
+            }
+          </div>
+
+          <!-- Validity Section -->
+          <div class="field-group">
+            <h4>Gültigkeit</h4>
+            
+            <div class="field-checkbox">
+              <p-toggleswitch 
+                [(ngModel)]="topic.validity.alwaysValid" 
+                inputId="alwaysValid"
+                (onChange)="onAlwaysValidChange()">
+              </p-toggleswitch>
+              <label for="alwaysValid" class="ml-2">Immer gültig</label>
+            </div>
+
+            @if (!topic.validity.alwaysValid) {
+              <div class="validity-dates">
+                <div class="field">
+                  <label for="validFrom">Gültig ab *</label>
+                  <p-datepicker 
+                    id="validFrom" 
+                    [(ngModel)]="validFromDate"
+                    dateFormat="dd.mm.yy"
+                    [showIcon]="true"
+                    [required]="!topic.validity.alwaysValid"
+                    [class.ng-invalid]="submitted && !topic.validity.alwaysValid && !validFromDate"
+                    [class.ng-dirty]="submitted && !topic.validity.alwaysValid && !validFromDate"
+                    ariaLabel="Gültig ab">
+                  </p-datepicker>
+                  @if (submitted && !topic.validity.alwaysValid && !validFromDate) {
+                    <small class="p-error">
+                      Gültig ab ist erforderlich.
+                    </small>
+                  }
+                </div>
+
+                <div class="field">
+                  <label for="validTo">Gültig bis (optional)</label>
+                  <p-datepicker 
+                    id="validTo" 
+                    [(ngModel)]="validToDate"
+                    dateFormat="dd.mm.yy"
+                    [showIcon]="true"
+                    ariaLabel="Gültig bis">
+                  </p-datepicker>
+                </div>
+              </div>
+            }
+          </div>
+
+          <!-- RACI Section -->
+          <div class="field-group">
+            <h4>Verantwortliche</h4>
+
             <div class="field">
-              <label for="size">Größe (T-Shirt)</label>
+              <label for="r1">R1 (Hauptverantwortlich)</label>
               <p-select 
-                id="size"
-                [options]="sizeOptions" 
-                [(ngModel)]="topic.size"
-                optionLabel="label" 
-                optionValue="value"
-                placeholder="Größe wählen..."
+                id="r1"
+                [options]="activeMembers" 
+                [(ngModel)]="topic.raci.r1MemberId"
+                optionLabel="displayName" 
+                optionValue="id"
+                placeholder="R1 auswählen..."
+                [filter]="true"
+                filterBy="displayName"
                 [showClear]="true">
               </p-select>
-              <small class="hint">Klassifizierung nach Aufwand (XXS bis XXL)</small>
-            </div>
-          </div>
-        </div>
-
-        <!-- File Reference Section -->
-        <div class="field-group">
-          <h4>Referenzen</h4>
-          
-          <div class="field-checkbox">
-            <p-toggleswitch 
-              [(ngModel)]="topic.hasFileNumber" 
-              inputId="hasFileNumber"
-              (onChange)="onHasFileNumberChange()">
-            </p-toggleswitch>
-            <label for="hasFileNumber" class="ml-2">Hat Aktenzeichen</label>
-          </div>
-
-          <div class="field" *ngIf="topic.hasFileNumber">
-            <label for="fileNumber">Aktenzeichen</label>
-            <input 
-              pInputText 
-              id="fileNumber" 
-              [(ngModel)]="topic.fileNumber" 
-              placeholder="Aktenzeichen eingeben..." />
-          </div>
-
-          <div class="field-checkbox">
-            <p-toggleswitch 
-              [(ngModel)]="topic.hasSharedFilePath" 
-              inputId="hasSharedFilePath"
-              (onChange)="onHasSharedFilePathChange()">
-            </p-toggleswitch>
-            <label for="hasSharedFilePath" class="ml-2">Hat Ablageort</label>
-          </div>
-
-          <div class="field" *ngIf="topic.hasSharedFilePath">
-            <label for="sharedFilePath">Ablageort (Dateipfad)</label>
-            <input 
-              pInputText 
-              id="sharedFilePath" 
-              [(ngModel)]="topic.sharedFilePath" 
-              placeholder="z.B. \\server\share\ordner" />
-          </div>
-        </div>
-
-        <!-- Validity Section -->
-        <div class="field-group">
-          <h4>Gültigkeit</h4>
-          
-          <div class="field-checkbox">
-            <p-toggleswitch 
-              [(ngModel)]="topic.validity.alwaysValid" 
-              inputId="alwaysValid"
-              (onChange)="onAlwaysValidChange()">
-            </p-toggleswitch>
-            <label for="alwaysValid" class="ml-2">Immer gültig</label>
-          </div>
-
-          <div class="validity-dates" *ngIf="!topic.validity.alwaysValid">
-            <div class="field">
-              <label for="validFrom">Gültig ab *</label>
-              <p-datepicker 
-                id="validFrom" 
-                [(ngModel)]="validFromDate"
-                dateFormat="dd.mm.yy"
-                [showIcon]="true"
-                [required]="!topic.validity.alwaysValid"
-                [class.ng-invalid]="submitted && !topic.validity.alwaysValid && !validFromDate"
-                [class.ng-dirty]="submitted && !topic.validity.alwaysValid && !validFromDate">
-              </p-datepicker>
-              <small class="p-error" *ngIf="submitted && !topic.validity.alwaysValid && !validFromDate">
-                Gültig ab ist erforderlich.
-              </small>
+              @if (!topic.raci.r1MemberId) {
+                <small class="hint">Ohne R1 wird das Thema als verwaist markiert</small>
+              }
             </div>
 
             <div class="field">
-              <label for="validTo">Gültig bis (optional)</label>
-              <p-datepicker 
-                id="validTo" 
-                [(ngModel)]="validToDate"
-                dateFormat="dd.mm.yy"
-                [showIcon]="true">
-              </p-datepicker>
+              <label for="r2">R2 (Stellvertretung)</label>
+              <p-select 
+                id="r2"
+                [options]="activeMembers" 
+                [(ngModel)]="topic.raci.r2MemberId"
+                optionLabel="displayName" 
+                optionValue="id"
+                placeholder="R2 auswählen..."
+                [filter]="true"
+                filterBy="displayName"
+                [showClear]="true">
+              </p-select>
+            </div>
+
+            <div class="field">
+              <label for="r3">R3 (Weitere Stellvertretung)</label>
+              <p-select 
+                id="r3"
+                [options]="activeMembers" 
+                [(ngModel)]="topic.raci.r3MemberId"
+                optionLabel="displayName" 
+                optionValue="id"
+                placeholder="R3 auswählen..."
+                [filter]="true"
+                filterBy="displayName"
+                [showClear]="true">
+              </p-select>
+            </div>
+
+            <div class="field">
+              <label for="consulted">Consulted (C)</label>
+              <p-multiSelect 
+                id="consulted"
+                [options]="activeMembers" 
+                [(ngModel)]="topic.raci.cMemberIds"
+                optionLabel="displayName" 
+                optionValue="id"
+                placeholder="Consulted auswählen..."
+                [filter]="true"
+                filterBy="displayName">
+              </p-multiSelect>
+            </div>
+
+            <div class="field">
+              <label for="informed">Informed (I)</label>
+              <p-multiSelect 
+                id="informed"
+                [options]="activeMembers" 
+                [(ngModel)]="topic.raci.iMemberIds"
+                optionLabel="displayName" 
+                optionValue="id"
+                placeholder="Informed auswählen..."
+                [filter]="true"
+                filterBy="displayName">
+              </p-multiSelect>
             </div>
           </div>
-        </div>
 
-        <!-- RACI Section -->
-        <div class="field-group">
-          <h4>Verantwortliche</h4>
-
-          <div class="field">
-            <label for="r1">R1 (Hauptverantwortlich)</label>
-            <p-select 
-              id="r1"
-              [options]="activeMembers" 
-              [(ngModel)]="topic.raci.r1MemberId"
-              optionLabel="displayName" 
-              optionValue="id"
-              placeholder="R1 auswählen..."
-              [filter]="true"
-              filterBy="displayName"
-              [showClear]="true">
-            </p-select>
-            <small class="hint" *ngIf="!topic.raci.r1MemberId">Ohne R1 wird das Thema als verwaist markiert</small>
-          </div>
-
-          <div class="field">
-            <label for="r2">R2 (Stellvertretung)</label>
-            <p-select 
-              id="r2"
-              [options]="activeMembers" 
-              [(ngModel)]="topic.raci.r2MemberId"
-              optionLabel="displayName" 
-              optionValue="id"
-              placeholder="R2 auswählen..."
-              [filter]="true"
-              filterBy="displayName"
-              [showClear]="true">
-            </p-select>
-          </div>
-
-          <div class="field">
-            <label for="r3">R3 (Weitere Stellvertretung)</label>
-            <p-select 
-              id="r3"
-              [options]="activeMembers" 
-              [(ngModel)]="topic.raci.r3MemberId"
-              optionLabel="displayName" 
-              optionValue="id"
-              placeholder="R3 auswählen..."
-              [filter]="true"
-              filterBy="displayName"
-              [showClear]="true">
-            </p-select>
-          </div>
-
-          <div class="field">
-            <label for="consulted">Consulted (C)</label>
-            <p-multiSelect 
-              id="consulted"
-              [options]="activeMembers" 
-              [(ngModel)]="topic.raci.cMemberIds"
-              optionLabel="displayName" 
-              optionValue="id"
-              placeholder="Consulted auswählen..."
-              [filter]="true"
-              filterBy="displayName">
-            </p-multiSelect>
-          </div>
-
-          <div class="field">
-            <label for="informed">Informed (I)</label>
-            <p-multiSelect 
-              id="informed"
-              [options]="activeMembers" 
-              [(ngModel)]="topic.raci.iMemberIds"
-              optionLabel="displayName" 
-              optionValue="id"
-              placeholder="Informed auswählen..."
-              [filter]="true"
-              filterBy="displayName">
-            </p-multiSelect>
-          </div>
-        </div>
-
-        <!-- Connections Section -->
-        <div class="field-group">
-          <h4>Verknüpfungen</h4>
-          <small class="hint mb-2">Verbindungen zu anderen Themen (z.B. Abhängigkeiten, Blockaden, Verwandtschaften)</small>
-          
-          <div class="connections-list" *ngIf="topic.connections && topic.connections.length > 0">
-            <div class="connection-item" *ngFor="let connection of topic.connections; let i = index">
-              <div class="connection-fields">
-                <p-select 
-                  [options]="availableTopicsForConnection"
-                  [(ngModel)]="connection.targetTopicId"
-                  optionLabel="header"
-                  optionValue="id"
-                  placeholder="Thema auswählen..."
-                  [filter]="true"
-                  filterBy="header"
-                  styleClass="connection-target">
-                </p-select>
-                <p-select 
-                  [options]="connectionTypeOptions"
-                  [(ngModel)]="connection.type"
-                  optionLabel="label"
-                  optionValue="value"
-                  placeholder="Typ..."
-                  styleClass="connection-type">
-                </p-select>
-                <p-button 
-                  icon="pi pi-trash" 
-                  [rounded]="true" 
-                  [text]="true" 
-                  severity="danger" 
-                  (onClick)="removeConnection(i)"
-                  ariaLabel="Verknüpfung entfernen">
-                </p-button>
+          <!-- Connections Section -->
+          <div class="field-group">
+            <h4>Verknüpfungen</h4>
+            <small class="hint mb-2">Verbindungen zu anderen Themen (z.B. Abhängigkeiten, Blockaden, Verwandtschaften)</small>
+            
+            @if (topic.connections && topic.connections.length > 0) {
+              <div class="connections-list">
+                @for (connection of topic.connections; track $index) {
+                  <div class="connection-item">
+                    <div class="connection-fields">
+                      <p-select 
+                        [options]="availableTopicsForConnection"
+                        [(ngModel)]="connection.targetTopicId"
+                        optionLabel="header"
+                        optionValue="id"
+                        placeholder="Thema auswählen..."
+                        [filter]="true"
+                        filterBy="header"
+                        styleClass="connection-target"
+                        ariaLabel="Zielthema">
+                      </p-select>
+                      <p-select 
+                        [options]="connectionTypeOptions"
+                        [(ngModel)]="connection.type"
+                        optionLabel="label"
+                        optionValue="value"
+                        placeholder="Typ..."
+                        styleClass="connection-type"
+                        ariaLabel="Verbindungstyp">
+                      </p-select>
+                      <p-button 
+                        icon="pi pi-trash" 
+                        [rounded]="true" 
+                        [text]="true" 
+                        severity="danger" 
+                        (onClick)="removeConnection($index)"
+                        ariaLabel="Verknüpfung entfernen">
+                      </p-button>
+                    </div>
+                  </div>
+                }
               </div>
-            </div>
+            }
+
+            <p-button 
+              label="Verknüpfung hinzufügen" 
+              icon="pi pi-plus" 
+              [text]="true" 
+              (onClick)="addConnection()"
+              [disabled]="availableTopicsForConnection.length === 0"
+              ariaLabel="Neue Verknüpfung hinzufügen">
+            </p-button>
+            @if (availableTopicsForConnection.length === 0) {
+              <small class="hint">
+                Keine anderen Themen zum Verknüpfen vorhanden.
+              </small>
+            }
           </div>
-
-          <p-button 
-            label="Verknüpfung hinzufügen" 
-            icon="pi pi-plus" 
-            [text]="true" 
-            (onClick)="addConnection()"
-            [disabled]="availableTopicsForConnection.length === 0">
-          </p-button>
-          <small class="hint" *ngIf="availableTopicsForConnection.length === 0">
-            Keine anderen Themen zum Verknüpfen vorhanden.
-          </small>
         </div>
-      </div>
-    </ng-template>
+      </ng-template>
 
-    <ng-template pTemplate="footer">
-      <p-button label="Abbrechen" icon="pi pi-times" [text]="true" (onClick)="hideDialog()"></p-button>
-      <p-button label="Speichern" icon="pi pi-check" (onClick)="saveTopic()" [loading]="saving"></p-button>
-    </ng-template>
+      <ng-template pTemplate="footer">
+        <p-button 
+          label="Abbrechen" 
+          icon="pi pi-times" 
+          [text]="true" 
+          (onClick)="hideDialog()"
+          severity="secondary"
+          ariaLabel="Abbrechen">
+        </p-button>
+        <p-button 
+          label="Speichern" 
+          icon="pi pi-check" 
+          (onClick)="saveTopic()" 
+          [loading]="saving"
+          severity="primary"
+          ariaLabel="Speichern">
+        </p-button>
+      </ng-template>
   </p-dialog>
-</div>
+  </div>
+</app-page-wrapper>

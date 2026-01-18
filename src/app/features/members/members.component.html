@@ -1,46 +1,47 @@
-<div class="page-container">
+<app-page-wrapper title="Teammitglieder verwalten" description="Erstellen, bearbeiten und verwalten Sie Teammitglieder">
   <p-toast></p-toast>
   <p-confirmDialog></p-confirmDialog>
 
-  <div class="page-header">
-    <h1>Teammitglieder verwalten</h1>
-    <p>Erstellen, bearbeiten und verwalten Sie Teammitglieder</p>
+  <div actions>
+    <p-button 
+      label="Neues Mitglied" 
+      icon="pi pi-plus" 
+      severity="primary" 
+      (onClick)="openNewDialog()"
+      [disabled]="!isConnected"
+      ariaLabel="Neues Teammitglied erstellen">
+    </p-button>
   </div>
 
-  <p-toolbar styleClass="mb-4">
-    <ng-template #start>
-      <p-button 
-        label="Neues Mitglied" 
-        icon="pi pi-plus" 
-        severity="primary" 
-        (onClick)="openNewDialog()"
-        [disabled]="!isConnected">
-      </p-button>
-    </ng-template>
-    <ng-template #end>
-      <p-iconfield>
-        <p-inputicon styleClass="pi pi-search" />
-        <input 
-          pInputText 
-          type="text" 
-          [(ngModel)]="globalFilter" 
-          (input)="onGlobalFilter($event)" 
-          placeholder="Suche..." />
-      </p-iconfield>
-    </ng-template>
-  </p-toolbar>
+  <div content>
+    <p-toolbar styleClass="mb-4">
+      <ng-template #end>
+        <p-iconfield>
+          <p-inputicon styleClass="pi pi-search" />
+          <input 
+            pInputText 
+            type="text" 
+            [(ngModel)]="globalFilter" 
+            (input)="onGlobalFilter($event)" 
+            placeholder="Suche..."
+            ariaLabel="Globale Suche" />
+        </p-iconfield>
+      </ng-template>
+    </p-toolbar>
 
-  <div class="card" *ngIf="!isConnected">
-    <p class="text-center text-secondary">
-      <i class="pi pi-info-circle"></i>
-      Bitte verbinden Sie zuerst ein Datenverzeichnis über die Einstellungen.
-    </p>
-  </div>
+    @if (!isConnected) {
+      <div class="card">
+        <p class="text-center text-secondary">
+          <i class="pi pi-info-circle"></i>
+          Bitte verbinden Sie zuerst ein Datenverzeichnis über die Einstellungen.
+        </p>
+      </div>
+    }
 
-  <p-table 
-    #dt
-    *ngIf="isConnected"
-    [value]="members" 
+    @if (isConnected) {
+      <p-table 
+        #dt
+        [value]="members" 
     [paginator]="true" 
     [rows]="10"
     [rowsPerPageOptions]="[10, 25, 50]"
@@ -104,12 +105,16 @@
     <ng-template pTemplate="body" let-member>
       <tr>
         <td>
-          <span *ngIf="member.color" class="member-color-swatch" [style.background-color]="member.color"></span>
+          @if (member.color) {
+            <span class="member-color-swatch" [style.background-color]="member.color"></span>
+          }
           <strong>{{ member.displayName }}</strong>
         </td>
         <td>{{ member.email || '-' }}</td>
         <td>
-          <p-tag *ngFor="let tag of member.tags" [value]="tag" severity="info" styleClass="mr-1 mb-1"></p-tag>
+          @for (tag of member.tags; track tag) {
+            <p-tag [value]="tag" severity="info" styleClass="mr-1 mb-1"></p-tag>
+          }
         </td>
         <td>
           <p-tag 
@@ -125,13 +130,28 @@
             [text]="true" 
             severity="info" 
             (onClick)="viewTopics(member)"
-            [badge]="getTopicCount(member.id) > 0 ? '' : undefined">
+            [badge]="getTopicCount(member.id) > 0 ? '' : undefined"
+            ariaLabel="Themen anzeigen">
           </p-button>
         </td>
         <td>{{ formatDate(member.updatedAt) }}</td>
         <td>
-          <p-button icon="pi pi-pencil" [rounded]="true" [text]="true" severity="info" (onClick)="editMember(member)"></p-button>
-          <p-button icon="pi pi-trash" [rounded]="true" [text]="true" severity="danger" (onClick)="confirmDelete(member)"></p-button>
+          <p-button 
+            icon="pi pi-pencil" 
+            [rounded]="true" 
+            [text]="true" 
+            severity="info" 
+            (onClick)="editMember(member)"
+            ariaLabel="Mitglied bearbeiten">
+          </p-button>
+          <p-button 
+            icon="pi pi-trash" 
+            [rounded]="true" 
+            [text]="true" 
+            severity="danger" 
+            (onClick)="confirmDelete(member)"
+            ariaLabel="Mitglied löschen">
+          </p-button>
         </td>
       </tr>
     </ng-template>
@@ -144,230 +164,237 @@
         </td>
       </tr>
     </ng-template>
-  </p-table>
+      </p-table>
+    }
 
-  <!-- Create/Edit Dialog -->
-  <p-dialog 
-    [(visible)]="memberDialog" 
-    [style]="{width: '550px'}" 
-    [header]="editMode ? 'Mitglied bearbeiten' : 'Neues Mitglied'" 
-    [modal]="true"
-    [closable]="true"
-    styleClass="p-fluid">
-    
-    <ng-template pTemplate="content">
-      <div class="form-grid">
-        <!-- Display Name (required) -->
-        <div class="field">
-          <label for="displayName">Name *</label>
-          <input 
-            pInputText 
-            id="displayName" 
-            [(ngModel)]="member.displayName" 
-            required 
-            autofocus
-            [class.ng-invalid]="submitted && !member.displayName"
-            [class.ng-dirty]="submitted && !member.displayName" />
-          <small class="p-error" *ngIf="submitted && !member.displayName">Name ist erforderlich.</small>
-        </div>
-
-        <!-- Email -->
-        <div class="field">
-          <label for="email">E-Mail</label>
-          <input 
-            pInputText 
-            id="email" 
-            [(ngModel)]="member.email"
-            type="email" />
-        </div>
-
-        <!-- Tags -->
-        <div class="field">
-          <label for="tags">Tags</label>
-          <p-autoComplete 
-            id="tags" 
-            [(ngModel)]="member.tags"
-            [multiple]="true"
-            [suggestions]="tagSuggestions"
-            (completeMethod)="searchTags($event)"
-            placeholder="Tags hinzufügen...">
-          </p-autoComplete>
-        </div>
-
-        <!-- Color -->
-        <div class="field">
-          <label for="color">Farbe</label>
-          <p-colorpicker [(ngModel)]="member.color" inputId="cp-hex" />
-        </div>
-
-        <!-- Active Status -->
-        <div class="field-checkbox">
-          <p-toggleswitch 
-            [(ngModel)]="member.active" 
-            inputId="active">
-          </p-toggleswitch>
-          <label for="active" class="ml-2">Aktiv</label>
-        </div>
-
-        <!-- Load Configuration Section -->
-        <div class="load-config-section" *ngIf="loadConfig">
-          <div class="section-header">
-            <span class="section-title">Auslastungskonfiguration</span>
-            <i class="pi pi-info-circle" 
-               pTooltip="Diese Einstellungen beeinflussen die Berechnung der Auslastung für dieses Mitglied."
-               tooltipPosition="top"></i>
-          </div>
-
-          <!-- Part-time Factor -->
+    <!-- Create/Edit Dialog -->
+    <p-dialog 
+      [(visible)]="memberDialog" 
+      [style]="{width: '550px'}" 
+      [header]="editMode ? 'Mitglied bearbeiten' : 'Neues Mitglied'" 
+      [modal]="true"
+      [closable]="true"
+      styleClass="p-fluid">
+      
+      <ng-template pTemplate="content">
+        <div class="form-grid">
+          <!-- Display Name (required) -->
           <div class="field">
-            <label for="partTimePercent">Teilzeitfaktor</label>
-            <div class="part-time-input">
-              <p-inputNumber 
-                id="partTimePercent"
-                [(ngModel)]="memberPartTimePercent" 
-                [min]="1" 
-                [max]="100"
-                suffix="%"
-                [showButtons]="true"
-                [step]="5"
-                inputStyleClass="w-full" />
-              <small class="field-hint">100% = Vollzeit. z.B. 80% für 4-Tage-Woche.</small>
-            </div>
+            <label for="displayName">Name *</label>
+            <input 
+              pInputText 
+              id="displayName" 
+              [(ngModel)]="member.displayName" 
+              required 
+              autofocus
+              [class.ng-invalid]="submitted && !member.displayName"
+              [class.ng-dirty]="submitted && !member.displayName" />
+            @if (submitted && !member.displayName) {
+              <small class="p-error">Name ist erforderlich.</small>
+            }
           </div>
 
-          <!-- Base Load Override -->
+          <!-- Email -->
           <div class="field">
-            <div class="field-checkbox mb-2">
-              <p-checkbox 
-                [(ngModel)]="hasBaseLoadOverride" 
-                [binary]="true"
-                inputId="hasBaseLoadOverride">
-              </p-checkbox>
-              <label for="hasBaseLoadOverride" class="ml-2">Individuelle Basislast</label>
-              <i class="pi pi-info-circle ml-2" 
-                 pTooltip="Überschreibt die Standard-Basislast ({{ defaultBaseLoad | number:'1.1-1' }} h/Woche) für dieses Mitglied."
-                 tooltipPosition="top"></i>
-            </div>
-            <div *ngIf="hasBaseLoadOverride">
-              <p-inputNumber 
-                id="baseLoadOverride"
-                [(ngModel)]="memberBaseLoadOverride" 
-                [min]="0" 
-                [max]="40"
-                suffix=" h/Woche"
-                [minFractionDigits]="1"
-                [maxFractionDigits]="1"
-                [showButtons]="true"
-                [step]="0.5"
-                inputStyleClass="w-full" />
-              <small class="field-hint">Standard: {{ defaultBaseLoad | number:'1.1-1' }} h/Woche (JF + Dailies)</small>
-            </div>
+            <label for="email">E-Mail</label>
+            <input 
+              pInputText 
+              id="email" 
+              [(ngModel)]="member.email"
+              type="email" />
           </div>
+
+          <!-- Tags -->
+          <div class="field">
+            <label for="tags">Tags</label>
+            <p-autoComplete 
+              id="tags" 
+              [(ngModel)]="member.tags"
+              [multiple]="true"
+              [suggestions]="tagSuggestions"
+              (completeMethod)="searchTags($event)"
+              placeholder="Tags hinzufügen...">
+            </p-autoComplete>
+          </div>
+
+          <!-- Color -->
+          <div class="field">
+            <label for="color">Farbe</label>
+            <p-colorpicker [(ngModel)]="member.color" inputId="cp-hex" />
+          </div>
+
+          <!-- Active Status -->
+          <div class="field-checkbox">
+            <p-toggleswitch 
+              [(ngModel)]="member.active" 
+              inputId="active">
+            </p-toggleswitch>
+            <label for="active" class="ml-2">Aktiv</label>
+          </div>
+
+          <!-- Load Configuration Section -->
+          @if (loadConfig) {
+            <div class="load-config-section">
+              <div class="section-header">
+                <span class="section-title">Auslastungskonfiguration</span>
+                <i class="pi pi-info-circle" 
+                   pTooltip="Diese Einstellungen beeinflussen die Berechnung der Auslastung für dieses Mitglied."
+                   tooltipPosition="top"></i>
+              </div>
+
+              <!-- Part-time Factor -->
+              <div class="field">
+                <label for="partTimePercent">Teilzeitfaktor</label>
+                <div class="part-time-input">
+                  <p-inputNumber 
+                    id="partTimePercent"
+                    [(ngModel)]="memberPartTimePercent" 
+                    [min]="1" 
+                    [max]="100"
+                    suffix="%"
+                    [showButtons]="true"
+                    [step]="5"
+                    inputStyleClass="w-full" />
+                  <small class="field-hint">100% = Vollzeit. z.B. 80% für 4-Tage-Woche.</small>
+                </div>
+              </div>
+
+              <!-- Base Load Override -->
+              <div class="field">
+                <div class="field-checkbox mb-2">
+                  <p-checkbox 
+                    [(ngModel)]="hasBaseLoadOverride" 
+                    [binary]="true"
+                    inputId="hasBaseLoadOverride">
+                  </p-checkbox>
+                  <label for="hasBaseLoadOverride" class="ml-2">Individuelle Basislast</label>
+                  <i class="pi pi-info-circle ml-2" 
+                     pTooltip="Überschreibt die Standard-Basislast ({{ defaultBaseLoad | number:'1.1-1' }} h/Woche) für dieses Mitglied."
+                     tooltipPosition="top"></i>
+                </div>
+                @if (hasBaseLoadOverride) {
+                  <div>
+                    <p-inputNumber 
+                      id="baseLoadOverride"
+                      [(ngModel)]="memberBaseLoadOverride" 
+                      [min]="0" 
+                      [max]="40"
+                      suffix=" h/Woche"
+                      [minFractionDigits]="1"
+                      [maxFractionDigits]="1"
+                      [showButtons]="true"
+                      [step]="0.5"
+                      inputStyleClass="w-full" />
+                    <small class="field-hint">Standard: {{ defaultBaseLoad | number:'1.1-1' }} h/Woche (JF + Dailies)</small>
+                  </div>
+                }
+              </div>
+            </div>
+          }
         </div>
-      </div>
-    </ng-template>
+      </ng-template>
 
-    <ng-template pTemplate="footer">
-      <p-button label="Abbrechen" icon="pi pi-times" [text]="true" (onClick)="hideDialog()"></p-button>
-      <p-button label="Speichern" icon="pi pi-check" (onClick)="saveMember()" [loading]="saving"></p-button>
-    </ng-template>
-  </p-dialog>
+      <ng-template pTemplate="footer">
+        <p-button label="Abbrechen" icon="pi pi-times" [text]="true" (onClick)="hideDialog()"></p-button>
+        <p-button label="Speichern" icon="pi pi-check" (onClick)="saveMember()" [loading]="saving"></p-button>
+      </ng-template>
+    </p-dialog>
 
-  <!-- Topics by Member Dialog -->
-  <p-dialog 
-    [(visible)]="topicsDialog" 
-    [style]="{width: '800px'}" 
-    [header]="'Themen von ' + selectedMemberName"
-    [modal]="true"
-    [closable]="true">
-    
-    <ng-template pTemplate="content">
-      <p-tabs value="0">
-        <p-tablist>
-          <p-tab value="0">Verantwortlich (R)</p-tab>
-          <p-tab value="1">Consulted (C)</p-tab>
-          <p-tab value="2">Informed (I)</p-tab>
-        </p-tablist>
-        <p-tabpanels>
-          <p-tabpanel value="0">
-            <p-table [value]="responsibleTopics" styleClass="p-datatable-sm">
-              <ng-template pTemplate="header">
-                <tr>
-                  <th>Thema</th>
-                  <th>Rolle</th>
-                  <th>Gültigkeit</th>
-                </tr>
-              </ng-template>
-              <ng-template pTemplate="body" let-item>
-                <tr>
-                  <td>{{ item.topic.header }}</td>
-                  <td><p-tag [value]="item.role" severity="info"></p-tag></td>
-                  <td><p-tag [value]="getValidityBadge(item.topic)" [severity]="getValiditySeverity(item.topic)"></p-tag></td>
-                </tr>
-              </ng-template>
-              <ng-template pTemplate="emptymessage">
-                <tr>
-                  <td colspan="3" class="text-center text-secondary">Keine Themen in dieser Rolle</td>
-                </tr>
-              </ng-template>
-            </p-table>
-          </p-tabpanel>
-          
-          <p-tabpanel value="1">
-            <p-table [value]="consultedTopics" styleClass="p-datatable-sm">
-              <ng-template pTemplate="header">
-                <tr>
-                  <th>Thema</th>
-                  <th>Gültigkeit</th>
-                </tr>
-              </ng-template>
-              <ng-template pTemplate="body" let-item>
-                <tr>
-                  <td>{{ item.topic.header }}</td>
-                  <td><p-tag [value]="getValidityBadge(item.topic)" [severity]="getValiditySeverity(item.topic)"></p-tag></td>
-                </tr>
-              </ng-template>
-              <ng-template pTemplate="emptymessage">
-                <tr>
-                  <td colspan="2" class="text-center text-secondary">Keine Themen in dieser Rolle</td>
-                </tr>
-              </ng-template>
-            </p-table>
-          </p-tabpanel>
-          
-          <p-tabpanel value="2">
-            <p-table [value]="informedTopics" styleClass="p-datatable-sm">
-              <ng-template pTemplate="header">
-                <tr>
-                  <th>Thema</th>
-                  <th>Gültigkeit</th>
-                </tr>
-              </ng-template>
-              <ng-template pTemplate="body" let-item>
-                <tr>
-                  <td>{{ item.topic.header }}</td>
-                  <td><p-tag [value]="getValidityBadge(item.topic)" [severity]="getValiditySeverity(item.topic)"></p-tag></td>
-                </tr>
-              </ng-template>
-              <ng-template pTemplate="emptymessage">
-                <tr>
-                  <td colspan="2" class="text-center text-secondary">Keine Themen in dieser Rolle</td>
-                </tr>
-              </ng-template>
-            </p-table>
-          </p-tabpanel>
-        </p-tabpanels>
-      </p-tabs>
-    </ng-template>
-  </p-dialog>
+    <!-- Topics by Member Dialog -->
+      <p-dialog 
+      [(visible)]="topicsDialog" 
+      [style]="{width: '800px'}" 
+      [header]="'Themen von ' + selectedMemberName"
+      [modal]="true"
+      [closable]="true">
+      
+      <ng-template pTemplate="content">
+        <p-tabs value="0">
+          <p-tablist>
+            <p-tab value="0">Verantwortlich (R)</p-tab>
+            <p-tab value="1">Consulted (C)</p-tab>
+            <p-tab value="2">Informed (I)</p-tab>
+          </p-tablist>
+          <p-tabpanels>
+            <p-tabpanel value="0">
+              <p-table [value]="responsibleTopics" styleClass="p-datatable-sm">
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th>Thema</th>
+                    <th>Rolle</th>
+                    <th>Gültigkeit</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-item>
+                  <tr>
+                    <td>{{ item.topic.header }}</td>
+                    <td><p-tag [value]="item.role" severity="info"></p-tag></td>
+                    <td><p-tag [value]="getValidityBadge(item.topic)" [severity]="getValiditySeverity(item.topic)"></p-tag></td>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                  <tr>
+                    <td colspan="3" class="text-center text-secondary">Keine Themen in dieser Rolle</td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </p-tabpanel>
+            
+            <p-tabpanel value="1">
+              <p-table [value]="consultedTopics" styleClass="p-datatable-sm">
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th>Thema</th>
+                    <th>Gültigkeit</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-item>
+                  <tr>
+                    <td>{{ item.topic.header }}</td>
+                    <td><p-tag [value]="getValidityBadge(item.topic)" [severity]="getValiditySeverity(item.topic)"></p-tag></td>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                  <tr>
+                    <td colspan="2" class="text-center text-secondary">Keine Themen in dieser Rolle</td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </p-tabpanel>
+            
+            <p-tabpanel value="2">
+              <p-table [value]="informedTopics" styleClass="p-datatable-sm">
+                <ng-template pTemplate="header">
+                  <tr>
+                    <th>Thema</th>
+                    <th>Gültigkeit</th>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-item>
+                  <tr>
+                    <td>{{ item.topic.header }}</td>
+                    <td><p-tag [value]="getValidityBadge(item.topic)" [severity]="getValiditySeverity(item.topic)"></p-tag></td>
+                  </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                  <tr>
+                    <td colspan="2" class="text-center text-secondary">Keine Themen in dieser Rolle</td>
+                  </tr>
+                </ng-template>
+              </p-table>
+            </p-tabpanel>
+          </p-tabpanels>
+        </p-tabs>
+      </ng-template>
+    </p-dialog>
 
-  <!-- Deactivate Offer Dialog -->
-  <p-dialog 
-    [(visible)]="deactivateDialog" 
-    [style]="{width: '450px'}" 
-    header="Mitglied wird verwendet"
-    [modal]="true"
-    [closable]="true">
+    <!-- Deactivate Offer Dialog -->
+      <p-dialog 
+      [(visible)]="deactivateDialog" 
+      [style]="{width: '450px'}" 
+      header="Mitglied wird verwendet"
+      [modal]="true"
+      [closable]="true">
     
     <ng-template pTemplate="content">
       <div class="deactivate-content">
@@ -381,8 +408,23 @@
     </ng-template>
 
     <ng-template pTemplate="footer">
-      <p-button label="Abbrechen" icon="pi pi-times" [text]="true" (onClick)="deactivateDialog = false"></p-button>
-      <p-button label="Deaktivieren" icon="pi pi-user-minus" severity="warn" (onClick)="deactivateMember()" [loading]="saving"></p-button>
+      <p-button 
+        label="Abbrechen" 
+        icon="pi pi-times" 
+        [text]="true" 
+        (onClick)="deactivateDialog = false"
+        severity="secondary"
+        ariaLabel="Abbrechen">
+      </p-button>
+      <p-button 
+        label="Deaktivieren" 
+        icon="pi pi-user-minus" 
+        severity="warn" 
+        (onClick)="deactivateMember()" 
+        [loading]="saving"
+        ariaLabel="Mitglied deaktivieren">
+      </p-button>
     </ng-template>
   </p-dialog>
-</div>
+  </div>
+</app-page-wrapper>
