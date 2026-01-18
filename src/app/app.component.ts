@@ -91,32 +91,7 @@ export class AppComponent implements OnInit, OnDestroy {
         id: 'visualizations',
         label: 'Visualisierungen',
         icon: 'pi pi-chart-bar',
-        items: [
-          {
-            id: 'visualizations-overview',
-            label: 'Übersicht',
-            icon: 'pi pi-home',
-            command: () => this.router.navigate(['/visualizations'])
-          },
-          {
-            id: 'visualizations-sunburst',
-            label: 'Sunburst',
-            icon: 'pi pi-sun',
-            command: () => this.router.navigate(['/visualizations/sunburst'])
-          },
-          {
-            id: 'visualizations-network',
-            label: 'Netzwerk',
-            icon: 'pi pi-share-alt',
-            command: () => this.router.navigate(['/visualizations/network'])
-          },
-          {
-            id: 'visualizations-treemap',
-            label: 'Treemap',
-            icon: 'pi pi-th-large',
-            command: () => this.router.navigate(['/visualizations/treemap'])
-          }
-        ]
+        command: () => this.router.navigate(['/visualizations'])
       },
       {
         id: 'settings',

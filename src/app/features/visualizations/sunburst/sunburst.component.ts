@@ -365,15 +365,20 @@ export class SunburstComponent implements AfterViewInit, OnDestroy {
     }
   }
   
+  private findTag(ds: Datastore, tagIdOrName: string) {
+    // Tags in topics can be either IDs or names, so search by both
+    return ds.tags?.find(t => t.id === tagIdOrName || t.name === tagIdOrName);
+  }
+  
   private buildHierarchy(topics: Topic[], ds: Datastore): SunburstNode {
     const tagMap = new Map<string, SunburstNode>();
     const rootChildren: SunburstNode[] = [];
     
     // Group topics by their tags (topics appear under each of their tags)
     topics.forEach(topic => {
-      const tagIds = topic.tags || [];
+      const tagRefs = topic.tags || [];
       
-      if (tagIds.length === 0) {
+      if (tagRefs.length === 0) {
         // Topics without tags go to "Ohne Tag"
         let noTagNode = tagMap.get('no-tag');
         if (!noTagNode) {
@@ -397,16 +402,18 @@ export class SunburstComponent implements AfterViewInit, OnDestroy {
         });
       } else {
         // Add topic to each of its tags
-        tagIds.forEach(tagId => {
-          let tagNode = tagMap.get(tagId);
+        tagRefs.forEach(tagRef => {
+          let tagNode = tagMap.get(tagRef);
           if (!tagNode) {
-            const tag = ds.tags?.find(t => t.id === tagId);
+            const tag = this.findTag(ds, tagRef);
+            // Use the tag name if found, otherwise use the reference itself (it might be the name already)
+            const tagName = tag?.name || tagRef;
             tagNode = {
-              name: tag?.name || 'Unbekannt',
+              name: tagName,
               children: [],
-              data: { type: 'tag', tagId, color: tag?.color || '#6366f1' }
+              data: { type: 'tag', tagId: tag?.id || tagRef, color: tag?.color || '#6366f1' }
             };
-            tagMap.set(tagId, tagNode);
+            tagMap.set(tagRef, tagNode);
             rootChildren.push(tagNode);
           }
           tagNode.children!.push({

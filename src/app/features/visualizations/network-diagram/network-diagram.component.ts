@@ -553,35 +553,38 @@ export class NetworkDiagramComponent implements AfterViewInit, OnDestroy {
     
     // Add tag nodes if selected
     if (this.selectedView === 'tags' || this.selectedView === 'all') {
-      const tagIds = new Set<string>();
+      const tagRefs = new Set<string>();
       topics.forEach(topic => {
-        topic.tags?.forEach(tagId => tagIds.add(tagId));
+        topic.tags?.forEach(tagRef => tagRefs.add(tagRef));
       });
       
-      tagIds.forEach(tagId => {
-        const tag = ds.tags?.find(t => t.id === tagId);
-        if (tag) {
-          const node: NetworkNode = {
-            id: tagId,
-            name: tag.name,
-            type: 'tag',
-            color: tag.color || '#8b5cf6',
-            radius: 8
-          };
-          nodes.push(node);
-          nodeMap.set(tagId, node);
-          
-          // Link topics to tags
-          topics.forEach(topic => {
-            if (topic.tags?.includes(tagId)) {
-              links.push({
-                source: topic.id,
-                target: tagId,
-                type: 'hasTag'
-              });
-            }
-          });
-        }
+      tagRefs.forEach(tagRef => {
+        // Tags in topics can be either IDs or names, so search by both
+        const tag = ds.tags?.find(t => t.id === tagRef || t.name === tagRef);
+        // Use the tag name if found, otherwise use the reference itself
+        const tagName = tag?.name || tagRef;
+        const tagId = tag?.id || tagRef;
+        
+        const node: NetworkNode = {
+          id: tagId,
+          name: tagName,
+          type: 'tag',
+          color: tag?.color || '#8b5cf6',
+          radius: 8
+        };
+        nodes.push(node);
+        nodeMap.set(tagRef, node);
+        
+        // Link topics to tags
+        topics.forEach(topic => {
+          if (topic.tags?.includes(tagRef)) {
+            links.push({
+              source: topic.id,
+              target: tagId,
+              type: 'hasTag'
+            });
+          }
+        });
       });
     }
     

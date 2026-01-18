@@ -476,6 +476,11 @@ export class TreemapComponent implements AfterViewInit, OnDestroy {
     return 0.4 + (p / 10) * 0.6;
   }
   
+  private findTag(ds: Datastore, tagIdOrName: string) {
+    // Tags in topics can be either IDs or names, so search by both
+    return ds.tags?.find(t => t.id === tagIdOrName || t.name === tagIdOrName);
+  }
+  
   private buildHierarchy(topics: Topic[], ds: Datastore): TreemapNode {
     const groupMap = new Map<string, TreemapNode>();
     const rootChildren: TreemapNode[] = [];
@@ -486,11 +491,13 @@ export class TreemapComponent implements AfterViewInit, OnDestroy {
       switch (this.selectedClustering) {
         case 'tag':
           if (topic.tags && topic.tags.length > 0) {
-            const firstTagId = topic.tags[0];
-            const tag = ds.tags?.find(t => t.id === firstTagId);
+            const firstTagRef = topic.tags[0];
+            const tag = this.findTag(ds, firstTagRef);
+            // Use the tag name if found, otherwise use the reference itself (it might be the name already)
+            const tagName = tag?.name || firstTagRef;
             groupKeys = [{ 
-              id: firstTagId, 
-              name: tag?.name || 'Unbekannt',
+              id: tag?.id || firstTagRef, 
+              name: tagName,
               color: tag?.color 
             }];
           } else {

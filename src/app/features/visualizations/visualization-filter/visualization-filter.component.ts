@@ -192,8 +192,20 @@ export class VisualizationFilterComponent {
     let topics = [...ds.topics];
     
     if (this.selectedTagIds.length > 0) {
+      // Create a set of selected tag names for matching
+      const selectedTagNames = new Set<string>();
+      this.selectedTagIds.forEach(tagId => {
+        const tag = ds.tags?.find(t => t.id === tagId);
+        if (tag) {
+          selectedTagNames.add(tag.name);
+          selectedTagNames.add(tag.id);
+        }
+      });
+      
       topics = topics.filter(t => 
-        t.tags?.some(tagId => this.selectedTagIds.includes(tagId))
+        t.tags?.some(tagRef => 
+          this.selectedTagIds.includes(tagRef) || selectedTagNames.has(tagRef)
+        )
       );
     }
     
