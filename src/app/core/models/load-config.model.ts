@@ -1,6 +1,7 @@
 /**
  * Load configuration model for `datadir/load_config.json`.
- * Defines base load, capacity, size thresholds, and member-specific overrides.
+ * Defines base load, capacity, size thresholds.
+ * Note: Per-member settings are stored on TeamMember in the datastore.
  */
 
 /**
@@ -10,13 +11,6 @@ export interface BaseLoadComponent {
   name: string;
   hoursPerWeek: number;
   enabled: boolean;
-}
-
-/**
- * Member-specific base load override.
- */
-export interface MemberBaseLoadOverride {
-  hoursPerWeek: number;
 }
 
 /**
