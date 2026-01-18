@@ -5,6 +5,7 @@ import { CacheService, CacheConflict } from './cache.service';
 import { DatastoreCommitService } from './datastore-commit.service';
 import { FileConnectionService } from './file-connection.service';
 import { RefreshService } from './refresh.service';
+import { LoadConfigService } from './load-config.service';
 import { Datastore } from '../models';
 import { runPlausibilityChecks } from './datastore-plausibility';
 
@@ -41,6 +42,7 @@ export class PersistenceService {
   private commitService = inject(DatastoreCommitService);
   private fileConnection = inject(FileConnectionService);
   private refreshService = inject(RefreshService);
+  private loadConfigService = inject(LoadConfigService);
   private destroyRef = inject(DestroyRef);
 
   private refreshSubscription?: Subscription;
@@ -213,6 +215,15 @@ export class PersistenceService {
   async connect(): Promise<PersistenceResult> {
     try {
       await this.fileConnection.connectToFolder();
+      
+      // Load load_config.json (create with defaults if missing)
+      try {
+        await this.loadConfigService.loadOrCreate();
+      } catch (configError) {
+        console.warn('[PersistenceService] Failed to load load_config.json:', configError);
+        // Non-fatal - continue with defaults
+      }
+      
       return this.loadFromBackend();
     } catch (error) {
       const message = `Verbindungsfehler: ${(error as Error).message}`;

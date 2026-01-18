@@ -19,7 +19,8 @@ import { Message } from 'primeng/message';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../../core/services/backend.service';
 import { LoadCalculationService, LoadCalculationResult, MemberLoadResult, LoadStatus } from '../../../core/services/load-calculation.service';
-import { Datastore } from '../../../core/models';
+import { LoadConfigService } from '../../../core/services/load-config.service';
+import { Datastore, LoadConfig, SizeLabel } from '../../../core/models';
 
 @Component({
   selector: 'app-load-dashboard',
@@ -41,9 +42,11 @@ import { Datastore } from '../../../core/models';
 export class LoadDashboardComponent implements OnInit, OnDestroy {
   private readonly backend = inject(BackendService);
   private readonly loadService = inject(LoadCalculationService);
+  private readonly loadConfigService = inject(LoadConfigService);
 
   protected readonly isConnected = signal(false);
   protected readonly loadResult = signal<LoadCalculationResult | null>(null);
+  protected readonly loadConfig = signal<LoadConfig | null>(null);
   protected readonly selectedMember = signal<MemberLoadResult | null>(null);
   protected readonly showFormula = signal(false);
 
@@ -60,7 +63,7 @@ export class LoadDashboardComponent implements OnInit, OnDestroy {
   });
 
   protected readonly formulaExplanation = computed(() => {
-    return this.loadService.getFormulaExplanation();
+    return this.loadService.getFormulaExplanation(this.loadConfig());
   });
 
   protected readonly hasWarnings = computed(() => {
@@ -114,6 +117,12 @@ export class LoadDashboardComponent implements OnInit, OnDestroy {
     );
 
     this.subscriptions.push(
+      this.loadConfigService.config$.subscribe((config) => {
+        this.loadConfig.set(config);
+      })
+    );
+
+    this.subscriptions.push(
       this.backend.datastore$.subscribe((datastore) => {
         if (datastore) {
           this.calculateLoad(datastore);
@@ -131,7 +140,8 @@ export class LoadDashboardComponent implements OnInit, OnDestroy {
       datastore.members,
       datastore.topics,
       datastore.tags || [],
-      datastore.revisionId
+      datastore.revisionId,
+      this.loadConfig()
     );
     this.loadResult.set(result);
   }
@@ -154,10 +164,21 @@ export class LoadDashboardComponent implements OnInit, OnDestroy {
     }
   }
 
-  protected getLoadBarColor(normalizedLoad: number): string {
-    if (normalizedLoad < 0.5) return 'var(--p-blue-500)';
-    if (normalizedLoad <= 1.5) return 'var(--p-green-500)';
-    if (normalizedLoad <= 2.0) return 'var(--p-orange-500)';
+  protected getSizeSeverity(size: SizeLabel): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
+    switch (size) {
+      case 'XS': return 'secondary';
+      case 'S': return 'info';
+      case 'M': return 'success';
+      case 'L': return 'warn';
+      case 'XL': return 'warn';
+      case 'XXL': return 'danger';
+    }
+  }
+
+  protected getLoadBarColor(capacityRatio: number): string {
+    if (capacityRatio < 0.3) return 'var(--p-blue-500)';
+    if (capacityRatio <= 0.9) return 'var(--p-green-500)';
+    if (capacityRatio <= 1.0) return 'var(--p-orange-500)';
     return 'var(--p-red-500)';
   }
 
@@ -180,6 +201,10 @@ export class LoadDashboardComponent implements OnInit, OnDestroy {
 
   protected formatNumber(value: number): string {
     return value.toFixed(2);
+  }
+
+  protected formatPercent(value: number): string {
+    return (value * 100).toFixed(0) + '%';
   }
 
   protected getRoleLabel(role: string): string {

@@ -277,9 +277,18 @@
   color: var(--p-text-color);
 }
 
-.normalized-value {
+.capacity-value {
   color: var(--p-text-muted-color);
   font-size: 0.875rem;
+}
+
+.part-time-badge {
+  background: var(--p-blue-100);
+  color: var(--p-blue-700);
+  padding: 0.125rem 0.5rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 500;
 }
 
 .load-bar-container {
@@ -396,6 +405,14 @@
     font-size: 1.25rem;
     font-weight: 600;
     color: var(--p-text-color);
+    
+    &.highlight {
+      color: var(--p-primary-color);
+    }
+    
+    &.overloaded {
+      color: var(--p-red-500);
+    }
   }
 
   h4 {
@@ -439,5 +456,13 @@
   
   td {
     padding: 0.75rem !important;
+  }
+  
+  &.total-row {
+    background: var(--p-primary-50);
+    
+    td {
+      border-top: 2px solid var(--p-primary-200);
+    }
   }
 }

@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { TestBed } from '@angular/core/testing';
 import {
   LoadCalculationService,
   ROLE_WEIGHTS,
@@ -6,7 +7,32 @@ import {
   COMPLEXITY_CONSTANTS,
   TAG_WEIGHT_MAX_ABSOLUTE,
 } from './load-calculation.service';
-import { TeamMember, Topic, Tag } from '../models';
+import { LoadConfigService } from './load-config.service';
+import { TeamMember, Topic, Tag, LoadConfig, DEFAULT_LOAD_CONFIG } from '../models';
+
+// Mock LoadConfigService
+const mockLoadConfigService = {
+  getConfig: vi.fn(() => null),
+  config$: { subscribe: vi.fn() },
+  getPartTimeFactor: vi.fn((config: LoadConfig, memberId: string) => 
+    config?.members?.partTimeFactors?.[memberId] ?? 1.0
+  ),
+  getMemberBaseLoad: vi.fn((config: LoadConfig, memberId: string) => {
+    const override = config?.baseLoad?.memberOverrides?.[memberId];
+    if (override) return override.hoursPerWeek;
+    return config?.baseLoad?.components
+      ?.filter((c: { enabled: boolean }) => c.enabled)
+      ?.reduce((sum: number, c: { hoursPerWeek: number }) => sum + c.hoursPerWeek, 0) ?? 3.5;
+  }),
+  classifySize: vi.fn((config: LoadConfig, totalLoad: number, effectiveCapacity: number) => {
+    if (totalLoad > effectiveCapacity) return 'XXL';
+    if (totalLoad >= 20) return 'XL';
+    if (totalLoad >= 14) return 'L';
+    if (totalLoad >= 8) return 'M';
+    if (totalLoad >= 2) return 'S';
+    return 'XS';
+  }),
+};
 
 describe('LoadCalculationService', () => {
   let service: LoadCalculationService;
@@ -39,7 +65,14 @@ describe('LoadCalculationService', () => {
   });
 
   beforeEach(() => {
-    service = new LoadCalculationService();
+    vi.clearAllMocks();
+    TestBed.configureTestingModule({
+      providers: [
+        LoadCalculationService,
+        { provide: LoadConfigService, useValue: mockLoadConfigService }
+      ]
+    });
+    service = TestBed.inject(LoadCalculationService);
     service.invalidateCache();
   });
 
@@ -141,10 +174,13 @@ describe('LoadCalculationService', () => {
   });
 
   describe('calculateTopicComplexity', () => {
+    const ALPHA = 1.0;
+    const BETA = 0.25;
+
     it('should return 1.0 for topic with no tags and no connections', () => {
       const topic = createTopic({ tags: [], connections: [] });
       const tagsMap = new Map<string, Tag>();
-      expect(service.calculateTopicComplexity(topic, tagsMap)).toBe(1.0);
+      expect(service.calculateTopicComplexity(topic, tagsMap, ALPHA, BETA)).toBe(1.0);
     });
 
     it('should calculate complexity correctly with tag weights', () => {
@@ -153,7 +189,7 @@ describe('LoadCalculationService', () => {
         ['tag1', createTag({ name: 'tag1', tagWeight: 2.0 })],
       ]);
       // c(t) = 1 + 1.0 * 2.0 + 0.25 * 0 = 3.0
-      expect(service.calculateTopicComplexity(topic, tagsMap)).toBe(3.0);
+      expect(service.calculateTopicComplexity(topic, tagsMap, ALPHA, BETA)).toBe(3.0);
     });
 
     it('should calculate complexity correctly with connections', () => {
@@ -166,7 +202,7 @@ describe('LoadCalculationService', () => {
       });
       const tagsMap = new Map<string, Tag>();
       // c(t) = 1 + 1.0 * 0 + 0.25 * 2 = 1.5
-      expect(service.calculateTopicComplexity(topic, tagsMap)).toBe(1.5);
+      expect(service.calculateTopicComplexity(topic, tagsMap, ALPHA, BETA)).toBe(1.5);
     });
 
     it('should calculate complexity correctly with both tags and connections', () => {
@@ -178,7 +214,7 @@ describe('LoadCalculationService', () => {
         ['tag1', createTag({ name: 'tag1', tagWeight: 1.5 })],
       ]);
       // c(t) = 1 + 1.0 * 1.5 + 0.25 * 1 = 2.75
-      expect(service.calculateTopicComplexity(topic, tagsMap)).toBe(2.75);
+      expect(service.calculateTopicComplexity(topic, tagsMap, ALPHA, BETA)).toBe(2.75);
     });
 
     it('should handle negative tag weights', () => {
@@ -187,7 +223,7 @@ describe('LoadCalculationService', () => {
         ['tag1', createTag({ name: 'tag1', tagWeight: -1.0 })],
       ]);
       // c(t) = 1 + 1.0 * (-1.0) + 0.25 * 0 = 0.0
-      expect(service.calculateTopicComplexity(topic, tagsMap)).toBe(0.0);
+      expect(service.calculateTopicComplexity(topic, tagsMap, ALPHA, BETA)).toBe(0.0);
     });
   });
 
@@ -269,25 +305,26 @@ describe('LoadCalculationService', () => {
   });
 
   describe('classifyLoadStatus', () => {
-    it('should classify < 0.5 as underutilized', () => {
+    // Now uses capacity ratio (0-1 scale where 1.0 = full capacity)
+    it('should classify < 0.3 as underutilized', () => {
       expect(service.classifyLoadStatus(0)).toBe('underutilized');
-      expect(service.classifyLoadStatus(0.49)).toBe('underutilized');
+      expect(service.classifyLoadStatus(0.29)).toBe('underutilized');
     });
 
-    it('should classify 0.5 - 1.5 as normal', () => {
+    it('should classify 0.3 - 0.9 as normal', () => {
+      expect(service.classifyLoadStatus(0.3)).toBe('normal');
       expect(service.classifyLoadStatus(0.5)).toBe('normal');
-      expect(service.classifyLoadStatus(1.0)).toBe('normal');
-      expect(service.classifyLoadStatus(1.5)).toBe('normal');
+      expect(service.classifyLoadStatus(0.9)).toBe('normal');
     });
 
-    it('should classify > 1.5 and <= 2.0 as overloaded', () => {
-      expect(service.classifyLoadStatus(1.51)).toBe('overloaded');
-      expect(service.classifyLoadStatus(2.0)).toBe('overloaded');
+    it('should classify > 0.9 and <= 1.0 as overloaded', () => {
+      expect(service.classifyLoadStatus(0.91)).toBe('overloaded');
+      expect(service.classifyLoadStatus(1.0)).toBe('overloaded');
     });
 
-    it('should classify > 2.0 as unsustainable', () => {
-      expect(service.classifyLoadStatus(2.01)).toBe('unsustainable');
-      expect(service.classifyLoadStatus(5.0)).toBe('unsustainable');
+    it('should classify > 1.0 as unsustainable', () => {
+      expect(service.classifyLoadStatus(1.01)).toBe('unsustainable');
+      expect(service.classifyLoadStatus(2.0)).toBe('unsustainable');
     });
   });
 
@@ -314,21 +351,21 @@ describe('LoadCalculationService', () => {
   describe('validateData', () => {
     it('should warn about NaN tagWeight', () => {
       const tags = [createTag({ name: 'bad-tag', tagWeight: NaN })];
-      const warnings = service.validateData([], [], tags);
+      const warnings = service.validateData([], [], tags, null);
       expect(warnings).toHaveLength(1);
       expect(warnings[0].type).toBe('tagWeight-invalid');
     });
 
     it('should warn about Infinity tagWeight', () => {
       const tags = [createTag({ name: 'bad-tag', tagWeight: Infinity })];
-      const warnings = service.validateData([], [], tags);
+      const warnings = service.validateData([], [], tags, null);
       expect(warnings).toHaveLength(1);
       expect(warnings[0].type).toBe('tagWeight-invalid');
     });
 
     it('should warn about extreme tagWeight values', () => {
       const tags = [createTag({ name: 'extreme-tag', tagWeight: 5.0 })];
-      const warnings = service.validateData([], [], tags);
+      const warnings = service.validateData([], [], tags, null);
       expect(warnings).toHaveLength(1);
       expect(warnings[0].type).toBe('tagWeight-extreme');
     });
@@ -338,7 +375,7 @@ describe('LoadCalculationService', () => {
         createTag({ name: 'tag1', tagWeight: 2.0 }),
         createTag({ name: 'tag2', tagWeight: -1.0 }),
       ];
-      const warnings = service.validateData([], [], tags);
+      const warnings = service.validateData([], [], tags, null);
       expect(warnings).toHaveLength(0);
     });
 
@@ -349,7 +386,7 @@ describe('LoadCalculationService', () => {
           raci: { r1MemberId: '', cMemberIds: [], iMemberIds: [] },
         }),
       ];
-      const warnings = service.validateData(topics, [], []);
+      const warnings = service.validateData(topics, [], [], null);
       expect(warnings).toHaveLength(1);
       expect(warnings[0].type).toBe('topic-no-r1');
     });
@@ -362,7 +399,7 @@ describe('LoadCalculationService', () => {
           raci: { r1MemberId: 'inactive-member', cMemberIds: [], iMemberIds: [] },
         }),
       ];
-      const warnings = service.validateData(topics, members, []);
+      const warnings = service.validateData(topics, members, [], null);
       expect(warnings).toHaveLength(1);
       expect(warnings[0].type).toBe('topic-inactive-r1');
     });
@@ -379,11 +416,14 @@ describe('LoadCalculationService', () => {
       expect(result.memberLoads).toHaveLength(1);
       const ml = result.memberLoads[0];
       expect(ml.memberId).toBe('member-1');
-      // Load = 1.0 (activity) * (3.0 (R1) * 1.0 (complexity)) = 3.0
-      expect(ml.totalLoad).toBe(3.0);
+      // topicsLoad = 1.0 (activity) * (3.0 (R1) * 1.0 (complexity)) = 3.0
+      // totalLoad = baseLoad (3.5) + topicsLoad (3.0) = 6.5
+      expect(ml.topicsLoad).toBe(3.0);
+      expect(ml.baseLoadHoursPerWeek).toBe(3.5);
+      expect(ml.totalLoad).toBe(6.5);
     });
 
-    it('should double load for inactive member', () => {
+    it('should double topic load for inactive member', () => {
       const members = [createMember({ id: 'member-1', active: false })];
       const topics = [createTopic({ raci: { r1MemberId: 'member-1', cMemberIds: [], iMemberIds: [] } })];
       const tags: Tag[] = [];
@@ -392,8 +432,10 @@ describe('LoadCalculationService', () => {
 
       const ml = result.memberLoads[0];
       expect(ml.activityMultiplier).toBe(2.0);
-      // Load = 2.0 (activity) * (3.0 (R1) * 1.0 (complexity)) = 6.0
-      expect(ml.totalLoad).toBe(6.0);
+      // topicsLoad = 2.0 (activity) * (3.0 (R1) * 1.0 (complexity)) = 6.0
+      // totalLoad = baseLoad (3.5) + topicsLoad (6.0) = 9.5
+      expect(ml.topicsLoad).toBe(6.0);
+      expect(ml.totalLoad).toBe(9.5);
     });
 
     it('should include tag weight in complexity calculation', () => {
@@ -410,9 +452,11 @@ describe('LoadCalculationService', () => {
 
       const ml = result.memberLoads[0];
       // Complexity = 1 + 1.0 * 2.0 = 3.0
-      // Load = 1.0 * (3.0 * 3.0) = 9.0
+      // topicsLoad = 1.0 * (3.0 * 3.0) = 9.0
+      // totalLoad = baseLoad (3.5) + topicsLoad (9.0) = 12.5
       expect(ml.topicContributions[0].topicComplexity).toBe(3.0);
-      expect(ml.totalLoad).toBe(9.0);
+      expect(ml.topicsLoad).toBe(9.0);
+      expect(ml.totalLoad).toBe(12.5);
     });
 
     it('should include dependencies in complexity calculation', () => {
@@ -432,9 +476,11 @@ describe('LoadCalculationService', () => {
 
       const ml = result.memberLoads[0];
       // Complexity = 1 + 0.25 * 2 = 1.5
-      // Load = 1.0 * (3.0 * 1.5) = 4.5
+      // topicsLoad = 1.0 * (3.0 * 1.5) = 4.5
+      // totalLoad = baseLoad (3.5) + topicsLoad (4.5) = 8.0
       expect(ml.topicContributions[0].topicComplexity).toBe(1.5);
-      expect(ml.totalLoad).toBe(4.5);
+      expect(ml.topicsLoad).toBe(4.5);
+      expect(ml.totalLoad).toBe(8.0);
     });
 
     it('should calculate normalized load based on median', () => {
@@ -455,50 +501,40 @@ describe('LoadCalculationService', () => {
 
       const result = service.calculateLoad(members, topics, tags, 1);
 
-      // member-1: 3.0 (1 topic)
-      // member-2: 6.0 (2 topics)
-      // member-3: 9.0 (3 topics)
-      // Median = 6.0
-      expect(result.medianLoad).toBe(6.0);
+      // member-1: baseLoad (3.5) + topicsLoad (3.0 = 1 topic) = 6.5
+      // member-2: baseLoad (3.5) + topicsLoad (6.0 = 2 topics) = 9.5
+      // member-3: baseLoad (3.5) + topicsLoad (9.0 = 3 topics) = 12.5
+      // Median = 9.5
+      expect(result.medianLoad).toBe(9.5);
       
       const ml1 = result.memberLoads.find((m) => m.memberId === 'member-1')!;
       const ml2 = result.memberLoads.find((m) => m.memberId === 'member-2')!;
       const ml3 = result.memberLoads.find((m) => m.memberId === 'member-3')!;
 
-      expect(ml1.normalizedLoad).toBe(0.5); // 3.0 / 6.0
-      expect(ml2.normalizedLoad).toBe(1.0); // 6.0 / 6.0
-      expect(ml3.normalizedLoad).toBe(1.5); // 9.0 / 6.0
+      // Normalized = totalLoad / median
+      expect(ml1.normalizedLoad).toBeCloseTo(6.5 / 9.5, 5);
+      expect(ml2.normalizedLoad).toBeCloseTo(9.5 / 9.5, 5);
+      expect(ml3.normalizedLoad).toBeCloseTo(12.5 / 9.5, 5);
     });
 
-    it('should correctly classify load status', () => {
+    it('should correctly classify load status based on capacity ratio', () => {
       const members = [
-        createMember({ id: 'underutilized', displayName: 'Underutilized' }),
-        createMember({ id: 'normal', displayName: 'Normal' }),
-        createMember({ id: 'overloaded', displayName: 'Overloaded' }),
+        createMember({ id: 'member-1', displayName: 'Test' }),
       ];
-      // Create topics to give different loads
       const topics = [
-        // underutilized: 1 topic = 3.0
-        createTopic({ id: 't1', raci: { r1MemberId: 'underutilized', cMemberIds: [], iMemberIds: [] } }),
-        // normal: 4 topics = 12.0 (will be median)
-        ...Array.from({ length: 4 }, (_, i) =>
-          createTopic({ id: `t-normal-${i}`, raci: { r1MemberId: 'normal', cMemberIds: [], iMemberIds: [] } })
-        ),
-        // overloaded: 8 topics = 24.0
-        ...Array.from({ length: 8 }, (_, i) =>
-          createTopic({ id: `t-overloaded-${i}`, raci: { r1MemberId: 'overloaded', cMemberIds: [], iMemberIds: [] } })
-        ),
+        createTopic({ id: 't1', raci: { r1MemberId: 'member-1', cMemberIds: [], iMemberIds: [] } }),
       ];
 
       const result = service.calculateLoad(members, topics, [], 1);
 
-      const underutilizedMember = result.memberLoads.find((m) => m.memberId === 'underutilized')!;
-      const normalMember = result.memberLoads.find((m) => m.memberId === 'normal')!;
-      const overloadedMember = result.memberLoads.find((m) => m.memberId === 'overloaded')!;
-
-      expect(underutilizedMember.loadStatus).toBe('underutilized');
-      expect(normalMember.loadStatus).toBe('normal');
-      expect(overloadedMember.loadStatus).toBe('overloaded');
+      // totalLoad = 3.5 + 3.0 = 6.5
+      // effectiveCapacity = 41 * (1 - 0.35) = 26.65
+      // capacityRatio = 6.5 / 26.65 ≈ 0.24
+      const member = result.memberLoads[0];
+      expect(member.totalLoad).toBe(6.5);
+      expect(member.effectiveCapacityHoursPerWeek).toBeCloseTo(26.65, 1);
+      expect(member.capacityRatio).toBeLessThan(0.3);
+      expect(member.loadStatus).toBe('underutilized');
     });
 
     it('should use cache for same revisionId', () => {
@@ -523,13 +559,16 @@ describe('LoadCalculationService', () => {
       expect(result1).not.toBe(result2);
     });
 
-    it('should handle member with zero load', () => {
+    it('should handle member with no topics (only base load)', () => {
       const members = [createMember({ id: 'no-topics' })];
       const topics: Topic[] = [];
 
       const result = service.calculateLoad(members, topics, [], 1);
 
-      expect(result.memberLoads[0].totalLoad).toBe(0);
+      // Member still has base load (3.5h/week)
+      expect(result.memberLoads[0].baseLoadHoursPerWeek).toBe(3.5);
+      expect(result.memberLoads[0].topicsLoad).toBe(0);
+      expect(result.memberLoads[0].totalLoad).toBe(3.5);
       expect(result.memberLoads[0].topicContributions).toHaveLength(0);
     });
 

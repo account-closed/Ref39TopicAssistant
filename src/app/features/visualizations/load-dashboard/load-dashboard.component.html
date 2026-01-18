@@ -38,12 +38,14 @@
           <pre>{{ formulaExplanation() }}</pre>
         </div>
         <div class="interpretation-guide">
-          <h4>Interpretation der normalisierten Auslastung:</h4>
+          <h4>Größenklassifikation (h/Woche):</h4>
           <ul>
-            <li><p-tag severity="info" value="< 0.5"></p-tag> Unterausgelastet / möglicherweise nicht eingebunden</li>
-            <li><p-tag severity="success" value="0.5 - 1.5"></p-tag> Normale Auslastung</li>
-            <li><p-tag severity="warn" value="> 1.5"></p-tag> Überlastet</li>
-            <li><p-tag severity="danger" value="> 2.0"></p-tag> Strukturell nicht tragbar</li>
+            <li><p-tag severity="secondary" value="XS"></p-tag> &lt; 2h/Woche</li>
+            <li><p-tag severity="info" value="S"></p-tag> 2-8h/Woche</li>
+            <li><p-tag severity="success" value="M"></p-tag> 8-14h/Woche</li>
+            <li><p-tag severity="warn" value="L"></p-tag> 14-20h/Woche</li>
+            <li><p-tag severity="warn" value="XL"></p-tag> 20h+ (innerhalb Kapazität)</li>
+            <li><p-tag severity="danger" value="XXL"></p-tag> Überschreitet Kapazität</li>
           </ul>
         </div>
       </div>
@@ -113,21 +115,26 @@
                   @if (!member.isActive) {
                     <i class="pi pi-user-minus inactive-icon" pTooltip="Inaktiv (x2 Multiplikator)" tooltipPosition="top"></i>
                   }
+                  @if (member.partTimeFactor < 1) {
+                    <span class="part-time-badge" [pTooltip]="'Teilzeit: ' + formatPercent(member.partTimeFactor)" tooltipPosition="top">
+                      {{ formatPercent(member.partTimeFactor) }}
+                    </span>
+                  }
                 </span>
                 <span class="member-stats">
                   <p-tag 
-                    [value]="getStatusLabel(member.loadStatus)" 
-                    [severity]="getStatusSeverity(member.loadStatus)"
+                    [value]="member.size" 
+                    [severity]="getSizeSeverity(member.size)"
                     [rounded]="true"></p-tag>
-                  <span class="load-value">{{ formatNumber(member.totalLoad) }}</span>
-                  <span class="normalized-value">({{ formatNumber(member.normalizedLoad) }}x)</span>
+                  <span class="load-value" [pTooltip]="'Total: ' + formatNumber(member.totalLoad) + ' h/Woche'">{{ formatNumber(member.totalLoad) }}h</span>
+                  <span class="capacity-value" [pTooltip]="'Kapazität: ' + formatPercent(member.capacityRatio)">({{ formatPercent(member.capacityRatio) }})</span>
                 </span>
               </div>
               <div class="load-bar-container">
                 <div 
                   class="load-bar" 
                   [style.width.%]="getLoadPercentage(member.totalLoad)"
-                  [style.background-color]="getLoadBarColor(member.normalizedLoad)">
+                  [style.background-color]="getLoadBarColor(member.capacityRatio)">
                 </div>
               </div>
             </div>
@@ -232,16 +239,34 @@
         <div class="member-detail">
           <div class="summary-row">
             <div class="summary-item">
+              <span class="summary-label">Basis-Auslastung</span>
+              <span class="summary-value">{{ formatNumber(member.baseLoadHoursPerWeek) }}h/Wo</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Themen-Auslastung</span>
+              <span class="summary-value">{{ formatNumber(member.topicsLoad) }}h/Wo</span>
+            </div>
+            <div class="summary-item">
               <span class="summary-label">Gesamtauslastung</span>
-              <span class="summary-value">{{ formatNumber(member.totalLoad) }}</span>
+              <span class="summary-value highlight">{{ formatNumber(member.totalLoad) }}h/Wo</span>
             </div>
             <div class="summary-item">
-              <span class="summary-label">Normalisiert</span>
-              <span class="summary-value">{{ formatNumber(member.normalizedLoad) }}x</span>
+              <span class="summary-label">Effektive Kapazität</span>
+              <span class="summary-value">{{ formatNumber(member.effectiveCapacityHoursPerWeek) }}h/Wo</span>
             </div>
             <div class="summary-item">
-              <span class="summary-label">Aktivitätsmultiplikator</span>
-              <span class="summary-value">{{ member.activityMultiplier }}x</span>
+              <span class="summary-label">Kapazitätsauslastung</span>
+              <span class="summary-value" [class.overloaded]="member.capacityRatio > 1">{{ formatPercent(member.capacityRatio) }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Teilzeitfaktor</span>
+              <span class="summary-value">{{ formatPercent(member.partTimeFactor) }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Größe</span>
+              <p-tag 
+                [value]="member.size" 
+                [severity]="getSizeSeverity(member.size)"></p-tag>
             </div>
             <div class="summary-item">
               <span class="summary-label">Status</span>
@@ -302,12 +327,20 @@
             </ng-template>
             <ng-template pTemplate="footer">
               <tr class="summary-footer">
-                <td colspan="6" class="text-right"><strong>Summe (Rohauslastung):</strong></td>
+                <td colspan="6" class="text-right"><strong>Summe Themenbeiträge (Roh):</strong></td>
                 <td class="number-cell"><strong>{{ formatNumber(member.rawLoad) }}</strong></td>
               </tr>
               <tr class="summary-footer">
                 <td colspan="6" class="text-right"><strong>× Aktivitätsmultiplikator ({{ member.activityMultiplier }}):</strong></td>
-                <td class="number-cell"><strong>{{ formatNumber(member.totalLoad) }}</strong></td>
+                <td class="number-cell"><strong>{{ formatNumber(member.topicsLoad) }}h</strong></td>
+              </tr>
+              <tr class="summary-footer">
+                <td colspan="6" class="text-right"><strong>+ Basis-Auslastung:</strong></td>
+                <td class="number-cell"><strong>{{ formatNumber(member.baseLoadHoursPerWeek) }}h</strong></td>
+              </tr>
+              <tr class="summary-footer total-row">
+                <td colspan="6" class="text-right"><strong>= Gesamtauslastung:</strong></td>
+                <td class="number-cell"><strong>{{ formatNumber(member.totalLoad) }}h/Wo</strong></td>
               </tr>
             </ng-template>
           </p-table>

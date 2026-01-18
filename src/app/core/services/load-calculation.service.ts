@@ -1,5 +1,6 @@
-import { Injectable } from '@angular/core';
-import { TeamMember, Topic, Tag } from '../models';
+import { Injectable, inject } from '@angular/core';
+import { TeamMember, Topic, Tag, LoadConfig, SizeLabel } from '../models';
+import { LoadConfigService } from './load-config.service';
 
 /**
  * Role weight constants as defined in the specification.
@@ -23,6 +24,7 @@ export const ACTIVITY_MULTIPLIER = {
 
 /**
  * System-wide constants for topic complexity calculation.
+ * These are now configurable via load_config.json but kept as defaults.
  */
 export const COMPLEXITY_CONSTANTS = {
   /** Weight multiplier for TagWeight contribution */
@@ -74,9 +76,22 @@ export interface MemberLoadResult {
   memberName: string;
   isActive: boolean;
   activityMultiplier: number;
+  /** Part-time factor (1.0 = full-time, 0.8 = 80% etc.) */
+  partTimeFactor: number;
   rawLoad: number;
+  /** Topic-based load (L_topics) */
+  topicsLoad: number;
+  /** Base load (L_base) in hours/week */
+  baseLoadHoursPerWeek: number;
+  /** Total load = L_base + L_topics */
   totalLoad: number;
   normalizedLoad: number;
+  /** Effective capacity for this member (hours/week) */
+  effectiveCapacityHoursPerWeek: number;
+  /** Capacity ratio = totalLoad / effectiveCapacity */
+  capacityRatio: number;
+  /** Size classification (XS/S/M/L/XL/XXL) */
+  size: SizeLabel;
   topicContributions: TopicContribution[];
   loadStatus: LoadStatus;
 }
@@ -90,7 +105,7 @@ export type LoadStatus = 'underutilized' | 'normal' | 'overloaded' | 'unsustaina
  * Validation warning for data issues.
  */
 export interface LoadValidationWarning {
-  type: 'tagWeight-invalid' | 'tagWeight-extreme' | 'topic-no-r1' | 'topic-inactive-r1';
+  type: 'tagWeight-invalid' | 'tagWeight-extreme' | 'topic-no-r1' | 'topic-inactive-r1' | 'config-warning';
   message: string;
   entityId: string;
   entityName: string;
@@ -102,8 +117,20 @@ export interface LoadValidationWarning {
 export interface LoadCalculationResult {
   memberLoads: MemberLoadResult[];
   medianLoad: number;
+  /** Effective full-time capacity (hours/week) */
+  effectiveFullTimeCapacity: number;
   warnings: LoadValidationWarning[];
   calculatedAt: string;
+  /** Alpha value used for topic complexity */
+  alpha: number;
+  /** Beta value used for topic complexity */
+  beta: number;
+  /** Default base load (hours/week) */
+  defaultBaseLoadHoursPerWeek: number;
+  /** Contract hours per week */
+  contractHoursPerWeek: number;
+  /** Overhead factor */
+  overheadFactor: number;
 }
 
 /**
@@ -111,12 +138,15 @@ export interface LoadCalculationResult {
  */
 export interface LoadCacheKey {
   revisionId: number;
+  configHash: string;
 }
 
 @Injectable({
   providedIn: 'root',
 })
 export class LoadCalculationService {
+  private readonly loadConfigService = inject(LoadConfigService);
+
   private cache: {
     key: LoadCacheKey | null;
     result: LoadCalculationResult | null;
@@ -160,13 +190,16 @@ export class LoadCalculationService {
   /**
    * Calculate topic complexity: c(t) = 1 + α·TagWeight(t) + β·DependencyCount(t)
    */
-  calculateTopicComplexity(topic: Topic, tagsMap: Map<string, Tag>): number {
+  calculateTopicComplexity(
+    topic: Topic,
+    tagsMap: Map<string, Tag>,
+    alpha: number,
+    beta: number
+  ): number {
     const tagWeightSum = this.calculateTagWeightSum(topic, tagsMap);
     const dependencyCount = this.calculateDependencyCount(topic);
 
-    return (
-      1 + COMPLEXITY_CONSTANTS.ALPHA * tagWeightSum + COMPLEXITY_CONSTANTS.BETA * dependencyCount
-    );
+    return 1 + alpha * tagWeightSum + beta * dependencyCount;
   }
 
   /**
@@ -193,12 +226,12 @@ export class LoadCalculationService {
   }
 
   /**
-   * Classify load status based on normalized load.
+   * Classify load status based on capacity ratio.
    */
-  classifyLoadStatus(normalizedLoad: number): LoadStatus {
-    if (normalizedLoad < 0.5) return 'underutilized';
-    if (normalizedLoad <= 1.5) return 'normal';
-    if (normalizedLoad <= 2.0) return 'overloaded';
+  classifyLoadStatus(capacityRatio: number): LoadStatus {
+    if (capacityRatio < 0.3) return 'underutilized';
+    if (capacityRatio <= 0.9) return 'normal';
+    if (capacityRatio <= 1.0) return 'overloaded';
     return 'unsustainable';
   }
 
@@ -223,7 +256,8 @@ export class LoadCalculationService {
   validateData(
     topics: Topic[],
     members: TeamMember[],
-    tags: Tag[]
+    tags: Tag[],
+    config: LoadConfig | null
   ): LoadValidationWarning[] {
     const warnings: LoadValidationWarning[] = [];
     const membersMap = new Map(members.map((m) => [m.id, m]));
@@ -276,7 +310,45 @@ export class LoadCalculationService {
       }
     }
 
+    // Check config member references
+    if (config) {
+      for (const memberId of Object.keys(config.members.partTimeFactors)) {
+        if (!membersMap.has(memberId)) {
+          warnings.push({
+            type: 'config-warning',
+            message: `partTimeFactors references unknown member ID: ${memberId}`,
+            entityId: memberId,
+            entityName: 'partTimeFactors',
+          });
+        }
+      }
+      for (const memberId of Object.keys(config.baseLoad.memberOverrides)) {
+        if (!membersMap.has(memberId)) {
+          warnings.push({
+            type: 'config-warning',
+            message: `baseLoad.memberOverrides references unknown member ID: ${memberId}`,
+            entityId: memberId,
+            entityName: 'baseLoad.memberOverrides',
+          });
+        }
+      }
+    }
+
     return warnings;
+  }
+
+  /**
+   * Generate a simple hash for config to detect changes.
+   */
+  private hashConfig(config: LoadConfig | null): string {
+    if (!config) return 'null';
+    return JSON.stringify({
+      capacity: config.capacity,
+      topicComplexity: config.topicComplexity,
+      baseLoad: config.baseLoad,
+      members: config.members,
+      sizes: config.sizes,
+    });
   }
 
   /**
@@ -287,31 +359,60 @@ export class LoadCalculationService {
     members: TeamMember[],
     topics: Topic[],
     tags: Tag[],
-    revisionId: number
+    revisionId: number,
+    config?: LoadConfig | null
   ): LoadCalculationResult {
+    // Use provided config or get from service
+    const loadConfig = config ?? this.loadConfigService.getConfig();
+    const configHash = this.hashConfig(loadConfig);
+
     // Check cache
     if (
       this.cache.key &&
       this.cache.result &&
-      this.cache.key.revisionId === revisionId
+      this.cache.key.revisionId === revisionId &&
+      this.cache.key.configHash === configHash
     ) {
       return this.cache.result;
     }
 
+    // Get configuration values
+    const alpha = loadConfig?.topicComplexity.alpha ?? COMPLEXITY_CONSTANTS.ALPHA;
+    const beta = loadConfig?.topicComplexity.beta ?? COMPLEXITY_CONSTANTS.BETA;
+    const contractHoursPerWeek = loadConfig?.capacity.contractHoursPerWeek ?? 41;
+    const overheadFactor = loadConfig?.capacity.overheadFactor ?? 0.35;
+    const effectiveFullTimeCapacity = contractHoursPerWeek * (1 - overheadFactor);
+
+    // Calculate default base load from enabled components
+    const defaultBaseLoad = loadConfig
+      ? loadConfig.baseLoad.components
+          .filter((c) => c.enabled)
+          .reduce((sum, c) => sum + c.hoursPerWeek, 0)
+      : 3.5;
+
     const tagsMap = new Map(tags.map((t) => [t.name, t]));
     const topicsMap = new Map(topics.map((t) => [t.id, t]));
 
-    // Calculate raw loads for each member
+    // Calculate loads for each member
     const memberLoads: MemberLoadResult[] = members.map((member) => {
       const roles = this.getMemberRoles(member, topics);
       const activityMultiplier = this.getActivityMultiplier(member);
+
+      // Get member-specific config values
+      const partTimeFactor = loadConfig
+        ? this.loadConfigService.getPartTimeFactor(loadConfig, member.id)
+        : 1.0;
+      const baseLoadHoursPerWeek = loadConfig
+        ? this.loadConfigService.getMemberBaseLoad(loadConfig, member.id)
+        : defaultBaseLoad;
+      const effectiveCapacityHoursPerWeek = effectiveFullTimeCapacity * partTimeFactor;
 
       const topicContributions: TopicContribution[] = roles.map((role) => {
         const topic = topicsMap.get(role.topicId)!;
         const roleWeight = this.getRoleWeight(role.role);
         const tagWeightSum = this.calculateTagWeightSum(topic, tagsMap);
         const dependencyCount = this.calculateDependencyCount(topic);
-        const topicComplexity = this.calculateTopicComplexity(topic, tagsMap);
+        const topicComplexity = this.calculateTopicComplexity(topic, tagsMap, alpha, beta);
         const loadContribution = roleWeight * topicComplexity;
 
         return {
@@ -327,18 +428,33 @@ export class LoadCalculationService {
       });
 
       const rawLoad = topicContributions.reduce((sum, tc) => sum + tc.loadContribution, 0);
-      const totalLoad = activityMultiplier * rawLoad;
+      const topicsLoad = activityMultiplier * rawLoad;
+      const totalLoad = baseLoadHoursPerWeek + topicsLoad;
+      const capacityRatio = effectiveCapacityHoursPerWeek > 0 
+        ? totalLoad / effectiveCapacityHoursPerWeek 
+        : 0;
+
+      // Determine size
+      const size = loadConfig
+        ? this.loadConfigService.classifySize(loadConfig, totalLoad, effectiveCapacityHoursPerWeek)
+        : this.classifySizeDefault(totalLoad, effectiveCapacityHoursPerWeek);
 
       return {
         memberId: member.id,
         memberName: member.displayName,
         isActive: member.active,
         activityMultiplier,
+        partTimeFactor,
         rawLoad,
+        topicsLoad,
+        baseLoadHoursPerWeek,
         totalLoad,
         normalizedLoad: 0, // Will be calculated after median
+        effectiveCapacityHoursPerWeek,
+        capacityRatio,
+        size,
         topicContributions,
-        loadStatus: 'normal' as LoadStatus, // Will be updated after normalization
+        loadStatus: this.classifyLoadStatus(capacityRatio),
       };
     });
 
@@ -346,29 +462,49 @@ export class LoadCalculationService {
     const allLoads = memberLoads.map((ml) => ml.totalLoad);
     const medianLoad = this.calculateMedian(allLoads);
 
-    // Calculate normalized loads and status
+    // Calculate normalized loads
     for (const ml of memberLoads) {
       ml.normalizedLoad = medianLoad > 0 ? ml.totalLoad / medianLoad : 0;
-      ml.loadStatus = this.classifyLoadStatus(ml.normalizedLoad);
     }
 
     // Validate data and collect warnings
-    const warnings = this.validateData(topics, members, tags);
+    const warnings = this.validateData(topics, members, tags, loadConfig);
 
     const result: LoadCalculationResult = {
       memberLoads,
       medianLoad,
+      effectiveFullTimeCapacity,
       warnings,
       calculatedAt: new Date().toISOString(),
+      alpha,
+      beta,
+      defaultBaseLoadHoursPerWeek: defaultBaseLoad,
+      contractHoursPerWeek,
+      overheadFactor,
     };
 
     // Update cache
     this.cache = {
-      key: { revisionId },
+      key: { revisionId, configHash },
       result,
     };
 
     return result;
+  }
+
+  /**
+   * Default size classification when no config is available.
+   */
+  private classifySizeDefault(
+    totalLoad: number,
+    effectiveCapacity: number
+  ): SizeLabel {
+    if (totalLoad > effectiveCapacity) return 'XXL';
+    if (totalLoad >= 20) return 'XL';
+    if (totalLoad >= 14) return 'L';
+    if (totalLoad >= 8) return 'M';
+    if (totalLoad >= 2) return 'S';
+    return 'XS';
   }
 
   /**
@@ -381,17 +517,46 @@ export class LoadCalculationService {
   /**
    * Get the formula explanation text.
    */
-  getFormulaExplanation(): string {
-    return `Load is calculated as the sum of responsibility weight multiplied by topic complexity. Topic complexity is influenced by tag weights and dependencies.
+  getFormulaExplanation(config?: LoadConfig | null): string {
+    const loadConfig = config ?? this.loadConfigService.getConfig();
+    const alpha = loadConfig?.topicComplexity.alpha ?? COMPLEXITY_CONSTANTS.ALPHA;
+    const beta = loadConfig?.topicComplexity.beta ?? COMPLEXITY_CONSTANTS.BETA;
+    const contractHours = loadConfig?.capacity.contractHoursPerWeek ?? 41;
+    const overhead = loadConfig?.capacity.overheadFactor ?? 0.35;
+    const effectiveCapacity = contractHours * (1 - overhead);
 
-Formula:
-L(m) = activity(m) × Σ [roleWeight(m,t) × topicComplexity(t)]
+    return `Load is calculated as the sum of base load plus topic-based load.
 
-Where:
-• activity(m) = ${ACTIVITY_MULTIPLIER.active} for active, ${ACTIVITY_MULTIPLIER.inactive} for inactive members
-• roleWeight: R1=${ROLE_WEIGHTS.R1}, R2=${ROLE_WEIGHTS.R2}, R3=${ROLE_WEIGHTS.R3}, C=${ROLE_WEIGHTS.C}, I=${ROLE_WEIGHTS.I}
-• topicComplexity(t) = 1 + ${COMPLEXITY_CONSTANTS.ALPHA}×TagWeight(t) + ${COMPLEXITY_CONSTANTS.BETA}×DependencyCount(t)
-• TagWeight(t) = sum of all tag weights assigned to the topic
-• Normalized load = L(m) / median(L(all members))`;
+**Total Load Formula:**
+L_total(m) = L_base(m) + L_topics(m)
+
+**Topic Load:**
+L_topics(m) = activity(m) × Σ [roleWeight(m,t) × topicComplexity(t)]
+
+**Topic Complexity:**
+c(t) = 1 + ${alpha}×TagWeight(t) + ${beta}×DependencyCount(t)
+
+**Capacity Calculation:**
+• Contract hours: ${contractHours} h/week
+• Overhead factor: ${(overhead * 100).toFixed(0)}%
+• H_eff_full = ${contractHours} × (1 - ${overhead}) = ${effectiveCapacity.toFixed(2)} h/week
+• H_eff(m) = H_eff_full × partTimeFactor(m)
+
+**Capacity Ratio:**
+CapacityRatio(m) = L_total(m) / H_eff(m)
+
+**Role Weights:**
+R1=${ROLE_WEIGHTS.R1}, R2=${ROLE_WEIGHTS.R2}, R3=${ROLE_WEIGHTS.R3}, C=${ROLE_WEIGHTS.C}, I=${ROLE_WEIGHTS.I}
+
+**Activity Multipliers:**
+active=${ACTIVITY_MULTIPLIER.active}, inactive=${ACTIVITY_MULTIPLIER.inactive}
+
+**Size Classification:**
+• XS: < 2h/week
+• S: 2-8h/week
+• M: 8-14h/week
+• L: 14-20h/week
+• XL: 20h+ but within capacity
+• XXL: exceeds capacity`;
   }
 }
