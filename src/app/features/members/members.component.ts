@@ -136,21 +136,21 @@ export class MembersComponent implements OnInit, OnDestroy {
 
     this.subscriptions.push(
       this.loadConfigService.config$.subscribe(config => {
-        this.loadConfig = config;
-        // Compute default base load when config changes
-        if (config) {
-          this.defaultBaseLoad = config.baseLoad.components
-            .filter(c => c.enabled)
-            .reduce((sum, c) => sum + c.hoursPerWeek, 0);
-        }
+        this.applyLoadConfig(config);
       })
     );
 
     // Load existing config synchronously if already available
-    const existingConfig = this.loadConfigService.getConfig();
-    if (existingConfig) {
-      this.loadConfig = existingConfig;
-      this.defaultBaseLoad = existingConfig.baseLoad.components
+    this.applyLoadConfig(this.loadConfigService.getConfig());
+  }
+
+  /**
+   * Apply load config values to component state.
+   */
+  private applyLoadConfig(config: LoadConfig | null): void {
+    this.loadConfig = config;
+    if (config) {
+      this.defaultBaseLoad = config.baseLoad.components
         .filter(c => c.enabled)
         .reduce((sum, c) => sum + c.hoursPerWeek, 0);
     }

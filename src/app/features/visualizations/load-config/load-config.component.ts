@@ -92,23 +92,26 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
 
     this.subscriptions.push(
       this.loadConfigService.config$.subscribe(config => {
-        if (config) {
-          this.config.set(config);
-          this.loadConfigValues(config);
-        }
+        this.applyConfig(config);
       })
     );
 
     // If already connected but config not loaded, load it now
-    const existingConfig = this.loadConfigService.getConfig();
-    if (existingConfig) {
-      this.config.set(existingConfig);
-      this.loadConfigValues(existingConfig);
-    }
+    this.applyConfig(this.loadConfigService.getConfig());
   }
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
+  }
+
+  /**
+   * Apply config values to component state.
+   */
+  private applyConfig(config: LoadConfig | null): void {
+    if (config) {
+      this.config.set(config);
+      this.loadConfigValues(config);
+    }
   }
 
   private loadConfigValues(config: LoadConfig): void {
