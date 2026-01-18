@@ -1,0 +1,358 @@
+<div class="page-container">
+  <div class="page-header">
+    <div class="header-content">
+      <button class="back-button" routerLink="/visualizations">
+        <i class="pi pi-arrow-left"></i>
+      </button>
+      <div>
+        <h1>
+          <i class="pi pi-chart-line"></i>
+          Auslastung & Verantwortung
+        </h1>
+        <p>Transparente Analyse der Arbeitsbelastung basierend auf Rollen und Themenkomplexität</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <p-button 
+        label="Konfiguration" 
+        icon="pi pi-cog" 
+        [outlined]="true"
+        routerLink="/visualizations/load/config"></p-button>
+    </div>
+  </div>
+
+  @if (!isConnected()) {
+    <div class="card">
+      <p class="text-center text-secondary">
+        <i class="pi pi-info-circle"></i>
+        Bitte verbinden Sie zuerst ein Datenverzeichnis über die Einstellungen.
+      </p>
+    </div>
+  } @else {
+    <!-- Formula Explanation (Mandatory) -->
+    <p-panel 
+      header="Wie wird die Auslastung berechnet?" 
+      [toggleable]="true" 
+      [collapsed]="!showFormula()"
+      (onAfterToggle)="toggleFormula()"
+      styleClass="formula-panel mb-4">
+      <div class="formula-content">
+        <p class="formula-intro">
+          Die Auslastung wird als Summe der Verantwortungsgewichte multipliziert mit der Themenkomplexität berechnet.
+          Die Themenkomplexität wird durch Tag-Gewichtungen und Abhängigkeiten beeinflusst.
+        </p>
+        <div class="formula-box">
+          <pre>{{ formulaExplanation() }}</pre>
+        </div>
+        <div class="interpretation-guide">
+          <h4>Größenklassifikation (h/Woche):</h4>
+          <ul>
+            <li><p-tag severity="secondary" value="XS"></p-tag> &lt; 2h/Woche</li>
+            <li><p-tag severity="info" value="S"></p-tag> 2-8h/Woche</li>
+            <li><p-tag severity="success" value="M"></p-tag> 8-14h/Woche</li>
+            <li><p-tag severity="warn" value="L"></p-tag> 14-20h/Woche</li>
+            <li><p-tag severity="warn" value="XL"></p-tag> 20h+ (innerhalb Kapazität)</li>
+            <li><p-tag severity="danger" value="XXL"></p-tag> Überschreitet Kapazität</li>
+          </ul>
+        </div>
+      </div>
+    </p-panel>
+
+    <!-- Warnings / Risk Indicators -->
+    @if (hasWarnings()) {
+      <div class="warnings-section mb-4">
+        <h3><i class="pi pi-exclamation-triangle"></i> Risikohinweise</h3>
+        
+        @if (inactiveR1Warnings().length > 0) {
+          <p-message severity="warn" styleClass="mb-2 full-width">
+            <ng-template #messageContent>
+              <span>
+                <strong>{{ inactiveR1Warnings().length }} Themen mit inaktivem R1:</strong>
+                Inaktive Hauptverantwortliche verdoppeln die berechnete Auslastung.
+                <ul class="warning-list">
+                  @for (warning of inactiveR1Warnings(); track warning.entityId) {
+                    <li>{{ warning.entityName }}</li>
+                  }
+                </ul>
+              </span>
+            </ng-template>
+          </p-message>
+        }
+        
+        @if (noR1Warnings().length > 0) {
+          <p-message severity="error" styleClass="mb-2 full-width">
+            <ng-template #messageContent>
+              <span>
+                <strong>{{ noR1Warnings().length }} Themen ohne R1:</strong>
+                Diese Themen haben keinen Hauptverantwortlichen.
+                <ul class="warning-list">
+                  @for (warning of noR1Warnings(); track warning.entityId) {
+                    <li>{{ warning.entityName }}</li>
+                  }
+                </ul>
+              </span>
+            </ng-template>
+          </p-message>
+        }
+      </div>
+    }
+
+    <div class="dashboard-grid">
+      <!-- Load per Member (Bar Chart) -->
+      <p-card styleClass="load-chart-card">
+        <ng-template #header>
+          <div class="card-header">
+            <h3><i class="pi pi-users"></i> Auslastung pro Teammitglied</h3>
+          </div>
+        </ng-template>
+        
+        <div class="member-load-list">
+          @for (member of sortedMemberLoads(); track member.memberId) {
+            <div 
+              class="member-load-item" 
+              [class.selected]="selectedMember()?.memberId === member.memberId"
+              [class.inactive-member]="!member.isActive"
+              (click)="selectMember(member)"
+              tabindex="0"
+              role="button"
+              [attr.aria-label]="'Details für ' + member.memberName + ' anzeigen'">
+              <div class="member-info">
+                <span class="member-name">
+                  {{ member.memberName }}
+                  @if (!member.isActive) {
+                    <i class="pi pi-user-minus inactive-icon" pTooltip="Inaktiv (x2 Multiplikator)" tooltipPosition="top"></i>
+                  }
+                  @if (member.partTimeFactor < 1) {
+                    <span class="part-time-badge" [pTooltip]="'Teilzeit: ' + formatPercent(member.partTimeFactor)" tooltipPosition="top">
+                      {{ formatPercent(member.partTimeFactor) }}
+                    </span>
+                  }
+                </span>
+                <span class="member-stats">
+                  <p-tag 
+                    [value]="member.size" 
+                    [severity]="getSizeSeverity(member.size)"
+                    [rounded]="true"></p-tag>
+                  <span class="load-value" [pTooltip]="'Total: ' + formatNumber(member.totalLoad) + ' h/Woche'">{{ formatNumber(member.totalLoad) }}h</span>
+                  <span class="capacity-value" [pTooltip]="'Kapazität: ' + formatPercent(member.capacityRatio)">({{ formatPercent(member.capacityRatio) }})</span>
+                </span>
+              </div>
+              <div class="load-bar-container">
+                <div 
+                  class="load-bar" 
+                  [style.width.%]="getLoadPercentage(member.totalLoad)"
+                  [style.background-color]="getCapacityBarColor(member.capacityRatio)">
+                </div>
+              </div>
+            </div>
+          }
+          
+          @if (sortedMemberLoads().length === 0) {
+            <div class="empty-state">
+              <i class="pi pi-users"></i>
+              <p>Keine Teammitglieder vorhanden</p>
+            </div>
+          }
+        </div>
+        
+        <ng-template #footer>
+          <div class="chart-footer">
+            <span class="median-info">
+              <i class="pi pi-equals"></i>
+              Median: {{ formatNumber(loadResult()?.medianLoad ?? 0) }}
+            </span>
+          </div>
+        </ng-template>
+      </p-card>
+
+      <!-- Role Breakdown -->
+      <p-card styleClass="breakdown-card">
+        <ng-template #header>
+          <div class="card-header">
+            <h3><i class="pi pi-chart-pie"></i> Auslastung nach Rolle</h3>
+          </div>
+        </ng-template>
+        
+        <div class="role-breakdown">
+          <div class="role-item">
+            <span class="role-label">R1 (Hauptverantwortlich)</span>
+            <div class="role-bar-container">
+              <div class="role-bar r1" [style.width.%]="getRoleBreakdownPercentage(roleBreakdown().r1)"></div>
+            </div>
+            <span class="role-value">{{ formatNumber(roleBreakdown().r1) }}</span>
+          </div>
+          <div class="role-item">
+            <span class="role-label">R2 (1. Stellvertreter)</span>
+            <div class="role-bar-container">
+              <div class="role-bar r2" [style.width.%]="getRoleBreakdownPercentage(roleBreakdown().r2)"></div>
+            </div>
+            <span class="role-value">{{ formatNumber(roleBreakdown().r2) }}</span>
+          </div>
+          <div class="role-item">
+            <span class="role-label">R3 (2. Stellvertreter)</span>
+            <div class="role-bar-container">
+              <div class="role-bar r3" [style.width.%]="getRoleBreakdownPercentage(roleBreakdown().r3)"></div>
+            </div>
+            <span class="role-value">{{ formatNumber(roleBreakdown().r3) }}</span>
+          </div>
+          <div class="role-item">
+            <span class="role-label">C (Konsultiert)</span>
+            <div class="role-bar-container">
+              <div class="role-bar c" [style.width.%]="getRoleBreakdownPercentage(roleBreakdown().c)"></div>
+            </div>
+            <span class="role-value">{{ formatNumber(roleBreakdown().c) }}</span>
+          </div>
+          <div class="role-item">
+            <span class="role-label">I (Informiert)</span>
+            <div class="role-bar-container">
+              <div class="role-bar i" [style.width.%]="getRoleBreakdownPercentage(roleBreakdown().i)"></div>
+            </div>
+            <span class="role-value">{{ formatNumber(roleBreakdown().i) }}</span>
+          </div>
+        </div>
+        
+        <ng-template #footer>
+          <div class="chart-footer">
+            <span class="total-info">
+              <i class="pi pi-calculator"></i>
+              Gesamt: {{ formatNumber(totalSystemLoad()) }}
+            </span>
+          </div>
+        </ng-template>
+      </p-card>
+    </div>
+
+    <!-- Member Detail View -->
+    @if (selectedMember(); as member) {
+      <p-card styleClass="detail-card mt-4">
+        <ng-template #header>
+          <div class="card-header detail-header">
+            <h3>
+              <i class="pi pi-user"></i>
+              {{ member.memberName }}
+              @if (!member.isActive) {
+                <p-tag severity="warn" value="Inaktiv" [rounded]="true"></p-tag>
+              }
+            </h3>
+            <p-button 
+              icon="pi pi-times" 
+              [rounded]="true" 
+              [text]="true" 
+              (onClick)="clearSelection()"
+              aria-label="Auswahl aufheben"></p-button>
+          </div>
+        </ng-template>
+
+        <div class="member-detail">
+          <div class="summary-row">
+            <div class="summary-item">
+              <span class="summary-label">Basis-Auslastung</span>
+              <span class="summary-value">{{ formatNumber(member.baseLoadHoursPerWeek) }}h/Wo</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Themen-Auslastung</span>
+              <span class="summary-value">{{ formatNumber(member.topicsLoad) }}h/Wo</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Gesamtauslastung</span>
+              <span class="summary-value highlight">{{ formatNumber(member.totalLoad) }}h/Wo</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Effektive Kapazität</span>
+              <span class="summary-value">{{ formatNumber(member.effectiveCapacityHoursPerWeek) }}h/Wo</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Kapazitätsauslastung</span>
+              <span class="summary-value" [class.overloaded]="member.capacityRatio > 1">{{ formatPercent(member.capacityRatio) }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Teilzeitfaktor</span>
+              <span class="summary-value">{{ formatPercent(member.partTimeFactor) }}</span>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Größe</span>
+              <p-tag 
+                [value]="member.size" 
+                [severity]="getSizeSeverity(member.size)"></p-tag>
+            </div>
+            <div class="summary-item">
+              <span class="summary-label">Status</span>
+              <p-tag 
+                [value]="getStatusLabel(member.loadStatus)" 
+                [severity]="getStatusSeverity(member.loadStatus)"></p-tag>
+            </div>
+          </div>
+
+          <h4><i class="pi pi-list"></i> Beitrag pro Thema</h4>
+          <p class="explanation-text">
+            Die folgende Tabelle zeigt, wie sich die Auslastung aus den einzelnen Themen zusammensetzt.
+          </p>
+          
+          <p-table 
+            [value]="member.topicContributions" 
+            [paginator]="member.topicContributions.length > 10"
+            [rows]="10"
+            styleClass="p-datatable-sm p-datatable-striped">
+            <ng-template pTemplate="header">
+              <tr>
+                <th>Thema</th>
+                <th>Rolle</th>
+                <th pTooltip="Gewichtung der Rolle (R1=3.0, R2=2.0, R3=1.5, C=1.0, I=0.5)" tooltipPosition="top">Rollengewicht</th>
+                <th pTooltip="Summe der Tag-Gewichtungen" tooltipPosition="top">TagWeight</th>
+                <th pTooltip="Anzahl der Verbindungen zu anderen Themen" tooltipPosition="top">Abhängigkeiten</th>
+                <th pTooltip="1 + α×TagWeight + β×Abhängigkeiten (α=1.0, β=0.25)" tooltipPosition="top">Komplexität</th>
+                <th pTooltip="Rollengewicht × Komplexität" tooltipPosition="top">Beitrag</th>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="body" let-tc>
+              <tr>
+                <td>{{ tc.topicHeader }}</td>
+                <td>
+                  <p-tag [value]="tc.role" severity="info" [rounded]="true"></p-tag>
+                </td>
+                <td class="number-cell">{{ formatNumber(tc.roleWeight) }}</td>
+                <td class="number-cell">
+                  @if (tc.tagWeightSum !== 0) {
+                    <span [class.positive-weight]="tc.tagWeightSum > 0" [class.negative-weight]="tc.tagWeightSum < 0">
+                      {{ formatNumber(tc.tagWeightSum) }}
+                    </span>
+                  } @else {
+                    <span class="neutral">0</span>
+                  }
+                </td>
+                <td class="number-cell">{{ tc.dependencyCount }}</td>
+                <td class="number-cell">{{ formatNumber(tc.topicComplexity) }}</td>
+                <td class="number-cell contribution">{{ formatNumber(tc.loadContribution) }}</td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="emptymessage">
+              <tr>
+                <td colspan="7" class="text-center">
+                  Keine Themenverantwortungen
+                </td>
+              </tr>
+            </ng-template>
+            <ng-template pTemplate="footer">
+              <tr class="summary-footer">
+                <td colspan="6" class="text-right"><strong>Summe Themenbeiträge (Roh):</strong></td>
+                <td class="number-cell"><strong>{{ formatNumber(member.rawLoad) }}</strong></td>
+              </tr>
+              <tr class="summary-footer">
+                <td colspan="6" class="text-right"><strong>× Aktivitätsmultiplikator ({{ member.activityMultiplier }}):</strong></td>
+                <td class="number-cell"><strong>{{ formatNumber(member.topicsLoad) }}h</strong></td>
+              </tr>
+              <tr class="summary-footer">
+                <td colspan="6" class="text-right"><strong>+ Basis-Auslastung:</strong></td>
+                <td class="number-cell"><strong>{{ formatNumber(member.baseLoadHoursPerWeek) }}h</strong></td>
+              </tr>
+              <tr class="summary-footer total-row">
+                <td colspan="6" class="text-right"><strong>= Gesamtauslastung:</strong></td>
+                <td class="number-cell"><strong>{{ formatNumber(member.totalLoad) }}h/Wo</strong></td>
+              </tr>
+            </ng-template>
+          </p-table>
+        </div>
+      </p-card>
+    }
+  }
+</div>

@@ -336,6 +336,7 @@
       "searchKeywords": ["kritisch", "prio1"],
       "hinweise": "",
       "copyPasteText": "",
+      "tagWeight": 1.5,
       "createdAt": "2026-01-04T21:08:39.993Z",
       "modifiedAt": "2026-01-05T09:10:00.000Z",
       "createdBy": "d3bf84af-1198-420f-8648-c039de293a2b"
@@ -346,6 +347,7 @@
       "searchKeywords": ["hilfe", "fragen", "antworten"],
       "hinweise": "Für wiederkehrende Fragen.",
       "copyPasteText": "",
+      "tagWeight": -0.5,
       "createdAt": "2026-01-05T09:05:00.000Z",
       "modifiedAt": "2026-01-05T09:05:00.000Z",
       "createdBy": "b774c13a-5139-4463-9e19-778415197fba"
@@ -356,6 +358,7 @@
       "searchKeywords": ["ablauf", "workflow", "vorgehen"],
       "hinweise": "Kennzeichnet standardisierte Abläufe.",
       "copyPasteText": "",
+      "tagWeight": 0.5,
       "createdAt": "2026-01-05T09:06:00.000Z",
       "modifiedAt": "2026-01-05T09:06:00.000Z",
       "createdBy": "d3bf84af-1198-420f-8648-c039de293a2b"
@@ -366,6 +369,7 @@
       "searchKeywords": ["sicherheit", "hardening", "patch"],
       "hinweise": "Sicherheitsrelevante Inhalte.",
       "copyPasteText": "",
+      "tagWeight": 2.0,
       "createdAt": "2026-01-05T09:07:00.000Z",
       "modifiedAt": "2026-01-05T09:07:00.000Z",
       "createdBy": "b2b77b0b-67a6-4af2-b64a-1e05b9a9c590"
@@ -376,6 +380,7 @@
       "searchKeywords": ["alt", "legacy", "veraltet"],
       "hinweise": "Nicht mehr verwenden.",
       "copyPasteText": "",
+      "tagWeight": -1.0,
       "createdAt": "2026-01-05T09:08:00.000Z",
       "modifiedAt": "2026-01-05T09:08:00.000Z",
       "createdBy": "b774c13a-5139-4463-9e19-778415197fba"

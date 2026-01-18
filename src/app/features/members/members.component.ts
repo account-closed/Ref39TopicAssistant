@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Table, TableModule } from 'primeng/table';
 import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
+import { InputNumber } from 'primeng/inputnumber';
 import { Dialog } from 'primeng/dialog';
 import { AutoComplete } from 'primeng/autocomplete';
 import { ToggleSwitch } from 'primeng/toggleswitch';
@@ -16,10 +17,13 @@ import { InputIcon } from 'primeng/inputicon';
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from 'primeng/tabs';
 import { Select } from 'primeng/select';
 import { ColorPicker } from 'primeng/colorpicker';
+import { Checkbox } from 'primeng/checkbox';
+import { Tooltip } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
-import { TeamMember, Topic, Datastore } from '../../core/models';
+import { LoadConfigService } from '../../core/services/load-config.service';
+import { TeamMember, Topic, Datastore, LoadConfig } from '../../core/models';
 
 interface TopicAssignment {
   topic: Topic;
@@ -35,6 +39,7 @@ interface TopicAssignment {
     TableModule,
     Button,
     InputText,
+    InputNumber,
     Dialog,
     AutoComplete,
     ToggleSwitch,
@@ -50,7 +55,9 @@ interface TopicAssignment {
     TabPanels,
     TabPanel,
     Select,
-    ColorPicker
+    ColorPicker,
+    Checkbox,
+    Tooltip
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './members.component.html',
@@ -90,10 +97,18 @@ export class MembersComponent implements OnInit, OnDestroy {
     { label: 'Inaktiv', value: false }
   ];
 
+  // Load config related properties
+  loadConfig: LoadConfig | null = null;
+  memberPartTimePercent: number = 100; // Display as percentage (1-100)
+  hasBaseLoadOverride: boolean = false;
+  memberBaseLoadOverride: number | null = null;
+  defaultBaseLoad: number = 3.5; // Computed from config
+
   private subscriptions: Subscription[] = [];
 
   constructor(
     private backend: BackendService,
+    private loadConfigService: LoadConfigService,
     private messageService: MessageService,
     private confirmationService: ConfirmationService
   ) {}
@@ -102,6 +117,12 @@ export class MembersComponent implements OnInit, OnDestroy {
     this.subscriptions.push(
       this.backend.connectionStatus$.subscribe(connected => {
         this.isConnected = connected;
+        // Ensure load config is loaded when connected
+        if (connected && !this.loadConfigService.getConfig()) {
+          void this.loadConfigService.loadOrCreate().catch(err => {
+            console.error('[Members] Failed to load config:', err);
+          });
+        }
       })
     );
 
@@ -112,6 +133,27 @@ export class MembersComponent implements OnInit, OnDestroy {
         }
       })
     );
+
+    this.subscriptions.push(
+      this.loadConfigService.config$.subscribe(config => {
+        this.applyLoadConfig(config);
+      })
+    );
+
+    // Load existing config synchronously if already available
+    this.applyLoadConfig(this.loadConfigService.getConfig());
+  }
+
+  /**
+   * Apply load config values to component state.
+   */
+  private applyLoadConfig(config: LoadConfig | null): void {
+    this.loadConfig = config;
+    if (config) {
+      this.defaultBaseLoad = config.baseLoad.components
+        .filter(c => c.enabled)
+        .reduce((sum, c) => sum + c.hoursPerWeek, 0);
+    }
   }
 
   ngOnDestroy(): void {
@@ -177,6 +219,10 @@ export class MembersComponent implements OnInit, OnDestroy {
     this.member = this.createEmptyMember();
     this.submitted = false;
     this.editMode = false;
+    // Reset load config fields for new member
+    this.memberPartTimePercent = 100;
+    this.hasBaseLoadOverride = false;
+    this.memberBaseLoadOverride = null;
     this.memberDialog = true;
   }
 
@@ -187,6 +233,16 @@ export class MembersComponent implements OnInit, OnDestroy {
     };
     this.submitted = false;
     this.editMode = true;
+    // Load load config values from member data
+    const partTimeFactor = member.partTimeFactor ?? 1.0;
+    this.memberPartTimePercent = Math.round(partTimeFactor * 100);
+    if (member.baseLoadOverride !== undefined && member.baseLoadOverride !== null) {
+      this.hasBaseLoadOverride = true;
+      this.memberBaseLoadOverride = member.baseLoadOverride;
+    } else {
+      this.hasBaseLoadOverride = false;
+      this.memberBaseLoadOverride = null;
+    }
     this.memberDialog = true;
   }
 
@@ -205,6 +261,22 @@ export class MembersComponent implements OnInit, OnDestroy {
     this.saving = true;
 
     try {
+      // Apply load config values to member
+      const partTimeFactor = Math.round(this.memberPartTimePercent) / 100;
+      if (partTimeFactor < 1.0) {
+        this.member.partTimeFactor = partTimeFactor;
+      } else {
+        // Remove if 100% (default)
+        delete this.member.partTimeFactor;
+      }
+
+      if (this.hasBaseLoadOverride && this.memberBaseLoadOverride !== null) {
+        this.member.baseLoadOverride = this.memberBaseLoadOverride;
+      } else {
+        // Remove override if disabled
+        delete this.member.baseLoadOverride;
+      }
+
       let success: boolean;
       if (this.editMode) {
         success = await this.backend.updateMember(this.member.id, this.member);
@@ -410,5 +482,17 @@ export class MembersComponent implements OnInit, OnDestroy {
     if (!isoString) return '';
     const date = new Date(isoString);
     return date.toLocaleDateString('de-DE');
+  }
+
+  /**
+   * Get the default base load from enabled components.
+   */
+  getDefaultBaseLoad(): number {
+    if (!this.loadConfig) {
+      return 3.5; // Default value
+    }
+    return this.loadConfig.baseLoad.components
+      .filter(c => c.enabled)
+      .reduce((sum, c) => sum + c.hoursPerWeek, 0);
   }
 }

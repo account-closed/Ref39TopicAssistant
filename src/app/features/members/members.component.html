@@ -149,7 +149,7 @@
   <!-- Create/Edit Dialog -->
   <p-dialog 
     [(visible)]="memberDialog" 
-    [style]="{width: '500px'}" 
+    [style]="{width: '550px'}" 
     [header]="editMode ? 'Mitglied bearbeiten' : 'Neues Mitglied'" 
     [modal]="true"
     [closable]="true"
@@ -207,6 +207,62 @@
             inputId="active">
           </p-toggleswitch>
           <label for="active" class="ml-2">Aktiv</label>
+        </div>
+
+        <!-- Load Configuration Section -->
+        <div class="load-config-section" *ngIf="loadConfig">
+          <div class="section-header">
+            <span class="section-title">Auslastungskonfiguration</span>
+            <i class="pi pi-info-circle" 
+               pTooltip="Diese Einstellungen beeinflussen die Berechnung der Auslastung für dieses Mitglied."
+               tooltipPosition="top"></i>
+          </div>
+
+          <!-- Part-time Factor -->
+          <div class="field">
+            <label for="partTimePercent">Teilzeitfaktor</label>
+            <div class="part-time-input">
+              <p-inputNumber 
+                id="partTimePercent"
+                [(ngModel)]="memberPartTimePercent" 
+                [min]="1" 
+                [max]="100"
+                suffix="%"
+                [showButtons]="true"
+                [step]="5"
+                inputStyleClass="w-full" />
+              <small class="field-hint">100% = Vollzeit. z.B. 80% für 4-Tage-Woche.</small>
+            </div>
+          </div>
+
+          <!-- Base Load Override -->
+          <div class="field">
+            <div class="field-checkbox mb-2">
+              <p-checkbox 
+                [(ngModel)]="hasBaseLoadOverride" 
+                [binary]="true"
+                inputId="hasBaseLoadOverride">
+              </p-checkbox>
+              <label for="hasBaseLoadOverride" class="ml-2">Individuelle Basislast</label>
+              <i class="pi pi-info-circle ml-2" 
+                 pTooltip="Überschreibt die Standard-Basislast ({{ defaultBaseLoad | number:'1.1-1' }} h/Woche) für dieses Mitglied."
+                 tooltipPosition="top"></i>
+            </div>
+            <div *ngIf="hasBaseLoadOverride">
+              <p-inputNumber 
+                id="baseLoadOverride"
+                [(ngModel)]="memberBaseLoadOverride" 
+                [min]="0" 
+                [max]="40"
+                suffix=" h/Woche"
+                [minFractionDigits]="1"
+                [maxFractionDigits]="1"
+                [showButtons]="true"
+                [step]="0.5"
+                inputStyleClass="w-full" />
+              <small class="field-hint">Standard: {{ defaultBaseLoad | number:'1.1-1' }} h/Woche (JF + Dailies)</small>
+            </div>
+          </div>
         </div>
       </div>
     </ng-template>

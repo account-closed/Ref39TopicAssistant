@@ -4,3 +4,4 @@ export * from './tag.model';
 export * from './datastore.model';
 export * from './lock.model';
 export * from './refresh.model';
+export * from './load-config.model';

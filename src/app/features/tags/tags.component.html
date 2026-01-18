@@ -92,6 +92,13 @@
           <p-tag [value]="tag.name" severity="info" [style]="tag.color ? {'background-color': tag.color} : {}"></p-tag>
           <i *ngIf="tag.isSuperTag" class="pi pi-star ml-1" pTooltip="Super-Tag" tooltipPosition="top"></i>
           <i *ngIf="tag.isGvplTag" class="pi pi-briefcase ml-1" pTooltip="GVPl-Tag" tooltipPosition="top"></i>
+          <i *ngIf="tag.tagWeight && tag.tagWeight !== 0" 
+             class="pi ml-1" 
+             [class.pi-arrow-up]="tag.tagWeight > 0" 
+             [class.pi-arrow-down]="tag.tagWeight < 0"
+             [style.color]="tag.tagWeight > 0 ? 'var(--p-orange-500)' : 'var(--p-blue-500)'"
+             [pTooltip]="'Gewichtung: ' + tag.tagWeight" 
+             tooltipPosition="top"></i>
         </td>
         <td>
           <span *ngFor="let kw of tag.searchKeywords; let last = last">
@@ -218,6 +225,36 @@
         <div class="field">
           <label for="color">Farbe</label>
           <p-colorpicker [(ngModel)]="tag.color" inputId="cp-hex" />
+        </div>
+
+        <!-- TagWeight -->
+        <div class="field">
+          <label for="tagWeight">
+            Gewichtung
+            <i class="pi pi-info-circle ml-1" 
+               pTooltip="Beeinflusst die Auslastungsberechnung. Neutral = 0, höhere Werte erhöhen die Komplexität von Themen mit diesem Tag. Empfohlener Bereich: -1.0 bis +2.0"
+               tooltipPosition="top"></i>
+          </label>
+          <div class="tag-weight-input">
+            <input 
+              pInputText 
+              type="number" 
+              id="tagWeight" 
+              [(ngModel)]="tag.tagWeight"
+              step="0.1"
+              placeholder="0 (neutral)"
+              [class.extreme-value]="isExtremeTagWeight()"
+              style="width: 100px" />
+            <span class="weight-indicator" *ngIf="tag.tagWeight !== null && tag.tagWeight !== undefined && tag.tagWeight !== 0">
+              <i class="pi" [class.pi-arrow-up]="tag.tagWeight > 0" [class.pi-arrow-down]="tag.tagWeight < 0"
+                 [style.color]="tag.tagWeight > 0 ? 'var(--p-orange-500)' : 'var(--p-blue-500)'"></i>
+              {{ tag.tagWeight > 0 ? 'Erhöht' : 'Reduziert' }} Komplexität
+            </span>
+          </div>
+          <small class="hint">Optional. Leere oder 0 = neutral (kein Einfluss auf Auslastung)</small>
+          <small class="p-error" *ngIf="isExtremeTagWeight()">
+            Extreme Gewichtung (außerhalb -1.0 bis +2.0). Dies kann zu unerwarteten Auslastungswerten führen.
+          </small>
         </div>
 
         <!-- Tag Type Toggles -->

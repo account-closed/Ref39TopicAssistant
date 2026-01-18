@@ -74,3 +74,22 @@
 :host ::ng-deep .p-datatable .p-datatable-header {
   padding: 1rem;
 }
+
+.tag-weight-input {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.weight-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.85rem;
+  color: var(--p-text-muted-color);
+}
+
+.extreme-value {
+  border-color: var(--p-orange-500) !important;
+  box-shadow: 0 0 0 1px var(--p-orange-500);
+}
