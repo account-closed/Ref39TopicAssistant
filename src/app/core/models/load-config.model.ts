@@ -35,6 +35,8 @@ export type SizeLabel = 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL';
 
 /**
  * Complete load configuration structure.
+ * Note: Per-member settings (partTimeFactor, baseLoadOverride) are stored
+ * directly on the TeamMember in the datastore, not in this config file.
  */
 export interface LoadConfig {
   schemaVersion: number;
@@ -52,10 +54,6 @@ export interface LoadConfig {
   baseLoad: {
     defaultHoursPerWeek: number;
     components: BaseLoadComponent[];
-    memberOverrides: Record<string, MemberBaseLoadOverride>;
-  };
-  members: {
-    partTimeFactors: Record<string, number>;
   };
   sizes: {
     thresholds: SizeThreshold[];
@@ -64,6 +62,7 @@ export interface LoadConfig {
 
 /**
  * Default load configuration values.
+ * Per-member settings are stored on TeamMember in the datastore.
  */
 export const DEFAULT_LOAD_CONFIG: LoadConfig = {
   schemaVersion: 1,
@@ -86,10 +85,6 @@ export const DEFAULT_LOAD_CONFIG: LoadConfig = {
       { name: 'Daily 2', hoursPerWeek: 0.5, enabled: true },
       { name: 'Daily 3', hoursPerWeek: 0.5, enabled: true },
     ],
-    memberOverrides: {},
-  },
-  members: {
-    partTimeFactors: {},
   },
   sizes: {
     thresholds: [

@@ -256,8 +256,7 @@ export class LoadCalculationService {
   validateData(
     topics: Topic[],
     members: TeamMember[],
-    tags: Tag[],
-    config: LoadConfig | null
+    tags: Tag[]
   ): LoadValidationWarning[] {
     const warnings: LoadValidationWarning[] = [];
     const membersMap = new Map(members.map((m) => [m.id, m]));
@@ -310,30 +309,6 @@ export class LoadCalculationService {
       }
     }
 
-    // Check config member references
-    if (config) {
-      for (const memberId of Object.keys(config.members.partTimeFactors)) {
-        if (!membersMap.has(memberId)) {
-          warnings.push({
-            type: 'config-warning',
-            message: `partTimeFactors references unknown member ID: ${memberId}`,
-            entityId: memberId,
-            entityName: 'partTimeFactors',
-          });
-        }
-      }
-      for (const memberId of Object.keys(config.baseLoad.memberOverrides)) {
-        if (!membersMap.has(memberId)) {
-          warnings.push({
-            type: 'config-warning',
-            message: `baseLoad.memberOverrides references unknown member ID: ${memberId}`,
-            entityId: memberId,
-            entityName: 'baseLoad.memberOverrides',
-          });
-        }
-      }
-    }
-
     return warnings;
   }
 
@@ -346,7 +321,6 @@ export class LoadCalculationService {
       capacity: config.capacity,
       topicComplexity: config.topicComplexity,
       baseLoad: config.baseLoad,
-      members: config.members,
       sizes: config.sizes,
     });
   }
@@ -398,13 +372,9 @@ export class LoadCalculationService {
       const roles = this.getMemberRoles(member, topics);
       const activityMultiplier = this.getActivityMultiplier(member);
 
-      // Get member-specific config values
-      const partTimeFactor = loadConfig
-        ? this.loadConfigService.getPartTimeFactor(loadConfig, member.id)
-        : 1.0;
-      const baseLoadHoursPerWeek = loadConfig
-        ? this.loadConfigService.getMemberBaseLoad(loadConfig, member.id)
-        : defaultBaseLoad;
+      // Get member-specific config values from member data (not config file)
+      const partTimeFactor = member.partTimeFactor ?? 1.0;
+      const baseLoadHoursPerWeek = member.baseLoadOverride ?? defaultBaseLoad;
       const effectiveCapacityHoursPerWeek = effectiveFullTimeCapacity * partTimeFactor;
 
       const topicContributions: TopicContribution[] = roles.map((role) => {
@@ -468,7 +438,7 @@ export class LoadCalculationService {
     }
 
     // Validate data and collect warnings
-    const warnings = this.validateData(topics, members, tags, loadConfig);
+    const warnings = this.validateData(topics, members, tags);
 
     const result: LoadCalculationResult = {
       memberLoads,

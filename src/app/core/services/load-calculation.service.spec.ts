@@ -14,12 +14,7 @@ import { TeamMember, Topic, Tag, LoadConfig, DEFAULT_LOAD_CONFIG } from '../mode
 const mockLoadConfigService = {
   getConfig: vi.fn(() => null),
   config$: { subscribe: vi.fn() },
-  getPartTimeFactor: vi.fn((config: LoadConfig, memberId: string) => 
-    config?.members?.partTimeFactors?.[memberId] ?? 1.0
-  ),
-  getMemberBaseLoad: vi.fn((config: LoadConfig, memberId: string) => {
-    const override = config?.baseLoad?.memberOverrides?.[memberId];
-    if (override) return override.hoursPerWeek;
+  getDefaultBaseLoad: vi.fn((config: LoadConfig) => {
     return config?.baseLoad?.components
       ?.filter((c: { enabled: boolean }) => c.enabled)
       ?.reduce((sum: number, c: { hoursPerWeek: number }) => sum + c.hoursPerWeek, 0) ?? 3.5;
@@ -351,21 +346,21 @@ describe('LoadCalculationService', () => {
   describe('validateData', () => {
     it('should warn about NaN tagWeight', () => {
       const tags = [createTag({ name: 'bad-tag', tagWeight: NaN })];
-      const warnings = service.validateData([], [], tags, null);
+      const warnings = service.validateData([], [], tags);
       expect(warnings).toHaveLength(1);
       expect(warnings[0].type).toBe('tagWeight-invalid');
     });
 
     it('should warn about Infinity tagWeight', () => {
       const tags = [createTag({ name: 'bad-tag', tagWeight: Infinity })];
-      const warnings = service.validateData([], [], tags, null);
+      const warnings = service.validateData([], [], tags);
       expect(warnings).toHaveLength(1);
       expect(warnings[0].type).toBe('tagWeight-invalid');
     });
 
     it('should warn about extreme tagWeight values', () => {
       const tags = [createTag({ name: 'extreme-tag', tagWeight: 5.0 })];
-      const warnings = service.validateData([], [], tags, null);
+      const warnings = service.validateData([], [], tags);
       expect(warnings).toHaveLength(1);
       expect(warnings[0].type).toBe('tagWeight-extreme');
     });
@@ -375,7 +370,7 @@ describe('LoadCalculationService', () => {
         createTag({ name: 'tag1', tagWeight: 2.0 }),
         createTag({ name: 'tag2', tagWeight: -1.0 }),
       ];
-      const warnings = service.validateData([], [], tags, null);
+      const warnings = service.validateData([], [], tags);
       expect(warnings).toHaveLength(0);
     });
 
@@ -386,7 +381,7 @@ describe('LoadCalculationService', () => {
           raci: { r1MemberId: '', cMemberIds: [], iMemberIds: [] },
         }),
       ];
-      const warnings = service.validateData(topics, [], [], null);
+      const warnings = service.validateData(topics, [], []);
       expect(warnings).toHaveLength(1);
       expect(warnings[0].type).toBe('topic-no-r1');
     });
@@ -399,7 +394,7 @@ describe('LoadCalculationService', () => {
           raci: { r1MemberId: 'inactive-member', cMemberIds: [], iMemberIds: [] },
         }),
       ];
-      const warnings = service.validateData(topics, members, [], null);
+      const warnings = service.validateData(topics, members, []);
       expect(warnings).toHaveLength(1);
       expect(warnings[0].type).toBe('topic-inactive-r1');
     });

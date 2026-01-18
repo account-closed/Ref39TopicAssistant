@@ -156,6 +156,19 @@ h1 {
   i {
     flex-shrink: 0;
   }
+
+  a.link {
+    color: var(--p-primary-color);
+    text-decoration: underline;
+    
+    &:hover {
+      color: var(--p-primary-700);
+    }
+  }
+}
+
+.info-section {
+  padding: 0.5rem 0;
 }
 
 .total-row {

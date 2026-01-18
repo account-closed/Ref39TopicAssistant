@@ -206,7 +206,7 @@
         </div>
       </p-card>
 
-      <!-- Member Settings -->
+      <!-- Info about Member Settings -->
       <p-card styleClass="config-card full-width">
         <ng-template #header>
           <div class="card-header">
@@ -214,63 +214,13 @@
           </div>
         </ng-template>
         
-        <div class="member-settings-section">
+        <div class="info-section">
           <p class="info-text">
             <i class="pi pi-info-circle"></i>
-            Teilzeitfaktor (1.0 = Vollzeit, 0.8 = 80%). Basis-Überschreibung ersetzt die Standard-Basis-Auslastung.
+            Individuelle Einstellungen wie <strong>Teilzeitfaktor</strong> und <strong>Basislast-Überschreibung</strong>
+            werden direkt beim Teammitglied unter 
+            <a routerLink="/members" class="link">Teammitglieder verwalten</a> konfiguriert.
           </p>
-          
-          @if (members().length === 0) {
-            <p class="empty-state">Keine Teammitglieder vorhanden</p>
-          } @else {
-            <p-table [value]="members()" styleClass="p-datatable-sm p-datatable-striped">
-              <ng-template pTemplate="header">
-                <tr>
-                  <th>Mitglied</th>
-                  <th pTooltip="Teilzeitfaktor (1.0 = 100%, 0.5 = 50%)" tooltipPosition="top">Teilzeit</th>
-                  <th>Effektive Kapazität</th>
-                  <th pTooltip="Optionale Überschreibung der Basis-Auslastung" tooltipPosition="top">Basis-Überschreibung</th>
-                </tr>
-              </ng-template>
-              <ng-template pTemplate="body" let-member>
-                <tr [class.inactive-member]="!member.active">
-                  <td>
-                    {{ member.displayName }}
-                    @if (!member.active) {
-                      <span class="inactive-badge">Inaktiv</span>
-                    }
-                  </td>
-                  <td>
-                    <p-inputNumber 
-                      [ngModel]="getMemberPartTimeFactor(member.id)"
-                      (ngModelChange)="setMemberPartTimeFactor(member.id, $event)"
-                      [min]="0.1"
-                      [max]="1.0"
-                      [step]="0.1"
-                      [minFractionDigits]="1"
-                      [maxFractionDigits]="2"
-                      [showButtons]="true"></p-inputNumber>
-                    <span class="percent-badge">{{ formatPercent(getMemberPartTimeFactor(member.id)) }}</span>
-                  </td>
-                  <td class="capacity-cell">
-                    {{ getMemberEffectiveCapacity(member.id).toFixed(1) }} h/Wo
-                  </td>
-                  <td>
-                    <p-inputNumber 
-                      [ngModel]="getMemberBaseLoadOverride(member.id)"
-                      (ngModelChange)="setMemberBaseLoadOverride(member.id, $event)"
-                      [min]="0"
-                      [max]="20"
-                      [step]="0.5"
-                      [minFractionDigits]="1"
-                      suffix=" h"
-                      placeholder="Standard"
-                      [showButtons]="true"></p-inputNumber>
-                  </td>
-                </tr>
-              </ng-template>
-            </p-table>
-          }
         </div>
       </p-card>
     </div>

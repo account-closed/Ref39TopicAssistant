@@ -218,20 +218,13 @@ export class MembersComponent implements OnInit, OnDestroy {
     };
     this.submitted = false;
     this.editMode = true;
-    // Load load config values for this member
-    if (this.loadConfig) {
-      const partTimeFactor = this.loadConfig.members.partTimeFactors[member.id] ?? 1.0;
-      this.memberPartTimePercent = Math.round(partTimeFactor * 100);
-      const override = this.loadConfig.baseLoad.memberOverrides[member.id];
-      if (override) {
-        this.hasBaseLoadOverride = true;
-        this.memberBaseLoadOverride = override.hoursPerWeek;
-      } else {
-        this.hasBaseLoadOverride = false;
-        this.memberBaseLoadOverride = null;
-      }
+    // Load load config values from member data
+    const partTimeFactor = member.partTimeFactor ?? 1.0;
+    this.memberPartTimePercent = Math.round(partTimeFactor * 100);
+    if (member.baseLoadOverride !== undefined && member.baseLoadOverride !== null) {
+      this.hasBaseLoadOverride = true;
+      this.memberBaseLoadOverride = member.baseLoadOverride;
     } else {
-      this.memberPartTimePercent = 100;
       this.hasBaseLoadOverride = false;
       this.memberBaseLoadOverride = null;
     }
@@ -253,22 +246,32 @@ export class MembersComponent implements OnInit, OnDestroy {
     this.saving = true;
 
     try {
+      // Apply load config values to member
+      const partTimeFactor = Math.round(this.memberPartTimePercent) / 100;
+      if (partTimeFactor < 1.0) {
+        this.member.partTimeFactor = partTimeFactor;
+      } else {
+        // Remove if 100% (default)
+        delete this.member.partTimeFactor;
+      }
+
+      if (this.hasBaseLoadOverride && this.memberBaseLoadOverride !== null) {
+        this.member.baseLoadOverride = this.memberBaseLoadOverride;
+      } else {
+        // Remove override if disabled
+        delete this.member.baseLoadOverride;
+      }
+
       let success: boolean;
-      let memberId: string;
       if (this.editMode) {
-        memberId = this.member.id;
         success = await this.backend.updateMember(this.member.id, this.member);
       } else {
-        memberId = this.backend.generateUUID();
-        this.member.id = memberId;
+        this.member.id = this.backend.generateUUID();
         this.member.updatedAt = new Date().toISOString();
         success = await this.backend.addMember(this.member);
       }
 
       if (success) {
-        // Save load config settings for this member
-        await this.saveLoadConfigForMember(memberId);
-        
         this.messageService.add({
           severity: 'success',
           summary: 'Erfolgreich',
@@ -464,41 +467,6 @@ export class MembersComponent implements OnInit, OnDestroy {
     if (!isoString) return '';
     const date = new Date(isoString);
     return date.toLocaleDateString('de-DE');
-  }
-
-  /**
-   * Save load config settings (part-time factor and base load override) for a member.
-   */
-  private async saveLoadConfigForMember(memberId: string): Promise<void> {
-    if (!this.loadConfig) {
-      return;
-    }
-
-    // Create a copy of the config to update
-    const updatedConfig: LoadConfig = JSON.parse(JSON.stringify(this.loadConfig));
-
-    // Update part-time factor
-    // Round to 2 decimal places for precision
-    const partTimeFactor = Math.round(this.memberPartTimePercent) / 100;
-    if (this.memberPartTimePercent < 100) {
-      updatedConfig.members.partTimeFactors[memberId] = partTimeFactor;
-    } else {
-      // Remove if 100% (default)
-      delete updatedConfig.members.partTimeFactors[memberId];
-    }
-
-    // Update base load override
-    if (this.hasBaseLoadOverride && this.memberBaseLoadOverride !== null) {
-      updatedConfig.baseLoad.memberOverrides[memberId] = {
-        hoursPerWeek: this.memberBaseLoadOverride
-      };
-    } else {
-      // Remove override if disabled
-      delete updatedConfig.baseLoad.memberOverrides[memberId];
-    }
-
-    // Save the updated config
-    await this.loadConfigService.saveConfig(updatedConfig);
   }
 
   /**

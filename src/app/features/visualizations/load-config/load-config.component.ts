@@ -22,7 +22,7 @@ import { Subscription } from 'rxjs';
 import { BackendService } from '../../../core/services/backend.service';
 import { LoadConfigService, MAX_OVERHEAD_FACTOR } from '../../../core/services/load-config.service';
 import { LoadCalculationService } from '../../../core/services/load-calculation.service';
-import { LoadConfig, DEFAULT_LOAD_CONFIG, BaseLoadComponent, Datastore, TeamMember } from '../../../core/models';
+import { LoadConfig, DEFAULT_LOAD_CONFIG, BaseLoadComponent } from '../../../core/models';
 
 @Component({
   selector: 'app-load-config',
@@ -51,7 +51,6 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
 
   protected readonly isConnected = signal(false);
   protected readonly config = signal<LoadConfig | null>(null);
-  protected readonly members = signal<TeamMember[]>([]);
   protected readonly isSaving = signal(false);
 
   // Constants for template
@@ -65,10 +64,6 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
   protected alpha = signal(1.0);
   protected beta = signal(0.25);
   protected baseComponents = signal<BaseLoadComponent[]>([]);
-
-  // Member-specific settings
-  protected memberPartTimeFactors = signal<Record<string, number>>({});
-  protected memberBaseLoadOverrides = signal<Record<string, number>>({});
 
   protected readonly effectiveCapacity = computed(() => {
     return this.contractHours() * (1 - this.overheadFactor());
@@ -97,14 +92,6 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
         }
       })
     );
-
-    this.subscriptions.push(
-      this.backend.datastore$.subscribe((datastore: Datastore | null) => {
-        if (datastore) {
-          this.members.set(datastore.members || []);
-        }
-      })
-    );
   }
 
   ngOnDestroy(): void {
@@ -117,14 +104,6 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
     this.alpha.set(config.topicComplexity.alpha);
     this.beta.set(config.topicComplexity.beta);
     this.baseComponents.set([...config.baseLoad.components]);
-    this.memberPartTimeFactors.set({ ...config.members.partTimeFactors });
-    
-    // Convert member overrides to simple record
-    const overrides: Record<string, number> = {};
-    for (const [memberId, override] of Object.entries(config.baseLoad.memberOverrides)) {
-      overrides[memberId] = override.hoursPerWeek;
-    }
-    this.memberBaseLoadOverrides.set(overrides);
   }
 
   protected async saveConfig(): Promise<void> {
@@ -134,14 +113,6 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
     this.isSaving.set(true);
 
     try {
-      // Build member overrides
-      const memberOverrides: Record<string, { hoursPerWeek: number }> = {};
-      for (const [memberId, hours] of Object.entries(this.memberBaseLoadOverrides())) {
-        if (hours !== undefined && hours !== null) {
-          memberOverrides[memberId] = { hoursPerWeek: hours };
-        }
-      }
-
       const updatedConfig: LoadConfig = {
         ...currentConfig,
         capacity: {
@@ -153,13 +124,8 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
           beta: this.beta(),
         },
         baseLoad: {
-          ...currentConfig.baseLoad,
           defaultHoursPerWeek: this.totalBaseLoad(),
           components: this.baseComponents(),
-          memberOverrides,
-        },
-        members: {
-          partTimeFactors: this.memberPartTimeFactors(),
         },
       };
 
@@ -220,42 +186,5 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
     const components = [...this.baseComponents()];
     components[index] = { ...components[index], name };
     this.baseComponents.set(components);
-  }
-
-  protected getMemberPartTimeFactor(memberId: string): number {
-    return this.memberPartTimeFactors()[memberId] ?? 1.0;
-  }
-
-  protected setMemberPartTimeFactor(memberId: string, factor: number | null): void {
-    const factors = { ...this.memberPartTimeFactors() };
-    if (factor === null || factor === 1.0) {
-      delete factors[memberId];
-    } else {
-      factors[memberId] = factor;
-    }
-    this.memberPartTimeFactors.set(factors);
-  }
-
-  protected getMemberBaseLoadOverride(memberId: string): number | null {
-    return this.memberBaseLoadOverrides()[memberId] ?? null;
-  }
-
-  protected setMemberBaseLoadOverride(memberId: string, hours: number | null): void {
-    const overrides = { ...this.memberBaseLoadOverrides() };
-    if (hours === null) {
-      delete overrides[memberId];
-    } else {
-      overrides[memberId] = hours;
-    }
-    this.memberBaseLoadOverrides.set(overrides);
-  }
-
-  protected formatPercent(value: number): string {
-    return `${Math.round(value * 100)}%`;
-  }
-
-  protected getMemberEffectiveCapacity(memberId: string): number {
-    const factor = this.getMemberPartTimeFactor(memberId);
-    return this.effectiveCapacity() * factor;
   }
 }

@@ -229,21 +229,6 @@ export class LoadConfigService {
       }
     }
 
-    // Members
-    const members = c['members'] as Record<string, unknown> | undefined;
-    if (!members || typeof members !== 'object') {
-      errors.push('Missing members section');
-    } else {
-      const partTimeFactors = members['partTimeFactors'] as Record<string, unknown> | undefined;
-      if (partTimeFactors && typeof partTimeFactors === 'object') {
-        for (const [memberId, factor] of Object.entries(partTimeFactors)) {
-          if (typeof factor !== 'number' || factor <= 0 || factor > 1.0) {
-            errors.push(`partTimeFactor for ${memberId} must be > 0 and <= 1.0`);
-          }
-        }
-      }
-    }
-
     // Sizes
     const sizes = c['sizes'] as Record<string, unknown> | undefined;
     if (!sizes || typeof sizes !== 'object') {
@@ -265,30 +250,9 @@ export class LoadConfigService {
   }
 
   /**
-   * Get part-time factor for a member (default 1.0 if not specified).
+   * Get the default base load from enabled components.
    */
-  getPartTimeFactor(config: LoadConfig, memberId: string): number {
-    return config.members.partTimeFactors[memberId] ?? 1.0;
-  }
-
-  /**
-   * Calculate effective capacity for a specific member (hours/week).
-   */
-  calculateMemberEffectiveCapacity(config: LoadConfig, memberId: string): number {
-    const fullTimeCapacity = this.calculateEffectiveFullTimeCapacity(config);
-    const partTimeFactor = this.getPartTimeFactor(config, memberId);
-    return fullTimeCapacity * partTimeFactor;
-  }
-
-  /**
-   * Get base load for a member (uses override if exists, else default).
-   */
-  getMemberBaseLoad(config: LoadConfig, memberId: string): number {
-    const override = config.baseLoad.memberOverrides[memberId];
-    if (override) {
-      return override.hoursPerWeek;
-    }
-    // Calculate from enabled components
+  getDefaultBaseLoad(config: LoadConfig): number {
     return config.baseLoad.components
       .filter((c) => c.enabled)
       .reduce((sum, c) => sum + c.hoursPerWeek, 0);

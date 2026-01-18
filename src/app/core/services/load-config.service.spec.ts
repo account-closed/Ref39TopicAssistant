@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 import { LoadConfigService, MAX_OVERHEAD_FACTOR } from './load-config.service';
 import { FileConnectionService } from './file-connection.service';
-import { LoadConfig, DEFAULT_LOAD_CONFIG, SizeLabel } from '../models';
+import { LoadConfig, DEFAULT_LOAD_CONFIG } from '../models';
 
 // Mock FileConnectionService
 const mockFileConnectionService = {
@@ -68,24 +68,11 @@ describe('LoadConfigService', () => {
       expect(result.errors).toContainEqual(expect.stringContaining('alpha'));
     });
 
-    it('should reject partTimeFactor > 1.0', () => {
-      const config = { ...mockConfig, members: { partTimeFactors: { 'member-1': 1.5 } } };
+    it('should reject negative beta', () => {
+      const config = { ...mockConfig, topicComplexity: { ...mockConfig.topicComplexity, beta: -1 } };
       const result = service.validateConfig(config);
       expect(result.isValid).toBe(false);
-      expect(result.errors).toContainEqual(expect.stringContaining('partTimeFactor'));
-    });
-
-    it('should reject partTimeFactor <= 0', () => {
-      const config = { ...mockConfig, members: { partTimeFactors: { 'member-1': 0 } } };
-      const result = service.validateConfig(config);
-      expect(result.isValid).toBe(false);
-      expect(result.errors).toContainEqual(expect.stringContaining('partTimeFactor'));
-    });
-
-    it('should accept valid partTimeFactor', () => {
-      const config = { ...mockConfig, members: { partTimeFactors: { 'member-1': 0.8 } } };
-      const result = service.validateConfig(config);
-      expect(result.isValid).toBe(true);
+      expect(result.errors).toContainEqual(expect.stringContaining('beta'));
     });
   });
 
@@ -105,49 +92,24 @@ describe('LoadConfigService', () => {
     });
   });
 
-  describe('getPartTimeFactor', () => {
-    it('should return 1.0 for unknown member', () => {
-      expect(service.getPartTimeFactor(mockConfig, 'unknown-member')).toBe(1.0);
-    });
-
-    it('should return configured factor', () => {
-      mockConfig.members.partTimeFactors['member-1'] = 0.8;
-      expect(service.getPartTimeFactor(mockConfig, 'member-1')).toBe(0.8);
-    });
-  });
-
-  describe('calculateMemberEffectiveCapacity', () => {
-    it('should return full capacity for full-time member', () => {
-      const result = service.calculateMemberEffectiveCapacity(mockConfig, 'unknown');
-      expect(result).toBeCloseTo(26.65, 2);
-    });
-
-    it('should return reduced capacity for part-time member', () => {
-      mockConfig.members.partTimeFactors['part-time'] = 0.5;
-      const result = service.calculateMemberEffectiveCapacity(mockConfig, 'part-time');
-      // 26.65 * 0.5 = 13.325
-      expect(result).toBeCloseTo(13.325, 2);
-    });
-  });
-
-  describe('getMemberBaseLoad', () => {
-    it('should return sum of enabled components for unknown member', () => {
+  describe('getDefaultBaseLoad', () => {
+    it('should return sum of enabled components', () => {
       // JF (2.0) + Daily 1 (0.5) + Daily 2 (0.5) + Daily 3 (0.5) = 3.5
-      const result = service.getMemberBaseLoad(mockConfig, 'unknown');
+      const result = service.getDefaultBaseLoad(mockConfig);
       expect(result).toBe(3.5);
-    });
-
-    it('should return override value if set', () => {
-      mockConfig.baseLoad.memberOverrides['member-1'] = { hoursPerWeek: 5.0 };
-      const result = service.getMemberBaseLoad(mockConfig, 'member-1');
-      expect(result).toBe(5.0);
     });
 
     it('should exclude disabled components', () => {
       mockConfig.baseLoad.components[0].enabled = false; // Disable JF
-      const result = service.getMemberBaseLoad(mockConfig, 'unknown');
+      const result = service.getDefaultBaseLoad(mockConfig);
       // Daily 1 (0.5) + Daily 2 (0.5) + Daily 3 (0.5) = 1.5
       expect(result).toBe(1.5);
+    });
+
+    it('should return 0 when all components disabled', () => {
+      mockConfig.baseLoad.components.forEach(c => c.enabled = false);
+      const result = service.getDefaultBaseLoad(mockConfig);
+      expect(result).toBe(0);
     });
   });
 
