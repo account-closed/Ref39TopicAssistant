@@ -2,10 +2,9 @@ import { Component, signal, OnInit, OnDestroy, inject, DestroyRef, ChangeDetecti
 import { RouterOutlet, Router } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Button } from 'primeng/button';
-import { Menu } from 'primeng/menu';
-import { MenuItem } from 'primeng/api';
 import { Toast } from 'primeng/toast';
 import { ConfirmDialog } from 'primeng/confirmdialog';
+import { Tooltip } from 'primeng/tooltip';
 import { StatusBarComponent } from './shared/components/status-bar/status-bar.component';
 import { UserSelectorDialogComponent } from './shared/components/user-selector-dialog/user-selector-dialog.component';
 import { HeaderUserSelectorComponent } from './shared/components/header-user-selector/header-user-selector.component';
@@ -15,14 +14,22 @@ import { SaveButtonComponent } from './shared/components/save-button/save-button
 import { BackendService } from './core/services/backend.service';
 import { IndexMonitorService } from './core/services/index-monitor.service';
 
+interface NavItem {
+  id: string;
+  label: string;
+  icon: string;
+  route: string;
+  disabled?: boolean;
+}
+
 @Component({
   selector: 'app-root',
   imports: [
     RouterOutlet, 
     Button, 
-    Menu,
     Toast,
     ConfirmDialog,
+    Tooltip,
     StatusBarComponent,
     UserSelectorDialogComponent,
     HeaderUserSelectorComponent,
@@ -42,11 +49,11 @@ export class AppComponent implements OnInit, OnDestroy {
 
   protected readonly title = signal('RACI Topic Finder');
   protected sidebarVisible = signal(true);
-  protected menuItems = signal<MenuItem[]>([]);
+  protected menuItems = signal<NavItem[]>([]);
   protected isConnected = signal(false);
 
   private stopIndexMonitor: (() => void) | null = null;
-  private allMenuItems: MenuItem[] = [];
+  private allMenuItems: NavItem[] = [];
 
   ngOnInit(): void {
     // Define all menu items with IDs for robust filtering
@@ -55,55 +62,55 @@ export class AppComponent implements OnInit, OnDestroy {
         id: 'search',
         label: 'Suche',
         icon: 'pi pi-search',
-        command: () => this.router.navigate(['/search'])
+        route: '/search'
       },
       {
         id: 'quick-assignment',
         label: 'Schnellzuordnung',
         icon: 'pi pi-bolt',
-        command: () => this.router.navigate(['/quick-assignment'])
+        route: '/quick-assignment'
       },
       {
         id: 'topics',
         label: 'Themen verwalten',
         icon: 'pi pi-list',
-        command: () => this.router.navigate(['/topics'])
+        route: '/topics'
       },
       {
         id: 'members',
         label: 'Teammitglieder verwalten',
         icon: 'pi pi-users',
-        command: () => this.router.navigate(['/members'])
+        route: '/members'
       },
       {
         id: 'topics-by-member',
         label: 'Themen nach Teammitglied',
         icon: 'pi pi-user',
-        command: () => this.router.navigate(['/topics-by-member'])
+        route: '/topics-by-member'
       },
       {
         id: 'tags',
         label: 'Tags verwalten',
         icon: 'pi pi-tags',
-        command: () => this.router.navigate(['/tags'])
+        route: '/tags'
       },
       {
         id: 'visualizations',
         label: 'Visualisierungen',
         icon: 'pi pi-chart-bar',
-        command: () => this.router.navigate(['/visualizations'])
+        route: '/visualizations'
       },
       {
         id: 'visualizations-load',
         label: 'Auslastung & Verantwortung',
         icon: 'pi pi-chart-line',
-        command: () => this.router.navigate(['/visualizations/load'])
+        route: '/visualizations/load'
       },
       {
         id: 'settings',
         label: 'Einstellungen',
         icon: 'pi pi-cog',
-        command: () => this.router.navigate(['/settings'])
+        route: '/settings'
       }
     ];
 
@@ -134,15 +141,14 @@ export class AppComponent implements OnInit, OnDestroy {
   private readonly ALWAYS_VISIBLE_MENU_IDS = ['search', 'settings'];
 
   private updateMenuItems(): void {
-    if (this.isConnected()) {
-      // Show all menu items when connected
-      this.menuItems.set([...this.allMenuItems]);
-    } else {
-      // Show only search (welcome screen) and settings when not connected
-      this.menuItems.set(
-        this.allMenuItems.filter(item => this.ALWAYS_VISIBLE_MENU_IDS.includes(item.id || ''))
-      );
-    }
+    const connected = this.isConnected();
+    // Show all menu items but mark non-accessible ones as disabled
+    this.menuItems.set(
+      this.allMenuItems.map(item => ({
+        ...item,
+        disabled: !connected && !this.ALWAYS_VISIBLE_MENU_IDS.includes(item.id)
+      }))
+    );
   }
 
   ngOnDestroy(): void {
@@ -153,5 +159,15 @@ export class AppComponent implements OnInit, OnDestroy {
 
   toggleSidebar(): void {
     this.sidebarVisible.update(v => !v);
+  }
+
+  isActiveRoute(route: string): boolean {
+    return this.router.url === route;
+  }
+
+  onNavigate(item: NavItem): void {
+    if (!item.disabled) {
+      this.router.navigate([item.route]);
+    }
   }
 }
