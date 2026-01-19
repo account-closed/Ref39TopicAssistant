@@ -19,6 +19,7 @@ import { Toolbar } from 'primeng/toolbar';
 import { IconField } from 'primeng/iconfield';
 import { InputIcon } from 'primeng/inputicon';
 import { Rating } from 'primeng/rating';
+import { Tooltip } from 'primeng/tooltip';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
@@ -62,6 +63,7 @@ interface TopicOption {
     IconField,
     InputIcon,
     Rating,
+    Tooltip,
     PageWrapperComponent
   ],
   providers: [MessageService, ConfirmationService],
@@ -703,5 +705,41 @@ export class TopicsComponent implements OnInit, OnDestroy {
    */
   onIrregularEstimationChange(): void {
     this.updateP80Calculation();
+  }
+
+  /**
+   * Get frequency-related errors for inline display
+   */
+  getFrequencyErrors(): string[] {
+    if (!this.irregularValidation?.errors) return [];
+    return this.irregularValidation.errors.filter(e => 
+      e.toLowerCase().includes('häufigkeit') || e.toLowerCase().includes('frequency')
+    );
+  }
+
+  /**
+   * Get effort-related errors for inline display
+   */
+  getEffortErrors(): string[] {
+    if (!this.irregularValidation?.errors) return [];
+    return this.irregularValidation.errors.filter(e => 
+      e.toLowerCase().includes('aufwand') || e.toLowerCase().includes('effort')
+    );
+  }
+
+  /**
+   * Get tooltip for variance class dropdown
+   */
+  getVarianceTooltip(): string {
+    const option = this.varianceClassOptions.find(o => o.value === this.topic.irregularEstimation?.varianceClass);
+    return option?.description || 'Wie stark variiert die Aufgabe?';
+  }
+
+  /**
+   * Get tooltip for wave class dropdown
+   */
+  getWaveTooltip(): string {
+    const option = this.waveClassOptions.find(o => o.value === this.topic.irregularEstimation?.waveClass);
+    return option?.description || 'Wie stark clustern sich die Ereignisse?';
   }
 }
