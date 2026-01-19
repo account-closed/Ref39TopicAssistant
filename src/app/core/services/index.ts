@@ -16,3 +16,4 @@ export * from './persistence.service';
 export * from './write-queue.service';
 export * from './load-config.service';
 export * from './load-calculation.service';
+export * from './irregular-task.service';

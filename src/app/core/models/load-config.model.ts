@@ -17,9 +17,20 @@ export interface BaseLoadComponent {
  * Size threshold definition.
  */
 export interface SizeThreshold {
-  name: 'XS' | 'S' | 'M' | 'L';
+  name: 'XS' | 'S' | 'M' | 'L' | 'XL';
   min: number;
   max: number;
+}
+
+/**
+ * Role weight configuration for RACI roles.
+ */
+export interface RoleWeights {
+  R1: number;
+  R2: number;
+  R3: number;
+  C: number;
+  I: number;
 }
 
 /**
@@ -52,6 +63,7 @@ export interface LoadConfig {
   sizes: {
     thresholds: SizeThreshold[];
   };
+  roleWeights: RoleWeights;
 }
 
 /**
@@ -86,7 +98,15 @@ export const DEFAULT_LOAD_CONFIG: LoadConfig = {
       { name: 'S', min: 2.0, max: 8.0 },
       { name: 'M', min: 8.0, max: 14.0 },
       { name: 'L', min: 14.0, max: 20.0 },
+      { name: 'XL', min: 20.0, max: Infinity },
     ],
+  },
+  roleWeights: {
+    R1: 3.0,
+    R2: 2.0,
+    R3: 1.5,
+    C: 1.0,
+    I: 0.5,
   },
 };
 

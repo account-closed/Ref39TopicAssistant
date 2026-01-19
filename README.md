@@ -16,6 +16,7 @@ A browser-only Angular 21 + PrimeNG 21 application for finding responsible perso
 - **RACI model**: Assign Responsible (R1/R2/R3), Consulted (C), and Informed (I) roles
 - **Real-time updates**: Automatic refresh every 10 seconds when other users make changes
 - **Backend abstraction**: Easy switch between File System and REST API backends
+- **Irregular task planning**: P80-based estimation for tasks with variable frequency and effort
 
 ## Technology Stack
 
@@ -261,6 +262,77 @@ FlexSearch was chosen for its:
 - Support for custom text normalization (German umlauts)
 - Small bundle size
 - Active maintenance
+
+## Irregular Tasks – How Planning Share Is Calculated
+
+### Regular vs. Irregular Tasks
+
+- **Regular tasks**: Have a constant, predictable weekly workload that doesn't vary significantly
+- **Irregular tasks**: Occur at unpredictable intervals with varying effort (e.g., incident responses, ad-hoc projects)
+
+### P80 Planning Explained
+
+The application uses **P80 estimation** to convert irregular tasks into stable weekly planning shares:
+
+- **P80** means the 80th percentile estimate – values that won't be exceeded 80% of the time
+- This provides a realistic planning buffer without excessive over-provisioning
+- Formula: `P80 = Typical + k × (Max - Typical)` where k depends on variance class
+
+### Planning Load vs. Peak Load
+
+| Metric | Purpose | Used In |
+|--------|---------|---------|
+| **Weekly Planning Hours** | Regular capacity allocation | Member workload calculation |
+| **Weekly Peak Hours** | Risk assessment | Overload analysis only |
+
+- **Planning hours** are automatically added to member workload
+- **Peak hours** show worst-case scenarios but are NOT added to total load
+
+### Variance Classes (L0–L4)
+
+| Class | Description | P80 Weight (k) |
+|-------|-------------|----------------|
+| L0 | Very stable, predictable | 0.40 |
+| L1 | Low variability | 0.50 |
+| L2 | Medium variability (default) | 0.60 |
+| L3 | High variability | 0.75 |
+| L4 | Extreme uncertainty | 0.90 |
+
+Use higher variance classes when:
+- Task duration varies significantly
+- Historical data shows wide spread
+- External dependencies cause unpredictability
+
+### Wave Classes (W0–W4)
+
+| Class | Description | Peak Multiplier (w) |
+|-------|-------------|---------------------|
+| W0 | Evenly spread throughout year | 1.0× |
+| W1 | Slightly clustered | 1.5× |
+| W2 | Clustered (default) | 2.0× |
+| W3 | Strongly clustered | 3.0× |
+| W4 | Extreme bursts | 4.0× |
+
+Use higher wave classes when:
+- Events tend to cluster (e.g., end-of-quarter, holidays)
+- Multiple instances can occur simultaneously
+- Peak periods are significantly different from average
+
+### Example Calculation
+
+**Scenario**: Support incidents
+- Frequency: 5–10–20 per year (min/typical/max)
+- Effort: 2–4–8 hours per incident (min/typical/max)
+- Variance: L2 (medium)
+- Wave: W2 (clustered)
+
+**Calculation**:
+1. k = 0.60 (from L2)
+2. N_P80 = 10 + 0.60 × (20 - 10) = 16 events/year
+3. T_P80 = 4 + 0.60 × (8 - 4) = 6.4 hours/event
+4. Yearly hours = 16 × 6.4 = 102.4 hours
+5. Weekly planning = 102.4 / 52 = **1.97 h/week**
+6. Weekly peak = 2.0 × 1.97 = **3.94 h/week** (for risk analysis)
 
 ## License
 

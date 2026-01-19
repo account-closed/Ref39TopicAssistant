@@ -235,6 +235,19 @@ export class LoadConfigService {
       errors.push('Missing sizes section');
     }
 
+    // Role weights
+    const roleWeights = c['roleWeights'] as Record<string, unknown> | undefined;
+    if (!roleWeights || typeof roleWeights !== 'object') {
+      errors.push('Missing roleWeights section');
+    } else {
+      const requiredRoles = ['R1', 'R2', 'R3', 'C', 'I'];
+      for (const role of requiredRoles) {
+        if (typeof roleWeights[role] !== 'number' || (roleWeights[role] as number) < 0) {
+          errors.push(`roleWeights.${role} must be a non-negative number`);
+        }
+      }
+    }
+
     return {
       isValid: errors.length === 0,
       errors,
@@ -271,19 +284,14 @@ export class LoadConfigService {
       return 'XXL';
     }
 
-    // XL: load >= 20 but <= capacity
-    if (totalLoad >= 20) {
-      return 'XL';
-    }
-
-    // Check thresholds (XS, S, M, L)
+    // Check thresholds (XS, S, M, L, XL)
     for (const threshold of config.sizes.thresholds) {
       if (totalLoad >= threshold.min && totalLoad < threshold.max) {
         return threshold.name;
       }
     }
 
-    // Default to L if between last threshold and XL
-    return 'L';
+    // Default to XL if beyond all thresholds but within capacity
+    return 'XL';
   }
 }

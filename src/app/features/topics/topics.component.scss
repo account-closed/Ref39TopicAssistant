@@ -203,3 +203,258 @@
 :host ::ng-deep .p-datatable .p-datatable-header {
   padding: 1rem;
 }
+
+.estimation-row {
+  margin-bottom: 1rem;
+  
+  > label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+}
+
+.triple-input {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  
+  .field {
+    label {
+      font-size: 0.75rem;
+      color: var(--p-text-muted-color);
+    }
+  }
+}
+
+.summary-box {
+  background: var(--p-primary-50);
+  border: 1px solid var(--p-primary-200);
+  border-radius: var(--p-border-radius);
+  padding: 1rem;
+  margin-top: 1rem;
+  
+  strong {
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  
+  .result-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+  }
+  
+  .highlight {
+    font-weight: 600;
+    color: var(--p-primary-color);
+  }
+}
+
+.validation-warnings {
+  margin-top: 0.5rem;
+  
+  small {
+    display: block;
+    color: var(--p-orange-600);
+    margin-bottom: 0.25rem;
+    
+    i {
+      margin-right: 0.25rem;
+    }
+  }
+}
+
+.mt-1 {
+  margin-top: 0.5rem;
+}
+
+// Improved P80 section with better UX
+.p80-section {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  background: var(--p-surface-50);
+  border-radius: var(--p-border-radius);
+  border: 1px solid var(--p-surface-200);
+}
+
+.p80-title {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.95rem;
+  color: var(--p-text-color);
+}
+
+.p80-description {
+  display: block;
+  margin-bottom: 1rem;
+  color: var(--p-text-muted-color);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.p80-field-group {
+  margin-bottom: 0.75rem;
+}
+
+.p80-group-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  color: var(--p-text-color);
+}
+
+.p80-triple-input {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.p80-input-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  
+  label {
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
+    font-weight: normal;
+  }
+}
+
+.p80-computed-value {
+  font-size: 0.85rem;
+  color: var(--p-primary-color);
+  white-space: nowrap;
+  padding-bottom: 0.35rem;
+  
+  strong {
+    font-weight: 600;
+  }
+  
+  sub {
+    font-size: 0.7rem;
+  }
+}
+
+:host ::ng-deep .p80-input {
+  width: 75px;
+  
+  .p-inputnumber-input {
+    width: 75px;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.85rem;
+  }
+}
+
+.p80-class-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.p80-class-item {
+  flex: 1;
+  min-width: 150px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  
+  label {
+    font-size: 0.75rem;
+    color: var(--p-text-muted-color);
+  }
+}
+
+:host ::ng-deep .p80-select-full {
+  width: 100%;
+  
+  .p-select-label {
+    padding: 0.4rem 0.5rem;
+    font-size: 0.85rem;
+  }
+}
+
+.p80-results {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--p-surface-200);
+}
+
+.p80-intermediate {
+  margin-bottom: 0.75rem;
+}
+
+.p80-calc-step {
+  font-size: 0.85rem;
+  color: var(--p-text-muted-color);
+  
+  i {
+    margin-right: 0.25rem;
+  }
+  
+  strong {
+    color: var(--p-text-color);
+  }
+}
+
+.p80-final {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.p80-result-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.p80-result-label {
+  font-size: 0.8rem;
+  color: var(--p-text-muted-color);
+}
+
+.p80-result-value {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.p80-planning .p80-result-value {
+  color: var(--p-primary-color);
+}
+
+.p80-peak .p80-result-value {
+  color: var(--p-orange-500);
+}
+
+.p80-error {
+  display: block;
+  color: var(--p-red-600);
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  
+  i {
+    margin-right: 0.25rem;
+    font-size: 0.75rem;
+  }
+}
+
+.p80-warnings {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background: var(--p-orange-50);
+  border-radius: var(--p-border-radius);
+}
+
+.p80-warning {
+  display: block;
+  color: var(--p-orange-700);
+  font-size: 0.8rem;
+  
+  i {
+    margin-right: 0.25rem;
+    font-size: 0.75rem;
+  }
+}

@@ -327,10 +327,25 @@
                   [(ngModel)]="topic.priority"
                   [stars]="10">
                 </p-rating>
-                <small class="hint">Sternbewertung von 1 (niedrig) bis 10 (hoch)</small>
               </div>
 
               <div class="field">
+                <label for="taskCategory">Aufgabenkategorie</label>
+                <p-select 
+                  id="taskCategory"
+                  [options]="taskCategoryOptions"
+                  [(ngModel)]="topic.taskCategory"
+                  (onChange)="onTaskCategoryChange()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Kategorie wählen...">
+                </p-select>
+              </div>
+            </div>
+            
+            <!-- T-Shirt Size (only for REGULAR tasks) -->
+            @if (topic.taskCategory !== 'IRREGULAR') {
+              <div class="field mt-1">
                 <label for="size">Größe (T-Shirt)</label>
                 <p-select 
                   id="size"
@@ -341,9 +356,114 @@
                   placeholder="Größe wählen..."
                   [showClear]="true">
                 </p-select>
-                <small class="hint">Klassifizierung nach Aufwand (XXS bis XXL)</small>
               </div>
-            </div>
+            }
+            
+            <!-- Irregular Task Estimation (P80) - improved UX -->
+            @if (topic.taskCategory === 'IRREGULAR') {
+              <div class="p80-section">
+                <h5 class="p80-title">Irreguläre Aufgabenschätzung (P80)</h5>
+                <small class="p80-description">Geben Sie Min/Typisch/Max-Werte ein. Die P80-Schätzung berechnet den Planungswert auf Basis der 80. Perzentile.</small>
+                
+                <!-- Frequency inputs with better labels -->
+                <div class="p80-field-group">
+                  <label class="p80-group-label">Häufigkeit pro Jahr (Ereignisse)</label>
+                  <div class="p80-triple-input">
+                    <div class="p80-input-item">
+                      <label>Min</label>
+                      <p-inputNumber [(ngModel)]="topic.irregularEstimation!.frequencyMin" [min]="0" [step]="0.1" [minFractionDigits]="0" [maxFractionDigits]="1" (onInput)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
+                    </div>
+                    <div class="p80-input-item">
+                      <label>Typisch</label>
+                      <p-inputNumber [(ngModel)]="topic.irregularEstimation!.frequencyTypical" [min]="0" [step]="0.1" [minFractionDigits]="0" [maxFractionDigits]="1" (onInput)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
+                    </div>
+                    <div class="p80-input-item">
+                      <label>Max</label>
+                      <p-inputNumber [(ngModel)]="topic.irregularEstimation!.frequencyMax" [min]="0" [step]="0.1" [minFractionDigits]="0" [maxFractionDigits]="1" (onInput)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
+                    </div>
+                    <div class="p80-computed-value">
+                      → N<sub>P80</sub>: <strong>{{ calculatedP80Result?.frequencyP80?.toFixed(1) ?? '0.0' }}</strong>
+                    </div>
+                  </div>
+                  @if (irregularValidation?.errors?.length) {
+                    @for (err of getFrequencyErrors(); track err) {
+                      <small class="p80-error"><i class="pi pi-times-circle"></i> {{ err }}</small>
+                    }
+                  }
+                </div>
+                
+                <!-- Effort inputs with better labels -->
+                <div class="p80-field-group">
+                  <label class="p80-group-label">Aufwand pro Ereignis (Stunden)</label>
+                  <div class="p80-triple-input">
+                    <div class="p80-input-item">
+                      <label>Min</label>
+                      <p-inputNumber [(ngModel)]="topic.irregularEstimation!.effortMin" [min]="0" [step]="0.1" [minFractionDigits]="0" [maxFractionDigits]="1" (onInput)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
+                    </div>
+                    <div class="p80-input-item">
+                      <label>Typisch</label>
+                      <p-inputNumber [(ngModel)]="topic.irregularEstimation!.effortTypical" [min]="0" [step]="0.1" [minFractionDigits]="0" [maxFractionDigits]="1" (onInput)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
+                    </div>
+                    <div class="p80-input-item">
+                      <label>Max</label>
+                      <p-inputNumber [(ngModel)]="topic.irregularEstimation!.effortMax" [min]="0" [step]="0.1" [minFractionDigits]="0" [maxFractionDigits]="1" (onInput)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
+                    </div>
+                    <div class="p80-computed-value">
+                      → T<sub>P80</sub>: <strong>{{ calculatedP80Result?.effortP80?.toFixed(1) ?? '0.0' }}h</strong>
+                    </div>
+                  </div>
+                  @if (irregularValidation?.errors?.length) {
+                    @for (err of getEffortErrors(); track err) {
+                      <small class="p80-error"><i class="pi pi-times-circle"></i> {{ err }}</small>
+                    }
+                  }
+                </div>
+                
+                <!-- Classification dropdowns with tooltips -->
+                <div class="p80-field-group">
+                  <label class="p80-group-label">Klassifizierung</label>
+                  <div class="p80-class-row">
+                    <div class="p80-class-item">
+                      <label>Varianz (Unsicherheit)</label>
+                      <p-select [options]="varianceClassOptions" [(ngModel)]="topic.irregularEstimation!.varianceClass" (onChange)="onIrregularEstimationChange()" optionLabel="label" optionValue="value" [pTooltip]="getVarianceTooltip()" tooltipPosition="top" styleClass="p80-select-full"></p-select>
+                    </div>
+                    <div class="p80-class-item">
+                      <label>Welle (Häufung)</label>
+                      <p-select [options]="waveClassOptions" [(ngModel)]="topic.irregularEstimation!.waveClass" (onChange)="onIrregularEstimationChange()" optionLabel="label" optionValue="value" [pTooltip]="getWaveTooltip()" tooltipPosition="top" styleClass="p80-select-full"></p-select>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Intermediate and final results -->
+                <div class="p80-results">
+                  <div class="p80-intermediate">
+                    <span class="p80-calc-step">
+                      <i class="pi pi-calculator"></i>
+                      Jahresstunden (P80): {{ calculatedP80Result?.frequencyP80?.toFixed(1) ?? '0' }} × {{ calculatedP80Result?.effortP80?.toFixed(1) ?? '0' }}h = <strong>{{ calculatedP80Result?.yearlyHoursP80?.toFixed(1) ?? '0.0' }}h/Jahr</strong>
+                    </span>
+                  </div>
+                  <div class="p80-final">
+                    <div class="p80-result-item p80-planning">
+                      <span class="p80-result-label">Wöchentlicher Planungsanteil:</span>
+                      <span class="p80-result-value">{{ calculatedP80Result?.weeklyPlanningHours?.toFixed(2) ?? '0.00' }} h/Woche</span>
+                    </div>
+                    <div class="p80-result-item p80-peak">
+                      <span class="p80-result-label">Wöchentliche Spitzenlast:</span>
+                      <span class="p80-result-value">{{ calculatedP80Result?.weeklyPeakHours?.toFixed(2) ?? '0.00' }} h/Woche</span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Warnings -->
+                @if (irregularValidation?.warnings?.length) {
+                  <div class="p80-warnings">
+                    @for (warning of irregularValidation?.warnings ?? []; track warning) {
+                      <small class="p80-warning"><i class="pi pi-exclamation-triangle"></i> {{ warning }}</small>
+                    }
+                  </div>
+                }
+              </div>
+            }
           </div>
 
           <!-- File Reference Section -->
