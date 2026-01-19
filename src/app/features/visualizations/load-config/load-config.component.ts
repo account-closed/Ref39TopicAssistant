@@ -160,6 +160,26 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
   protected async saveConfig(): Promise<void> {
     const currentConfig = this.config();
     if (!currentConfig) return;
+    
+    // Validate size thresholds are in ascending order
+    const thresholds = [
+      this.sizeThresholdXSMax(),
+      this.sizeThresholdSMax(),
+      this.sizeThresholdMMax(),
+      this.sizeThresholdLMax(),
+      this.sizeThresholdXLMin(),
+    ];
+    
+    for (let i = 1; i < thresholds.length; i++) {
+      if (thresholds[i] <= thresholds[i - 1]) {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Ungültige Schwellenwerte',
+          detail: 'Die Schwellenwerte müssen in aufsteigender Reihenfolge sein',
+        });
+        return;
+      }
+    }
 
     this.isSaving.set(true);
 

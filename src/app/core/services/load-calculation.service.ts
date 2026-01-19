@@ -157,11 +157,11 @@ export class LoadCalculationService {
    * Uses config if available, otherwise falls back to ROLE_WEIGHTS constant.
    */
   getRoleWeight(role: RoleType | null | undefined, config?: LoadConfig | null): number {
-    if (!role) return 0;
+    if (!role) return ROLE_WEIGHTS.NONE;
     
     // Use config role weights if available
     if (config?.roleWeights) {
-      return config.roleWeights[role] ?? 0;
+      return config.roleWeights[role] ?? ROLE_WEIGHTS.NONE;
     }
     
     // Fallback to hardcoded constants
