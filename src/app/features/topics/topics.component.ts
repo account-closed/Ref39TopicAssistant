@@ -674,6 +674,8 @@ export class TopicsComponent implements OnInit, OnDestroy {
       if (!this.topic.irregularEstimation) {
         this.topic.irregularEstimation = { ...DEFAULT_IRREGULAR_ESTIMATION };
       }
+      // Clear t-shirt size when switching to irregular
+      this.topic.size = undefined;
       this.updateP80Calculation();
     } else {
       // Clear irregular estimation when switching to regular

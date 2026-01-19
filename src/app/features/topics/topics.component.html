@@ -327,10 +327,25 @@
                   [(ngModel)]="topic.priority"
                   [stars]="10">
                 </p-rating>
-                <small class="hint">Sternbewertung von 1 (niedrig) bis 10 (hoch)</small>
               </div>
 
               <div class="field">
+                <label for="taskCategory">Aufgabenkategorie</label>
+                <p-select 
+                  id="taskCategory"
+                  [options]="taskCategoryOptions"
+                  [(ngModel)]="topic.taskCategory"
+                  (onChange)="onTaskCategoryChange()"
+                  optionLabel="label"
+                  optionValue="value"
+                  placeholder="Kategorie wählen...">
+                </p-select>
+              </div>
+            </div>
+            
+            <!-- T-Shirt Size (only for REGULAR tasks) -->
+            @if (topic.taskCategory !== 'IRREGULAR') {
+              <div class="field mt-1">
                 <label for="size">Größe (T-Shirt)</label>
                 <p-select 
                   id="size"
@@ -341,157 +356,45 @@
                   placeholder="Größe wählen..."
                   [showClear]="true">
                 </p-select>
-                <small class="hint">Klassifizierung nach Aufwand (XXS bis XXL)</small>
               </div>
-            </div>
+            }
+            
+            <!-- Irregular Task Estimation (P80) - compact layout -->
+            @if (topic.taskCategory === 'IRREGULAR') {
+              <div class="p80-section">
+                <div class="p80-inputs">
+                  <div class="p80-row">
+                    <span class="p80-label">Häufigkeit/Jahr:</span>
+                    <p-inputNumber [(ngModel)]="topic.irregularEstimation!.frequencyMin" [min]="0" [step]="0.1" [minFractionDigits]="0" [maxFractionDigits]="1" placeholder="Min" (onInput)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
+                    <p-inputNumber [(ngModel)]="topic.irregularEstimation!.frequencyTypical" [min]="0" [step]="0.1" [minFractionDigits]="0" [maxFractionDigits]="1" placeholder="Typ" (onInput)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
+                    <p-inputNumber [(ngModel)]="topic.irregularEstimation!.frequencyMax" [min]="0" [step]="0.1" [minFractionDigits]="0" [maxFractionDigits]="1" placeholder="Max" (onInput)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
+                  </div>
+                  <div class="p80-row">
+                    <span class="p80-label">Aufwand/Ereignis (h):</span>
+                    <p-inputNumber [(ngModel)]="topic.irregularEstimation!.effortMin" [min]="0" [step]="0.1" [minFractionDigits]="0" [maxFractionDigits]="1" placeholder="Min" (onInput)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
+                    <p-inputNumber [(ngModel)]="topic.irregularEstimation!.effortTypical" [min]="0" [step]="0.1" [minFractionDigits]="0" [maxFractionDigits]="1" placeholder="Typ" (onInput)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
+                    <p-inputNumber [(ngModel)]="topic.irregularEstimation!.effortMax" [min]="0" [step]="0.1" [minFractionDigits]="0" [maxFractionDigits]="1" placeholder="Max" (onInput)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
+                  </div>
+                  <div class="p80-row">
+                    <span class="p80-label">Klassen:</span>
+                    <p-select [options]="varianceClassOptions" [(ngModel)]="topic.irregularEstimation!.varianceClass" (onChange)="onIrregularEstimationChange()" optionLabel="label" optionValue="value" pTooltip="Varianz" styleClass="p80-select"></p-select>
+                    <p-select [options]="waveClassOptions" [(ngModel)]="topic.irregularEstimation!.waveClass" (onChange)="onIrregularEstimationChange()" optionLabel="label" optionValue="value" pTooltip="Welle" styleClass="p80-select"></p-select>
+                  </div>
+                </div>
+                <div class="p80-result">
+                  <span><strong>P80:</strong> {{ calculatedP80Result?.weeklyPlanningHours?.toFixed(2) ?? '0.00' }} h/Wo</span>
+                  <span class="p80-peak">Spitze: {{ calculatedP80Result?.weeklyPeakHours?.toFixed(2) ?? '0.00' }} h/Wo</span>
+                </div>
+                @if (irregularValidation?.warnings?.length) {
+                  <div class="p80-warnings">
+                    @for (warning of irregularValidation?.warnings ?? []; track warning) {
+                      <small><i class="pi pi-exclamation-triangle"></i> {{ warning }}</small>
+                    }
+                  </div>
+                }
+              </div>
+            }
           </div>
-
-          <!-- Task Category Selection -->
-          <div class="field-group">
-            <h4>Aufgabenkategorie</h4>
-            <div class="field">
-              <label for="taskCategory">Kategorie</label>
-              <p-select 
-                id="taskCategory"
-                [options]="taskCategoryOptions"
-                [(ngModel)]="topic.taskCategory"
-                (onChange)="onTaskCategoryChange()"
-                optionLabel="label"
-                optionValue="value"
-                placeholder="Kategorie wählen...">
-              </p-select>
-              <small class="hint">Reguläre Aufgaben haben konstanten Aufwand, irreguläre variieren</small>
-            </div>
-          </div>
-
-          <!-- Irregular Task Estimation (only shown when category is IRREGULAR) -->
-          @if (topic.taskCategory === 'IRREGULAR') {
-            <div class="field-group">
-              <h4>Irreguläre Aufgabenschätzung (P80)</h4>
-              <small class="hint mb-2">Schätzen Sie Häufigkeit und Aufwand mit Min/Typisch/Max-Werten</small>
-              
-              <!-- Frequency row -->
-              <div class="estimation-row">
-                <label>Häufigkeit pro Jahr</label>
-                <div class="triple-input">
-                  <div class="field">
-                    <label>Min</label>
-                    <p-inputNumber 
-                      [(ngModel)]="topic.irregularEstimation!.frequencyMin" 
-                      [min]="0" 
-                      [step]="1"
-                      (onInput)="onIrregularEstimationChange()">
-                    </p-inputNumber>
-                  </div>
-                  <div class="field">
-                    <label>Typisch</label>
-                    <p-inputNumber 
-                      [(ngModel)]="topic.irregularEstimation!.frequencyTypical" 
-                      [min]="0" 
-                      [step]="1"
-                      (onInput)="onIrregularEstimationChange()">
-                    </p-inputNumber>
-                  </div>
-                  <div class="field">
-                    <label>Max</label>
-                    <p-inputNumber 
-                      [(ngModel)]="topic.irregularEstimation!.frequencyMax" 
-                      [min]="0" 
-                      [step]="1"
-                      (onInput)="onIrregularEstimationChange()">
-                    </p-inputNumber>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Effort row -->
-              <div class="estimation-row">
-                <label>Aufwand pro Ereignis (Stunden)</label>
-                <div class="triple-input">
-                  <div class="field">
-                    <label>Min</label>
-                    <p-inputNumber 
-                      [(ngModel)]="topic.irregularEstimation!.effortMin" 
-                      [min]="0" 
-                      [step]="0.5" 
-                      suffix=" h"
-                      (onInput)="onIrregularEstimationChange()">
-                    </p-inputNumber>
-                  </div>
-                  <div class="field">
-                    <label>Typisch</label>
-                    <p-inputNumber 
-                      [(ngModel)]="topic.irregularEstimation!.effortTypical" 
-                      [min]="0" 
-                      [step]="0.5" 
-                      suffix=" h"
-                      (onInput)="onIrregularEstimationChange()">
-                    </p-inputNumber>
-                  </div>
-                  <div class="field">
-                    <label>Max</label>
-                    <p-inputNumber 
-                      [(ngModel)]="topic.irregularEstimation!.effortMax" 
-                      [min]="0" 
-                      [step]="0.5" 
-                      suffix=" h"
-                      (onInput)="onIrregularEstimationChange()">
-                    </p-inputNumber>
-                  </div>
-                </div>
-              </div>
-              
-              <!-- Classification dropdowns -->
-              <div class="classification-row">
-                <div class="field">
-                  <label for="varianceClass">Varianzklasse</label>
-                  <p-select 
-                    id="varianceClass"
-                    [options]="varianceClassOptions"
-                    [(ngModel)]="topic.irregularEstimation!.varianceClass"
-                    (onChange)="onIrregularEstimationChange()"
-                    optionLabel="label"
-                    optionValue="value"
-                    pTooltip="Wie stark variiert die Aufgabe?">
-                  </p-select>
-                </div>
-                <div class="field">
-                  <label for="waveClass">Wellenklasse</label>
-                  <p-select 
-                    id="waveClass"
-                    [options]="waveClassOptions"
-                    [(ngModel)]="topic.irregularEstimation!.waveClass"
-                    (onChange)="onIrregularEstimationChange()"
-                    optionLabel="label"
-                    optionValue="value"
-                    pTooltip="Wie stark clustern sich die Ereignisse?">
-                  </p-select>
-                </div>
-              </div>
-              
-              <!-- Calculated results (read-only) -->
-              <div class="summary-box">
-                <strong>Berechnete Werte (P80)</strong>
-                <div class="result-row">
-                  <span>Wöchentlicher Planungsanteil:</span>
-                  <span class="highlight">{{ calculatedP80Result?.weeklyPlanningHours?.toFixed(2) ?? '0.00' }} h/Woche</span>
-                </div>
-                <div class="result-row">
-                  <span>Wöchentliche Spitzenlast:</span>
-                  <span class="highlight">{{ calculatedP80Result?.weeklyPeakHours?.toFixed(2) ?? '0.00' }} h/Woche</span>
-                </div>
-              </div>
-              
-              <!-- Validation warnings -->
-              @if (irregularValidation?.warnings?.length) {
-                <div class="validation-warnings">
-                  @for (warning of irregularValidation?.warnings ?? []; track warning) {
-                    <small class="p-warning"><i class="pi pi-exclamation-triangle"></i> {{ warning }}</small>
-                  }
-                </div>
-              }
-            </div>
-          }
 
           <!-- File Reference Section -->
           <div class="field-group">
