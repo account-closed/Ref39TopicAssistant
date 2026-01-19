@@ -25,8 +25,8 @@ interface NavItem {
 @Component({
   selector: 'app-root',
   imports: [
-    RouterOutlet, 
-    Button, 
+    RouterOutlet,
+    Button,
     Toast,
     ConfirmDialog,
     Tooltip,
@@ -92,7 +92,7 @@ export class AppComponent implements OnInit, OnDestroy {
         id: 'raci-matrix',
         label: 'RACI-Matrix',
         icon: 'pi pi-table',
-        command: () => this.router.navigate(['/raci-matrix'])
+        route: '/raci-matrix'
       },
       {
         id: 'tags',
@@ -134,7 +134,7 @@ export class AppComponent implements OnInit, OnDestroy {
     // Initialize user from localStorage if available
     const storedMemberId = localStorage.getItem('currentMemberId');
     const storedMemberName = localStorage.getItem('currentMemberName');
-    
+
     if (storedMemberId && storedMemberName) {
       this.backend.setCurrentUser(storedMemberId, storedMemberName);
     }
