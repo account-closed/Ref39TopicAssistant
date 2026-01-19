@@ -427,8 +427,11 @@ export class LoadCalculationService {
             const roleWeight = this.getRoleWeight(role?.role, loadConfig);
             // R1 gets 100% of planning hours, other roles get proportional share
             const r1Weight = loadConfig?.roleWeights?.R1 ?? ROLE_WEIGHTS.R1;
-            const proportion = roleWeight / r1Weight;
-            irregularTasksLoad += result.weeklyPlanningHours * proportion;
+            // Guard against division by zero
+            if (r1Weight > 0) {
+              const proportion = roleWeight / r1Weight;
+              irregularTasksLoad += result.weeklyPlanningHours * proportion;
+            }
           }
         }
       }
