@@ -12,7 +12,7 @@ import { TeamMember, Topic, Tag, LoadConfig, DEFAULT_LOAD_CONFIG } from '../mode
 
 // Mock LoadConfigService
 const mockLoadConfigService = {
-  getConfig: vi.fn(() => null),
+  getConfig: vi.fn(() => null as LoadConfig | null),
   config$: { subscribe: vi.fn() },
   getDefaultBaseLoad: vi.fn((config: LoadConfig) => {
     return config?.baseLoad?.components
@@ -72,27 +72,27 @@ describe('LoadCalculationService', () => {
   });
 
   describe('getRoleWeight', () => {
-    it('should return correct weight for R1', () => {
+    it('should return correct weight for R1 from hardcoded constants', () => {
       expect(service.getRoleWeight('R1')).toBe(ROLE_WEIGHTS.R1);
       expect(service.getRoleWeight('R1')).toBe(3.0);
     });
 
-    it('should return correct weight for R2', () => {
+    it('should return correct weight for R2 from hardcoded constants', () => {
       expect(service.getRoleWeight('R2')).toBe(ROLE_WEIGHTS.R2);
       expect(service.getRoleWeight('R2')).toBe(2.0);
     });
 
-    it('should return correct weight for R3', () => {
+    it('should return correct weight for R3 from hardcoded constants', () => {
       expect(service.getRoleWeight('R3')).toBe(ROLE_WEIGHTS.R3);
       expect(service.getRoleWeight('R3')).toBe(1.5);
     });
 
-    it('should return correct weight for C', () => {
+    it('should return correct weight for C from hardcoded constants', () => {
       expect(service.getRoleWeight('C')).toBe(ROLE_WEIGHTS.C);
       expect(service.getRoleWeight('C')).toBe(1.0);
     });
 
-    it('should return correct weight for I', () => {
+    it('should return correct weight for I from hardcoded constants', () => {
       expect(service.getRoleWeight('I')).toBe(ROLE_WEIGHTS.I);
       expect(service.getRoleWeight('I')).toBe(0.5);
     });
@@ -100,6 +100,30 @@ describe('LoadCalculationService', () => {
     it('should return 0 for null or undefined', () => {
       expect(service.getRoleWeight(null)).toBe(0);
       expect(service.getRoleWeight(undefined)).toBe(0);
+    });
+    
+    it('should use config role weights when provided', () => {
+      const config: LoadConfig = {
+        ...DEFAULT_LOAD_CONFIG,
+        roleWeights: {
+          R1: 5.0,
+          R2: 3.0,
+          R3: 2.5,
+          C: 1.5,
+          I: 0.75,
+        },
+      };
+      
+      expect(service.getRoleWeight('R1', config)).toBe(5.0);
+      expect(service.getRoleWeight('R2', config)).toBe(3.0);
+      expect(service.getRoleWeight('R3', config)).toBe(2.5);
+      expect(service.getRoleWeight('C', config)).toBe(1.5);
+      expect(service.getRoleWeight('I', config)).toBe(0.75);
+    });
+    
+    it('should fall back to hardcoded constants when config is null', () => {
+      expect(service.getRoleWeight('R1', null)).toBe(3.0);
+      expect(service.getRoleWeight('R2', null)).toBe(2.0);
     });
   });
 
@@ -594,10 +618,41 @@ describe('LoadCalculationService', () => {
       // Load contribution = 3.0 * 2.25 = 6.75
       expect(contribution.loadContribution).toBe(6.75);
     });
+    
+    it('should use configurable role weights when config is provided', () => {
+      const config: LoadConfig = {
+        ...DEFAULT_LOAD_CONFIG,
+        roleWeights: {
+          R1: 5.0,  // Custom weight instead of 3.0
+          R2: 3.0,
+          R3: 2.0,
+          C: 1.5,
+          I: 1.0,
+        },
+      };
+      
+      mockLoadConfigService.getConfig.mockReturnValue(config);
+      
+      const members = [createMember({ id: 'member-1' })];
+      const topics = [createTopic({ raci: { r1MemberId: 'member-1', cMemberIds: [], iMemberIds: [] } })];
+      const tags: Tag[] = [];
+
+      const result = service.calculateLoad(members, topics, tags, 1, config);
+
+      const ml = result.memberLoads[0];
+      // topicsLoad = 1.0 (activity) * (5.0 (R1 custom) * 1.0 (complexity)) = 5.0
+      // totalLoad = baseLoad (3.5) + topicsLoad (5.0) = 8.5
+      expect(ml.topicsLoad).toBe(5.0);
+      expect(ml.totalLoad).toBe(8.5);
+      expect(ml.topicContributions[0].roleWeight).toBe(5.0);
+    });
   });
 
   describe('getFormulaExplanation', () => {
     it('should return formula explanation text', () => {
+      // Reset mock to return null so defaults are used
+      mockLoadConfigService.getConfig.mockReturnValue(null);
+      
       const explanation = service.getFormulaExplanation();
       expect(explanation).toContain('Load is calculated');
       expect(explanation).toContain('R1=3');

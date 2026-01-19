@@ -154,9 +154,17 @@ export class LoadCalculationService {
 
   /**
    * Get the role weight for a given role type.
+   * Uses config if available, otherwise falls back to ROLE_WEIGHTS constant.
    */
-  getRoleWeight(role: RoleType | null | undefined): number {
-    if (!role) return ROLE_WEIGHTS.NONE;
+  getRoleWeight(role: RoleType | null | undefined, config?: LoadConfig | null): number {
+    if (!role) return 0;
+    
+    // Use config role weights if available
+    if (config?.roleWeights) {
+      return config.roleWeights[role] ?? 0;
+    }
+    
+    // Fallback to hardcoded constants
     return ROLE_WEIGHTS[role] ?? ROLE_WEIGHTS.NONE;
   }
 
@@ -322,6 +330,7 @@ export class LoadCalculationService {
       topicComplexity: config.topicComplexity,
       baseLoad: config.baseLoad,
       sizes: config.sizes,
+      roleWeights: config.roleWeights,
     });
   }
 
@@ -379,7 +388,7 @@ export class LoadCalculationService {
 
       const topicContributions: TopicContribution[] = roles.map((role) => {
         const topic = topicsMap.get(role.topicId)!;
-        const roleWeight = this.getRoleWeight(role.role);
+        const roleWeight = this.getRoleWeight(role.role, loadConfig);
         const tagWeightSum = this.calculateTagWeightSum(topic, tagsMap);
         const dependencyCount = this.calculateDependencyCount(topic);
         const topicComplexity = this.calculateTopicComplexity(topic, tagsMap, alpha, beta);
@@ -494,6 +503,15 @@ export class LoadCalculationService {
     const contractHours = loadConfig?.capacity.contractHoursPerWeek ?? 41;
     const overhead = loadConfig?.capacity.overheadFactor ?? 0.35;
     const effectiveCapacity = contractHours * (1 - overhead);
+    
+    // Get role weights from config or use defaults
+    const roleWeights = loadConfig?.roleWeights ?? {
+      R1: ROLE_WEIGHTS.R1,
+      R2: ROLE_WEIGHTS.R2,
+      R3: ROLE_WEIGHTS.R3,
+      C: ROLE_WEIGHTS.C,
+      I: ROLE_WEIGHTS.I,
+    };
 
     return `Load is calculated as the sum of base load plus topic-based load.
 
@@ -516,7 +534,7 @@ c(t) = 1 + ${alpha}×TagWeight(t) + ${beta}×DependencyCount(t)
 CapacityRatio(m) = L_total(m) / H_eff(m)
 
 **Role Weights:**
-R1=${ROLE_WEIGHTS.R1}, R2=${ROLE_WEIGHTS.R2}, R3=${ROLE_WEIGHTS.R3}, C=${ROLE_WEIGHTS.C}, I=${ROLE_WEIGHTS.I}
+R1=${roleWeights.R1}, R2=${roleWeights.R2}, R3=${roleWeights.R3}, C=${roleWeights.C}, I=${roleWeights.I}
 
 **Activity Multipliers:**
 active=${ACTIVITY_MULTIPLIER.active}, inactive=${ACTIVITY_MULTIPLIER.inactive}

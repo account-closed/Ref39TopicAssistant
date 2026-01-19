@@ -223,6 +223,190 @@
           </p>
         </div>
       </p-card>
+      
+      <!-- Role Weights Configuration -->
+      <p-card styleClass="config-card full-width">
+        <ng-template #header>
+          <div class="card-header">
+            <h3><i class="pi pi-users"></i> Rollen-Gewichtung</h3>
+          </div>
+        </ng-template>
+        
+        <div class="config-section">
+          <p class="info-text">
+            <i class="pi pi-info-circle"></i>
+            Die Rollen-Gewichtung bestimmt, wie stark eine Rolle zur Gesamtauslastung beiträgt.
+          </p>
+          
+          <div class="role-weights-grid">
+            <div class="config-row">
+              <label for="roleWeightR1">Hauptverantwortlicher (R1)</label>
+              <p-inputNumber 
+                id="roleWeightR1"
+                [(ngModel)]="roleWeightR1"
+                [min]="0"
+                [max]="10"
+                [step]="0.5"
+                [minFractionDigits]="1"
+                [showButtons]="true"
+                pTooltip="Gewichtung für Hauptverantwortliche"
+                tooltipPosition="top"></p-inputNumber>
+            </div>
+            
+            <div class="config-row">
+              <label for="roleWeightR2">Stellvertreter (R2)</label>
+              <p-inputNumber 
+                id="roleWeightR2"
+                [(ngModel)]="roleWeightR2"
+                [min]="0"
+                [max]="10"
+                [step]="0.5"
+                [minFractionDigits]="1"
+                [showButtons]="true"
+                pTooltip="Gewichtung für Stellvertreter"
+                tooltipPosition="top"></p-inputNumber>
+            </div>
+            
+            <div class="config-row">
+              <label for="roleWeightR3">Zweiter Stellvertreter (R3)</label>
+              <p-inputNumber 
+                id="roleWeightR3"
+                [(ngModel)]="roleWeightR3"
+                [min]="0"
+                [max]="10"
+                [step]="0.5"
+                [minFractionDigits]="1"
+                [showButtons]="true"
+                pTooltip="Gewichtung für zweiten Stellvertreter"
+                tooltipPosition="top"></p-inputNumber>
+            </div>
+            
+            <div class="config-row">
+              <label for="roleWeightC">Konsultiert (C)</label>
+              <p-inputNumber 
+                id="roleWeightC"
+                [(ngModel)]="roleWeightC"
+                [min]="0"
+                [max]="10"
+                [step]="0.5"
+                [minFractionDigits]="1"
+                [showButtons]="true"
+                pTooltip="Gewichtung für zu konsultierende Personen"
+                tooltipPosition="top"></p-inputNumber>
+            </div>
+            
+            <div class="config-row">
+              <label for="roleWeightI">Informiert (I)</label>
+              <p-inputNumber 
+                id="roleWeightI"
+                [(ngModel)]="roleWeightI"
+                [min]="0"
+                [max]="10"
+                [step]="0.5"
+                [minFractionDigits]="1"
+                [showButtons]="true"
+                pTooltip="Gewichtung für zu informierende Personen"
+                tooltipPosition="top"></p-inputNumber>
+            </div>
+          </div>
+        </div>
+      </p-card>
+      
+      <!-- Size Classification Configuration -->
+      <p-card styleClass="config-card full-width">
+        <ng-template #header>
+          <div class="card-header">
+            <h3><i class="pi pi-chart-bar"></i> Größen-Klassifizierung</h3>
+          </div>
+        </ng-template>
+        
+        <div class="config-section">
+          <p class="info-text">
+            <i class="pi pi-info-circle"></i>
+            Definieren Sie die Schwellenwerte für die Klassifizierung der Themengröße.
+            Die Größe XXL wird automatisch für Themen vergeben, die die Kapazität überschreiten.
+          </p>
+          
+          <div class="size-thresholds-grid">
+            <div class="config-row">
+              <label>XS (Extra Small)</label>
+              <div class="threshold-input">
+                <span class="threshold-label">0.0h bis</span>
+                <p-inputNumber 
+                  [(ngModel)]="sizeThresholdXSMax"
+                  [min]="0"
+                  [max]="20"
+                  [step]="0.5"
+                  [minFractionDigits]="1"
+                  suffix=" h"
+                  [showButtons]="true"></p-inputNumber>
+              </div>
+            </div>
+            
+            <div class="config-row">
+              <label>S (Small)</label>
+              <div class="threshold-input">
+                <span class="threshold-label">{{ sizeThresholdXSMax().toFixed(1) }}h bis</span>
+                <p-inputNumber 
+                  [(ngModel)]="sizeThresholdSMax"
+                  [min]="0"
+                  [max]="20"
+                  [step]="0.5"
+                  [minFractionDigits]="1"
+                  suffix=" h"
+                  [showButtons]="true"></p-inputNumber>
+              </div>
+            </div>
+            
+            <div class="config-row">
+              <label>M (Medium)</label>
+              <div class="threshold-input">
+                <span class="threshold-label">{{ sizeThresholdSMax().toFixed(1) }}h bis</span>
+                <p-inputNumber 
+                  [(ngModel)]="sizeThresholdMMax"
+                  [min]="0"
+                  [max]="30"
+                  [step]="0.5"
+                  [minFractionDigits]="1"
+                  suffix=" h"
+                  [showButtons]="true"></p-inputNumber>
+              </div>
+            </div>
+            
+            <div class="config-row">
+              <label>L (Large)</label>
+              <div class="threshold-input">
+                <span class="threshold-label">{{ sizeThresholdMMax().toFixed(1) }}h bis</span>
+                <p-inputNumber 
+                  [(ngModel)]="sizeThresholdLMax"
+                  [min]="0"
+                  [max]="40"
+                  [step]="0.5"
+                  [minFractionDigits]="1"
+                  suffix=" h"
+                  [showButtons]="true"></p-inputNumber>
+              </div>
+            </div>
+            
+            <div class="config-row">
+              <label>XL (Extra Large)</label>
+              <div class="threshold-input">
+                <span class="threshold-label">ab</span>
+                <p-inputNumber 
+                  [(ngModel)]="sizeThresholdXLMin"
+                  [min]="0"
+                  [max]="100"
+                  [step]="1"
+                  [minFractionDigits]="1"
+                  suffix=" h"
+                  [showButtons]="true"
+                  pTooltip="Untere Grenze für XL (obere Grenze = Kapazität)"
+                  tooltipPosition="top"></p-inputNumber>
+              </div>
+            </div>
+          </div>
+        </div>
+      </p-card>
     </div>
   }
 </div>

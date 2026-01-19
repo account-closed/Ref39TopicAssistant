@@ -213,6 +213,25 @@ h1 {
   color: var(--p-primary-color);
 }
 
+.role-weights-grid,
+.size-thresholds-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.threshold-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  
+  .threshold-label {
+    color: var(--p-text-muted-color);
+    white-space: nowrap;
+  }
+}
+
 // Responsive
 @media (max-width: 768px) {
   .page-header {

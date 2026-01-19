@@ -64,6 +64,20 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
   protected alpha = signal(1.0);
   protected beta = signal(0.25);
   protected baseComponents = signal<BaseLoadComponent[]>([]);
+  
+  // Role weights
+  protected roleWeightR1 = signal(3.0);
+  protected roleWeightR2 = signal(2.0);
+  protected roleWeightR3 = signal(1.5);
+  protected roleWeightC = signal(1.0);
+  protected roleWeightI = signal(0.5);
+  
+  // Size thresholds
+  protected sizeThresholdXSMax = signal(2.0);
+  protected sizeThresholdSMax = signal(8.0);
+  protected sizeThresholdMMax = signal(14.0);
+  protected sizeThresholdLMax = signal(20.0);
+  protected sizeThresholdXLMin = signal(20.0);
 
   protected readonly effectiveCapacity = computed(() => {
     return this.contractHours() * (1 - this.overheadFactor());
@@ -120,6 +134,27 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
     this.alpha.set(config.topicComplexity.alpha);
     this.beta.set(config.topicComplexity.beta);
     this.baseComponents.set([...config.baseLoad.components]);
+    
+    // Load role weights
+    this.roleWeightR1.set(config.roleWeights.R1);
+    this.roleWeightR2.set(config.roleWeights.R2);
+    this.roleWeightR3.set(config.roleWeights.R3);
+    this.roleWeightC.set(config.roleWeights.C);
+    this.roleWeightI.set(config.roleWeights.I);
+    
+    // Load size thresholds
+    const thresholds = config.sizes.thresholds;
+    const xs = thresholds.find(t => t.name === 'XS');
+    const s = thresholds.find(t => t.name === 'S');
+    const m = thresholds.find(t => t.name === 'M');
+    const l = thresholds.find(t => t.name === 'L');
+    const xl = thresholds.find(t => t.name === 'XL');
+    
+    if (xs) this.sizeThresholdXSMax.set(xs.max);
+    if (s) this.sizeThresholdSMax.set(s.max);
+    if (m) this.sizeThresholdMMax.set(m.max);
+    if (l) this.sizeThresholdLMax.set(l.max);
+    if (xl) this.sizeThresholdXLMin.set(xl.min);
   }
 
   protected async saveConfig(): Promise<void> {
@@ -142,6 +177,22 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
         baseLoad: {
           defaultHoursPerWeek: this.totalBaseLoad(),
           components: this.baseComponents(),
+        },
+        roleWeights: {
+          R1: this.roleWeightR1(),
+          R2: this.roleWeightR2(),
+          R3: this.roleWeightR3(),
+          C: this.roleWeightC(),
+          I: this.roleWeightI(),
+        },
+        sizes: {
+          thresholds: [
+            { name: 'XS', min: 0.0, max: this.sizeThresholdXSMax() },
+            { name: 'S', min: this.sizeThresholdXSMax(), max: this.sizeThresholdSMax() },
+            { name: 'M', min: this.sizeThresholdSMax(), max: this.sizeThresholdMMax() },
+            { name: 'L', min: this.sizeThresholdMMax(), max: this.sizeThresholdLMax() },
+            { name: 'XL', min: this.sizeThresholdXLMin(), max: Infinity },
+          ],
         },
       };
 
