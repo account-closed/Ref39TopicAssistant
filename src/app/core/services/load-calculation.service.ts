@@ -161,7 +161,8 @@ export class LoadCalculationService {
     
     // Use config role weights if available
     if (config?.roleWeights) {
-      return config.roleWeights[role] ?? ROLE_WEIGHTS.NONE;
+      const weight = config.roleWeights[role];
+      return weight !== undefined ? weight : ROLE_WEIGHTS.NONE;
     }
     
     // Fallback to hardcoded constants

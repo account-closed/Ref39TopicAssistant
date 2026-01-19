@@ -162,23 +162,20 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
     if (!currentConfig) return;
     
     // Validate size thresholds are in ascending order
-    const thresholds = [
-      this.sizeThresholdXSMax(),
-      this.sizeThresholdSMax(),
-      this.sizeThresholdMMax(),
-      this.sizeThresholdLMax(),
-      this.sizeThresholdXLMin(),
-    ];
+    // XS.max < S.max < M.max < L.max <= XL.min
+    const xsMax = this.sizeThresholdXSMax();
+    const sMax = this.sizeThresholdSMax();
+    const mMax = this.sizeThresholdMMax();
+    const lMax = this.sizeThresholdLMax();
+    const xlMin = this.sizeThresholdXLMin();
     
-    for (let i = 1; i < thresholds.length; i++) {
-      if (thresholds[i] <= thresholds[i - 1]) {
-        this.messageService.add({
-          severity: 'error',
-          summary: 'Ungültige Schwellenwerte',
-          detail: 'Die Schwellenwerte müssen in aufsteigender Reihenfolge sein',
-        });
-        return;
-      }
+    if (xsMax >= sMax || sMax >= mMax || mMax >= lMax || lMax > xlMin) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Ungültige Schwellenwerte',
+        detail: 'Die Schwellenwerte müssen in aufsteigender Reihenfolge sein',
+      });
+      return;
     }
 
     this.isSaving.set(true);
@@ -207,11 +204,11 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
         },
         sizes: {
           thresholds: [
-            { name: 'XS', min: 0.0, max: this.sizeThresholdXSMax() },
-            { name: 'S', min: this.sizeThresholdXSMax(), max: this.sizeThresholdSMax() },
-            { name: 'M', min: this.sizeThresholdSMax(), max: this.sizeThresholdMMax() },
-            { name: 'L', min: this.sizeThresholdMMax(), max: this.sizeThresholdLMax() },
-            { name: 'XL', min: this.sizeThresholdXLMin(), max: Infinity },
+            { name: 'XS', min: 0.0, max: xsMax },
+            { name: 'S', min: xsMax, max: sMax },
+            { name: 'M', min: sMax, max: mMax },
+            { name: 'L', min: mMax, max: lMax },
+            { name: 'XL', min: xlMin, max: Infinity },
           ],
         },
       };

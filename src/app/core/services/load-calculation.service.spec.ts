@@ -125,6 +125,22 @@ describe('LoadCalculationService', () => {
       expect(service.getRoleWeight('R1', null)).toBe(3.0);
       expect(service.getRoleWeight('R2', null)).toBe(2.0);
     });
+    
+    it('should handle zero weight from config correctly', () => {
+      const config: LoadConfig = {
+        ...DEFAULT_LOAD_CONFIG,
+        roleWeights: {
+          R1: 0,  // Explicitly set to 0
+          R2: 2.0,
+          R3: 1.5,
+          C: 1.0,
+          I: 0.5,
+        },
+      };
+      
+      // Should return 0, not fall back to default
+      expect(service.getRoleWeight('R1', config)).toBe(0);
+    });
   });
 
   describe('getActivityMultiplier', () => {
