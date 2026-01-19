@@ -110,11 +110,61 @@ The backend layer handles:
 Located in `core/models/`, these are pure TypeScript interfaces:
 
 - `Datastore`: Root data container with schema version
-- `Topic`: RACI topic with assignments and metadata
+- `Topic`: RACI topic with assignments, metadata, and optional irregular task estimation
 - `TeamMember`: User identity and contact information
 - `Tag`: Categorization with optional hints and copy text
 - `Lock`: Concurrency control state
 - `Refresh`: Multi-client sync signal
+- `IrregularTaskEstimation`: P80-based estimation for irregular tasks
+
+### 5. Irregular Task Calculation
+
+The `IrregularTaskService` handles P80-based estimation for irregular tasks:
+
+**Data Model** (`IrregularTaskEstimation`):
+```typescript
+interface IrregularTaskEstimation {
+  frequencyMin: number;       // N_a - minimum events per year
+  frequencyTypical: number;   // N_b - typical events per year  
+  frequencyMax: number;       // N_c - maximum events per year
+  effortMin: number;          // T_a - minimum hours per event
+  effortTypical: number;      // T_b - typical hours per event
+  effortMax: number;          // T_c - maximum hours per event
+  varianceClass: 'L0'|'L1'|'L2'|'L3'|'L4';
+  waveClass: 'W0'|'W1'|'W2'|'W3'|'W4';
+}
+```
+
+**Formulas**:
+```
+# P80 estimation
+k = VARIANCE_CLASS_WEIGHTS[varianceClass]  // 0.40–0.90
+N_P80 = N_b + k × (N_c - N_b)
+T_P80 = T_b + k × (T_c - T_b)
+
+# Weekly planning share
+yearlyHours_P80 = N_P80 × T_P80
+weeklyPlanningHours = yearlyHours_P80 / 52
+
+# Weekly peak load (for risk analysis)
+w = WAVE_CLASS_MULTIPLIERS[waveClass]  // 1.0–4.0
+weeklyPeakHours = w × weeklyPlanningHours
+```
+
+**Mapping Tables**:
+| Variance Class | k (weight) | Wave Class | w (multiplier) |
+|----------------|------------|------------|----------------|
+| L0 | 0.40 | W0 | 1.0 |
+| L1 | 0.50 | W1 | 1.5 |
+| L2 | 0.60 | W2 | 2.0 |
+| L3 | 0.75 | W3 | 3.0 |
+| L4 | 0.90 | W4 | 4.0 |
+
+**Validation Rules**:
+- Ordering: `0 ≤ min ≤ typical ≤ max` for both frequency and effort
+- Soft warning if `effortMax / effortTypical > 3` (high uncertainty)
+- Soft warning if `frequencyTypical = 0` (no planning impact)
+- Soft warning if `weeklyPeakHours > 41` (overload risk)
 
 ## Data Flow
 
