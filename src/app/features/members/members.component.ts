@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Table, TableModule } from 'primeng/table';
@@ -24,6 +24,7 @@ import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
 import { LoadConfigService } from '../../core/services/load-config.service';
 import { TeamMember, Topic, Datastore, LoadConfig } from '../../core/models';
+import { PageWrapperComponent } from '../../shared/components';
 
 interface TopicAssignment {
   topic: Topic;
@@ -57,11 +58,13 @@ interface TopicAssignment {
     Select,
     ColorPicker,
     Checkbox,
-    Tooltip
+    Tooltip,
+    PageWrapperComponent
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './members.component.html',
-  styleUrl: './members.component.scss'
+  styleUrl: './members.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MembersComponent implements OnInit, OnDestroy {
   @ViewChild('dt') table!: Table;

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone, effect, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef, NgZone, effect, ViewChild, ElementRef, AfterViewInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { InputText } from 'primeng/inputtext';
@@ -36,7 +36,8 @@ interface DisplaySearchResult {
   imports: [CommonModule, FormsModule, InputText, Card, Tag, Button, Message, ProgressSpinner, Dialog, Toast, Divider, Rating, Tooltip],
   providers: [MessageService],
   templateUrl: './search.component.html',
-  styleUrl: './search.component.scss'
+  styleUrl: './search.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('searchInput') searchInputRef!: ElementRef<HTMLInputElement>;

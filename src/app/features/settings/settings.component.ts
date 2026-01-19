@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -16,6 +16,7 @@ import { FileConnectionService } from '../../core/services/file-connection.servi
 import { CacheService, CacheState } from '../../core/services/cache.service';
 import { PersistenceService } from '../../core/services/persistence.service';
 import { Datastore } from '../../core/models';
+import { PageWrapperComponent } from '../../shared/components';
 
 type BackendType = 'filesystem' | 'rest';
 
@@ -26,10 +27,11 @@ interface BackendOption {
 
 @Component({
   selector: 'app-settings',
-  imports: [CommonModule, FormsModule, Card, Button, SelectButton, Divider, Tag, Message, ConfirmDialog],
+  imports: [CommonModule, FormsModule, Card, Button, SelectButton, Divider, Tag, Message, ConfirmDialog, PageWrapperComponent],
   providers: [ConfirmationService],
   templateUrl: './settings.component.html',
-  styleUrl: './settings.component.scss'
+  styleUrl: './settings.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SettingsComponent implements OnInit, OnDestroy {
   private backend = inject(BackendService);

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Table, TableModule } from 'primeng/table';
@@ -22,6 +22,7 @@ import { BackendService } from '../../core/services/backend.service';
 import { Tag, TeamMember, Datastore } from '../../core/models';
 import { isValidKeyword, sanitizeKeyword } from '../../shared/utils/validation.utils';
 import { TAG_WEIGHT_RECOMMENDED_MIN, TAG_WEIGHT_RECOMMENDED_MAX } from '../../core/services/load-calculation.service';
+import { PageWrapperComponent } from '../../shared/components';
 
 @Component({
   selector: 'app-tags',
@@ -43,11 +44,13 @@ import { TAG_WEIGHT_RECOMMENDED_MIN, TAG_WEIGHT_RECOMMENDED_MAX } from '../../co
     InputIcon,
     Tooltip,
     ColorPicker,
-    ToggleSwitch
+    ToggleSwitch,
+    PageWrapperComponent
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './tags.component.html',
-  styleUrl: './tags.component.scss'
+  styleUrl: './tags.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class TagsComponent implements OnInit, OnDestroy {
   @ViewChild('dt') table!: Table;
