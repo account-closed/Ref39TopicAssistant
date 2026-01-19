@@ -1,9 +1,10 @@
-import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ChangeDetectionStrategy, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Table, TableModule } from 'primeng/table';
 import { Button } from 'primeng/button';
 import { InputText } from 'primeng/inputtext';
+import { InputNumber } from 'primeng/inputnumber';
 import { Dialog } from 'primeng/dialog';
 import { AutoComplete } from 'primeng/autocomplete';
 import { Textarea } from 'primeng/textarea';
@@ -21,7 +22,8 @@ import { Rating } from 'primeng/rating';
 import { MessageService, ConfirmationService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
-import { Topic, TeamMember, Datastore, Tag as TagModel, TShirtSize, TopicConnection, TopicConnectionType } from '../../core/models';
+import { IrregularTaskService, IrregularTaskResult, IrregularTaskValidation } from '../../core/services/irregular-task.service';
+import { Topic, TeamMember, Datastore, Tag as TagModel, TShirtSize, TopicConnection, TopicConnectionType, TaskCategory, DEFAULT_IRREGULAR_ESTIMATION, VARIANCE_CLASS_OPTIONS, WAVE_CLASS_OPTIONS } from '../../core/models';
 import { getPriorityStars, getSizeSeverity } from '../../shared/utils/topic-display.utils';
 import { isValidKeyword, sanitizeKeyword } from '../../shared/utils/validation.utils';
 import { PageWrapperComponent } from '../../shared/components';
@@ -45,6 +47,7 @@ interface TopicOption {
     TableModule,
     Button,
     InputText,
+    InputNumber,
     Dialog,
     AutoComplete,
     Textarea,
@@ -130,6 +133,17 @@ export class TopicsComponent implements OnInit, OnDestroy {
     { label: 'Verwandt mit', value: 'relatedTo' }
   ];
 
+  taskCategoryOptions: { label: string; value: TaskCategory }[] = [
+    { label: 'Regulär', value: 'REGULAR' },
+    { label: 'Irregulär', value: 'IRREGULAR' }
+  ];
+
+  varianceClassOptions = VARIANCE_CLASS_OPTIONS;
+  waveClassOptions = WAVE_CLASS_OPTIONS;
+
+  calculatedP80Result: IrregularTaskResult | null = null;
+  irregularValidation: IrregularTaskValidation | null = null;
+
   /** All topics available for connection selection. Filtered by getAvailableTopicsForConnection() to exclude current topic. */
   topicOptions: TopicOption[] = [];
 
@@ -144,7 +158,8 @@ export class TopicsComponent implements OnInit, OnDestroy {
   constructor(
     private backend: BackendService,
     private messageService: MessageService,
-    private confirmationService: ConfirmationService
+    private confirmationService: ConfirmationService,
+    private irregularTaskService: IrregularTaskService
   ) {}
 
   ngOnInit(): void {
@@ -293,7 +308,9 @@ export class TopicsComponent implements OnInit, OnDestroy {
       hasSharedFilePath: false,
       sharedFilePath: '',
       size: undefined,
-      connections: []
+      connections: [],
+      taskCategory: 'REGULAR',
+      irregularEstimation: undefined
     };
   }
 
@@ -318,11 +335,16 @@ export class TopicsComponent implements OnInit, OnDestroy {
         cMemberIds: [...topic.raci.cMemberIds],
         iMemberIds: [...topic.raci.iMemberIds]
       },
-      connections: topic.connections ? topic.connections.map(c => ({ ...c })) : []
+      connections: topic.connections ? topic.connections.map(c => ({ ...c })) : [],
+      taskCategory: topic.taskCategory || 'REGULAR',
+      irregularEstimation: topic.irregularEstimation ? { ...topic.irregularEstimation } : undefined
     };
     
     this.validFromDate = topic.validity.validFrom ? new Date(topic.validity.validFrom) : null;
     this.validToDate = topic.validity.validTo ? new Date(topic.validity.validTo) : null;
+    
+    // Calculate P80 if irregular task
+    this.updateP80Calculation();
     
     this.submitted = false;
     this.editMode = true;
@@ -641,5 +663,43 @@ export class TopicsComponent implements OnInit, OnDestroy {
    */
   getConnectionCount(topic: Topic): number {
     return topic.connections?.length || 0;
+  }
+
+  /**
+   * Handle task category change
+   */
+  onTaskCategoryChange(): void {
+    if (this.topic.taskCategory === 'IRREGULAR') {
+      // Initialize irregular estimation if not present
+      if (!this.topic.irregularEstimation) {
+        this.topic.irregularEstimation = { ...DEFAULT_IRREGULAR_ESTIMATION };
+      }
+      this.updateP80Calculation();
+    } else {
+      // Clear irregular estimation when switching to regular
+      this.topic.irregularEstimation = undefined;
+      this.calculatedP80Result = null;
+      this.irregularValidation = null;
+    }
+  }
+
+  /**
+   * Update P80 calculation when irregular estimation changes
+   */
+  updateP80Calculation(): void {
+    if (this.topic.taskCategory === 'IRREGULAR' && this.topic.irregularEstimation) {
+      this.calculatedP80Result = this.irregularTaskService.calculateP80(this.topic.irregularEstimation);
+      this.irregularValidation = this.irregularTaskService.validate(this.topic.irregularEstimation);
+    } else {
+      this.calculatedP80Result = null;
+      this.irregularValidation = null;
+    }
+  }
+
+  /**
+   * Handle irregular estimation field changes
+   */
+  onIrregularEstimationChange(): void {
+    this.updateP80Calculation();
   }
 }

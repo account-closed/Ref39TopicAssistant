@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { TeamMember, Topic, Tag, LoadConfig, SizeLabel } from '../models';
 import { LoadConfigService } from './load-config.service';
+import { IrregularTaskService } from './irregular-task.service';
 
 /**
  * Role weight constants as defined in the specification.
@@ -81,9 +82,11 @@ export interface MemberLoadResult {
   rawLoad: number;
   /** Topic-based load (L_topics) */
   topicsLoad: number;
+  /** Irregular tasks load contribution */
+  irregularTasksLoad: number;
   /** Base load (L_base) in hours/week */
   baseLoadHoursPerWeek: number;
-  /** Total load = L_base + L_topics */
+  /** Total load = L_base + L_topics + L_irregular */
   totalLoad: number;
   normalizedLoad: number;
   /** Effective capacity for this member (hours/week) */
@@ -146,6 +149,7 @@ export interface LoadCacheKey {
 })
 export class LoadCalculationService {
   private readonly loadConfigService = inject(LoadConfigService);
+  private readonly irregularTaskService = inject(IrregularTaskService);
 
   private cache: {
     key: LoadCacheKey | null;
@@ -409,7 +413,27 @@ export class LoadCalculationService {
 
       const rawLoad = topicContributions.reduce((sum, tc) => sum + tc.loadContribution, 0);
       const topicsLoad = activityMultiplier * rawLoad;
-      const totalLoad = baseLoadHoursPerWeek + topicsLoad;
+      
+      // Calculate irregular task contributions
+      let irregularTasksLoad = 0;
+      for (const topic of topics) {
+        if (topic.taskCategory === 'IRREGULAR' && topic.irregularEstimation) {
+          // Check if member has a role in this topic
+          const hasRole = roles.some(r => r.topicId === topic.id);
+          if (hasRole) {
+            const result = this.irregularTaskService.calculateP80(topic.irregularEstimation);
+            // Use role weight to proportion the load contribution
+            const role = roles.find(r => r.topicId === topic.id);
+            const roleWeight = this.getRoleWeight(role?.role, loadConfig);
+            // R1 gets 100% of planning hours, other roles get proportional share
+            const r1Weight = loadConfig?.roleWeights?.R1 ?? ROLE_WEIGHTS.R1;
+            const proportion = roleWeight / r1Weight;
+            irregularTasksLoad += result.weeklyPlanningHours * proportion;
+          }
+        }
+      }
+      
+      const totalLoad = baseLoadHoursPerWeek + topicsLoad + irregularTasksLoad;
       const capacityRatio = effectiveCapacityHoursPerWeek > 0 
         ? totalLoad / effectiveCapacityHoursPerWeek 
         : 0;
@@ -427,6 +451,7 @@ export class LoadCalculationService {
         partTimeFactor,
         rawLoad,
         topicsLoad,
+        irregularTasksLoad,
         baseLoadHoursPerWeek,
         totalLoad,
         normalizedLoad: 0, // Will be calculated after median

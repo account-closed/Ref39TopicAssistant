@@ -14,6 +14,32 @@ export interface TopicRaci {
 
 export type TShirtSize = 'XXS' | 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL';
 
+// Task category
+export type TaskCategory = 'REGULAR' | 'IRREGULAR';
+
+// Variance class for P80 calculation
+export type VarianceClass = 'L0' | 'L1' | 'L2' | 'L3' | 'L4';
+
+// Wave class for peak multiplier
+export type WaveClass = 'W0' | 'W1' | 'W2' | 'W3' | 'W4';
+
+// Irregular task estimation (P80-based)
+export interface IrregularTaskEstimation {
+  // Frequency per year (events/year)
+  frequencyMin: number;    // N_a
+  frequencyTypical: number; // N_b
+  frequencyMax: number;    // N_c
+  
+  // Effort per event (hours/event)
+  effortMin: number;       // T_a
+  effortTypical: number;   // T_b
+  effortMax: number;       // T_c
+  
+  // Classification
+  varianceClass: VarianceClass;
+  waveClass: WaveClass;
+}
+
 /**
  * Type of connection between two topics.
  * - dependsOn: This topic depends on another topic
@@ -47,4 +73,6 @@ export interface Topic {
   sharedFilePath?: string; // Shared file path, shown when hasSharedFilePath is true
   size?: TShirtSize; // T-shirt size classification (XXS to XXL)
   connections?: TopicConnection[]; // Connections to other topics
+  taskCategory?: TaskCategory; // Default: 'REGULAR'
+  irregularEstimation?: IrregularTaskEstimation;
 }
