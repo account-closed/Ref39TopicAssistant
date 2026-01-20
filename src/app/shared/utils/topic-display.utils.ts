@@ -21,14 +21,15 @@ export function getSizeSeverity(
 ): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
   switch (size) {
     case 'XXS':
-    case 'XS':
       return 'success';
+    case 'XS':
     case 'S':
-    case 'M':
       return 'info';
+    case 'M':
+      return 'secondary';
     case 'L':
-    case 'XL':
       return 'warn';
+    case 'XL':
     case 'XXL':
       return 'danger';
     default:
