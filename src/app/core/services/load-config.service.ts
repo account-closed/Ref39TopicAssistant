@@ -278,13 +278,13 @@ export class LoadConfigService {
     config: LoadConfig,
     totalLoad: number,
     effectiveCapacity: number
-  ): 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' {
+  ): 'XXS' | 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL' {
     // XXL: load exceeds capacity
     if (totalLoad > effectiveCapacity) {
       return 'XXL';
     }
 
-    // Check thresholds (XS, S, M, L, XL)
+    // Check thresholds (XXS, XS, S, M, L, XL)
     for (const threshold of config.sizes.thresholds) {
       if (totalLoad >= threshold.min && totalLoad < threshold.max) {
         return threshold.name;
