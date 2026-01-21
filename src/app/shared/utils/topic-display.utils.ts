@@ -27,8 +27,8 @@ export function getSizeSeverity(
     case 'M':
       return 'info';
     case 'L':
-    case 'XL':
       return 'warn';
+    case 'XL':
     case 'XXL':
       return 'danger';
     default:

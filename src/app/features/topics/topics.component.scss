@@ -458,3 +458,17 @@
     font-size: 0.75rem;
   }
 }
+
+// Fix for dialog dropdowns being clipped
+:host ::ng-deep .p-dialog .p-dialog-content {
+  overflow-x: visible;
+  overflow-y: auto;
+  max-height: 70vh;
+}
+
+// Ensure select/multiselect overlays appear above dialog
+:host ::ng-deep .p-select-overlay,
+:host ::ng-deep .p-multiselect-overlay,
+:host ::ng-deep .p-autocomplete-overlay {
+  z-index: 1101 !important;
+}

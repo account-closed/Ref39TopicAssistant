@@ -329,9 +329,24 @@
           
           <div class="size-thresholds-grid">
             <div class="config-row">
-              <label>XS (Extra Small)</label>
+              <label>XXS (Extra Extra Small)</label>
               <div class="threshold-input">
                 <span class="threshold-label">0.0h bis</span>
+                <p-inputNumber 
+                  [(ngModel)]="sizeThresholdXXSMax"
+                  [min]="0"
+                  [max]="20"
+                  [step]="0.5"
+                  [minFractionDigits]="1"
+                  suffix=" h"
+                  [showButtons]="true"></p-inputNumber>
+              </div>
+            </div>
+            
+            <div class="config-row">
+              <label>XS (Extra Small)</label>
+              <div class="threshold-input">
+                <span class="threshold-label">{{ sizeThresholdXXSMax().toFixed(1) }}h bis</span>
                 <p-inputNumber 
                   [(ngModel)]="sizeThresholdXSMax"
                   [min]="0"

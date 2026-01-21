@@ -73,6 +73,7 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
   protected roleWeightI = signal(0.5);
   
   // Size thresholds
+  protected sizeThresholdXXSMax = signal(1.0);
   protected sizeThresholdXSMax = signal(2.0);
   protected sizeThresholdSMax = signal(8.0);
   protected sizeThresholdMMax = signal(14.0);
@@ -144,12 +145,14 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
     
     // Load size thresholds
     const thresholds = config.sizes.thresholds;
+    const xxs = thresholds.find(t => t.name === 'XXS');
     const xs = thresholds.find(t => t.name === 'XS');
     const s = thresholds.find(t => t.name === 'S');
     const m = thresholds.find(t => t.name === 'M');
     const l = thresholds.find(t => t.name === 'L');
     const xl = thresholds.find(t => t.name === 'XL');
     
+    if (xxs) this.sizeThresholdXXSMax.set(xxs.max);
     if (xs) this.sizeThresholdXSMax.set(xs.max);
     if (s) this.sizeThresholdSMax.set(s.max);
     if (m) this.sizeThresholdMMax.set(m.max);
@@ -162,14 +165,15 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
     if (!currentConfig) return;
     
     // Validate size thresholds are in ascending order
-    // XS.max < S.max < M.max < L.max <= XL.min
+    // XXS.max < XS.max < S.max < M.max < L.max <= XL.min
+    const xxsMax = this.sizeThresholdXXSMax();
     const xsMax = this.sizeThresholdXSMax();
     const sMax = this.sizeThresholdSMax();
     const mMax = this.sizeThresholdMMax();
     const lMax = this.sizeThresholdLMax();
     const xlMin = this.sizeThresholdXLMin();
     
-    if (xsMax >= sMax || sMax >= mMax || mMax >= lMax || lMax > xlMin) {
+    if (xxsMax >= xsMax || xsMax >= sMax || sMax >= mMax || mMax >= lMax || lMax > xlMin) {
       this.messageService.add({
         severity: 'error',
         summary: 'Ungültige Schwellenwerte',
@@ -204,7 +208,8 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
         },
         sizes: {
           thresholds: [
-            { name: 'XS', min: 0.0, max: xsMax },
+            { name: 'XXS', min: 0.0, max: xxsMax },
+            { name: 'XS', min: xxsMax, max: xsMax },
             { name: 'S', min: xsMax, max: sMax },
             { name: 'M', min: sMax, max: mMax },
             { name: 'L', min: mMax, max: lMax },

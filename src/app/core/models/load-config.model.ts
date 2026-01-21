@@ -17,7 +17,7 @@ export interface BaseLoadComponent {
  * Size threshold definition.
  */
 export interface SizeThreshold {
-  name: 'XS' | 'S' | 'M' | 'L' | 'XL';
+  name: 'XXS' | 'XS' | 'S' | 'M' | 'L' | 'XL';
   min: number;
   max: number;
 }
@@ -36,7 +36,7 @@ export interface RoleWeights {
 /**
  * Size classification label.
  */
-export type SizeLabel = 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL';
+export type SizeLabel = 'XXS' | 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL';
 
 /**
  * Complete load configuration structure.
@@ -94,7 +94,8 @@ export const DEFAULT_LOAD_CONFIG: LoadConfig = {
   },
   sizes: {
     thresholds: [
-      { name: 'XS', min: 0.0, max: 2.0 },
+      { name: 'XXS', min: 0.0, max: 1.0 },
+      { name: 'XS', min: 1.0, max: 2.0 },
       { name: 'S', min: 2.0, max: 8.0 },
       { name: 'M', min: 8.0, max: 14.0 },
       { name: 'L', min: 14.0, max: 20.0 },
