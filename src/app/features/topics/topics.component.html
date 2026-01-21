@@ -445,11 +445,11 @@
                   <div class="p80-final">
                     <div class="p80-result-item p80-planning">
                       <span class="p80-result-label">Wöchentlicher Planungsanteil:</span>
-                      <span class="p80-result-value">{{ calculatedP80Result?.weeklyPlanningHours?.toFixed(2) ?? '0.00' }} h/Woche</span>
+                      <span class="p80-result-value">{{ formatHoursMinutes(calculatedP80Result?.weeklyPlanningHours ?? 0) }}/Woche</span>
                     </div>
                     <div class="p80-result-item p80-peak">
                       <span class="p80-result-label">Wöchentliche Spitzenlast:</span>
-                      <span class="p80-result-value">{{ calculatedP80Result?.weeklyPeakHours?.toFixed(2) ?? '0.00' }} h/Woche</span>
+                      <span class="p80-result-value">{{ formatHoursMinutes(calculatedP80Result?.weeklyPeakHours ?? 0) }}/Woche</span>
                     </div>
                   </div>
                 </div>

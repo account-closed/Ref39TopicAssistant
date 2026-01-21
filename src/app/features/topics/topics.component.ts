@@ -27,6 +27,7 @@ import { IrregularTaskService, IrregularTaskResult, IrregularTaskValidation } fr
 import { Topic, TeamMember, Datastore, Tag as TagModel, TShirtSize, TopicConnection, TopicConnectionType, TaskCategory, DEFAULT_IRREGULAR_ESTIMATION, VARIANCE_CLASS_OPTIONS, WAVE_CLASS_OPTIONS } from '../../core/models';
 import { getPriorityStars, getSizeSeverity } from '../../shared/utils/topic-display.utils';
 import { isValidKeyword, sanitizeKeyword } from '../../shared/utils/validation.utils';
+import { formatHoursMinutes } from '../../shared/utils/time-format.utils';
 import { PageWrapperComponent } from '../../shared/components';
 
 interface MemberOption {
@@ -742,4 +743,6 @@ export class TopicsComponent implements OnInit, OnDestroy {
     const option = this.waveClassOptions.find(o => o.value === this.topic.irregularEstimation?.waveClass);
     return option?.description || 'Wie stark clustern sich die Ereignisse?';
   }
+
+  formatHoursMinutes = formatHoursMinutes;
 }

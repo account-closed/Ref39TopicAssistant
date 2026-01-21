@@ -21,6 +21,7 @@ import { BackendService } from '../../../core/services/backend.service';
 import { LoadCalculationService, LoadCalculationResult, MemberLoadResult, LoadStatus } from '../../../core/services/load-calculation.service';
 import { LoadConfigService } from '../../../core/services/load-config.service';
 import { Datastore, LoadConfig, SizeLabel } from '../../../core/models';
+import { formatHoursMinutes } from '../../../shared/utils/time-format.utils';
 
 @Component({
   selector: 'app-load-dashboard',
@@ -204,24 +205,7 @@ export class LoadDashboardComponent implements OnInit, OnDestroy {
     return value.toFixed(2);
   }
 
-  /**
-   * Formats a decimal hour value as hours and minutes.
-   * Example: 1.75 -> "1h 45min", 0.5 -> "30min", 2 -> "2h"
-   */
-  protected formatHoursMinutes(value: number): string {
-    const hours = Math.floor(value);
-    const minutes = Math.round((value - hours) * 60);
-
-    if (hours === 0 && minutes === 0) {
-      return '0min';
-    } else if (hours === 0) {
-      return `${minutes}min`;
-    } else if (minutes === 0) {
-      return `${hours}h`;
-    } else {
-      return `${hours}h ${minutes}min`;
-    }
-  }
+  protected formatHoursMinutes = formatHoursMinutes;
 
   protected formatPercent(value: number): string {
     return (value * 100).toFixed(0) + '%';

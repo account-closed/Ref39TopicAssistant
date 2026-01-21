@@ -23,6 +23,7 @@ import { BackendService } from '../../../core/services/backend.service';
 import { LoadConfigService, MAX_OVERHEAD_FACTOR } from '../../../core/services/load-config.service';
 import { LoadCalculationService } from '../../../core/services/load-calculation.service';
 import { LoadConfig, DEFAULT_LOAD_CONFIG, BaseLoadComponent } from '../../../core/models';
+import { formatHoursMinutes } from '../../../shared/utils/time-format.utils';
 
 @Component({
   selector: 'app-load-config',
@@ -276,4 +277,6 @@ export class LoadConfigComponent implements OnInit, OnDestroy {
     components[index] = { ...components[index], name };
     this.baseComponents.set(components);
   }
+
+  protected formatHoursMinutes = formatHoursMinutes;
 }
