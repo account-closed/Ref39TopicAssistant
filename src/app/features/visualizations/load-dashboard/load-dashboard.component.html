@@ -133,7 +133,7 @@
                     [value]="member.size" 
                     [severity]="getSizeSeverity(member.size)"
                     [rounded]="true"></p-tag>
-                  <span class="load-value" [pTooltip]="'Total: ' + formatNumber(member.totalLoad) + ' h/Woche'">{{ formatNumber(member.totalLoad) }}h</span>
+                  <span class="load-value" [pTooltip]="'Total: ' + formatHoursMinutes(member.totalLoad) + '/Woche'">{{ formatHoursMinutes(member.totalLoad) }}</span>
                   <span class="capacity-value" [pTooltip]="'Kapazität: ' + formatPercent(member.capacityRatio)">({{ formatPercent(member.capacityRatio) }})</span>
                 </span>
               </div>
@@ -159,7 +159,7 @@
           <div class="chart-footer">
             <span class="median-info">
               <i class="pi pi-equals"></i>
-              Median: {{ formatNumber(loadResult()?.medianLoad ?? 0) }}
+              Median: {{ formatHoursMinutes(loadResult()?.medianLoad ?? 0) }}
             </span>
           </div>
         </ng-template>
@@ -179,35 +179,35 @@
             <div class="role-bar-container">
               <div class="role-bar r1" [style.width.%]="getRoleBreakdownPercentage(roleBreakdown().r1)"></div>
             </div>
-            <span class="role-value">{{ formatNumber(roleBreakdown().r1) }}</span>
+            <span class="role-value">{{ formatHoursMinutes(roleBreakdown().r1) }}</span>
           </div>
           <div class="role-item">
             <span class="role-label">R2 (1. Stellvertreter)</span>
             <div class="role-bar-container">
               <div class="role-bar r2" [style.width.%]="getRoleBreakdownPercentage(roleBreakdown().r2)"></div>
             </div>
-            <span class="role-value">{{ formatNumber(roleBreakdown().r2) }}</span>
+            <span class="role-value">{{ formatHoursMinutes(roleBreakdown().r2) }}</span>
           </div>
           <div class="role-item">
             <span class="role-label">R3 (2. Stellvertreter)</span>
             <div class="role-bar-container">
               <div class="role-bar r3" [style.width.%]="getRoleBreakdownPercentage(roleBreakdown().r3)"></div>
             </div>
-            <span class="role-value">{{ formatNumber(roleBreakdown().r3) }}</span>
+            <span class="role-value">{{ formatHoursMinutes(roleBreakdown().r3) }}</span>
           </div>
           <div class="role-item">
             <span class="role-label">C (Konsultiert)</span>
             <div class="role-bar-container">
               <div class="role-bar c" [style.width.%]="getRoleBreakdownPercentage(roleBreakdown().c)"></div>
             </div>
-            <span class="role-value">{{ formatNumber(roleBreakdown().c) }}</span>
+            <span class="role-value">{{ formatHoursMinutes(roleBreakdown().c) }}</span>
           </div>
           <div class="role-item">
             <span class="role-label">I (Informiert)</span>
             <div class="role-bar-container">
               <div class="role-bar i" [style.width.%]="getRoleBreakdownPercentage(roleBreakdown().i)"></div>
             </div>
-            <span class="role-value">{{ formatNumber(roleBreakdown().i) }}</span>
+            <span class="role-value">{{ formatHoursMinutes(roleBreakdown().i) }}</span>
           </div>
         </div>
         
@@ -215,7 +215,7 @@
           <div class="chart-footer">
             <span class="total-info">
               <i class="pi pi-calculator"></i>
-              Gesamt: {{ formatNumber(totalSystemLoad()) }}
+              Gesamt: {{ formatHoursMinutes(totalSystemLoad()) }}
             </span>
           </div>
         </ng-template>
@@ -247,19 +247,19 @@
           <div class="summary-row">
             <div class="summary-item">
               <span class="summary-label">Basis-Auslastung</span>
-              <span class="summary-value">{{ formatNumber(member.baseLoadHoursPerWeek) }}h/Wo</span>
+              <span class="summary-value">{{ formatHoursMinutes(member.baseLoadHoursPerWeek) }}/Wo</span>
             </div>
             <div class="summary-item">
               <span class="summary-label">Themen-Auslastung</span>
-              <span class="summary-value">{{ formatNumber(member.topicsLoad) }}h/Wo</span>
+              <span class="summary-value">{{ formatHoursMinutes(member.topicsLoad) }}/Wo</span>
             </div>
             <div class="summary-item">
               <span class="summary-label">Gesamtauslastung</span>
-              <span class="summary-value highlight">{{ formatNumber(member.totalLoad) }}h/Wo</span>
+              <span class="summary-value highlight">{{ formatHoursMinutes(member.totalLoad) }}/Wo</span>
             </div>
             <div class="summary-item">
               <span class="summary-label">Effektive Kapazität</span>
-              <span class="summary-value">{{ formatNumber(member.effectiveCapacityHoursPerWeek) }}h/Wo</span>
+              <span class="summary-value">{{ formatHoursMinutes(member.effectiveCapacityHoursPerWeek) }}/Wo</span>
             </div>
             <div class="summary-item">
               <span class="summary-label">Kapazitätsauslastung</span>
@@ -339,15 +339,15 @@
               </tr>
               <tr class="summary-footer">
                 <td colspan="6" class="text-right"><strong>× Aktivitätsmultiplikator ({{ member.activityMultiplier }}):</strong></td>
-                <td class="number-cell"><strong>{{ formatNumber(member.topicsLoad) }}h</strong></td>
+                <td class="number-cell"><strong>{{ formatHoursMinutes(member.topicsLoad) }}</strong></td>
               </tr>
               <tr class="summary-footer">
                 <td colspan="6" class="text-right"><strong>+ Basis-Auslastung:</strong></td>
-                <td class="number-cell"><strong>{{ formatNumber(member.baseLoadHoursPerWeek) }}h</strong></td>
+                <td class="number-cell"><strong>{{ formatHoursMinutes(member.baseLoadHoursPerWeek) }}</strong></td>
               </tr>
               <tr class="summary-footer total-row">
                 <td colspan="6" class="text-right"><strong>= Gesamtauslastung:</strong></td>
-                <td class="number-cell"><strong>{{ formatNumber(member.totalLoad) }}h/Wo</strong></td>
+                <td class="number-cell"><strong>{{ formatHoursMinutes(member.totalLoad) }}/Wo</strong></td>
               </tr>
             </ng-template>
           </p-table>
