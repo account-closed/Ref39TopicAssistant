@@ -22,11 +22,9 @@ import { BackendService } from '../../core/services/backend.service';
 import { Tag, TeamMember, Datastore } from '../../core/models';
 import { isValidKeyword, sanitizeKeyword } from '../../shared/utils/validation.utils';
 import { TAG_WEIGHT_RECOMMENDED_MIN, TAG_WEIGHT_RECOMMENDED_MAX } from '../../core/services/load-calculation.service';
-import { PageWrapperComponent } from '../../shared/components';
 
 @Component({
   selector: 'app-tags',
-  standalone: true,
   imports: [
     CommonModule,
     FormsModule,
@@ -45,7 +43,6 @@ import { PageWrapperComponent } from '../../shared/components';
     Tooltip,
     ColorPicker,
     ToggleSwitch,
-    PageWrapperComponent
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './tags.component.html',

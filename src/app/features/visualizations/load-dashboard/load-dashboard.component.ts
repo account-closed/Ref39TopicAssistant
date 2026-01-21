@@ -166,6 +166,7 @@ export class LoadDashboardComponent implements OnInit, OnDestroy {
 
   protected getSizeSeverity(size: SizeLabel): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
     switch (size) {
+      case 'XXS': return 'secondary';
       case 'XS': return 'secondary';
       case 'S': return 'info';
       case 'M': return 'success';
