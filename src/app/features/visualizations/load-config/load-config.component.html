@@ -175,15 +175,12 @@
                     (change)="updateComponentName(i, $any($event.target).value)">
                 </td>
                 <td>
-                  <p-inputNumber 
+                  <app-time-input
                     [ngModel]="component.hoursPerWeek"
                     (ngModelChange)="updateComponentHours(i, $event)"
-                    [min]="0"
-                    [max]="10"
-                    [step]="0.5"
-                    [minFractionDigits]="1"
-                    suffix=" h"
-                    [showButtons]="true"></p-inputNumber>
+                    [maxHours]="10"
+                    [minuteStep]="15">
+                  </app-time-input>
                 </td>
                 <td>
                   <p-button 
@@ -331,15 +328,12 @@
             <div class="config-row">
               <label>XXS (Extra Extra Small)</label>
               <div class="threshold-input">
-                <span class="threshold-label">0.0h bis</span>
-                <p-inputNumber 
+                <span class="threshold-label">0min bis</span>
+                <app-time-input
                   [(ngModel)]="sizeThresholdXXSMax"
-                  [min]="0"
-                  [max]="20"
-                  [step]="0.5"
-                  [minFractionDigits]="1"
-                  suffix=" h"
-                  [showButtons]="true"></p-inputNumber>
+                  [maxHours]="20"
+                  [minuteStep]="15">
+                </app-time-input>
               </div>
             </div>
             
@@ -347,14 +341,11 @@
               <label>XS (Extra Small)</label>
               <div class="threshold-input">
                 <span class="threshold-label">{{ formatHoursMinutes(sizeThresholdXXSMax()) }} bis</span>
-                <p-inputNumber 
+                <app-time-input
                   [(ngModel)]="sizeThresholdXSMax"
-                  [min]="0"
-                  [max]="20"
-                  [step]="0.5"
-                  [minFractionDigits]="1"
-                  suffix=" h"
-                  [showButtons]="true"></p-inputNumber>
+                  [maxHours]="20"
+                  [minuteStep]="15">
+                </app-time-input>
               </div>
             </div>
             
@@ -362,14 +353,11 @@
               <label>S (Small)</label>
               <div class="threshold-input">
                 <span class="threshold-label">{{ formatHoursMinutes(sizeThresholdXSMax()) }} bis</span>
-                <p-inputNumber 
+                <app-time-input
                   [(ngModel)]="sizeThresholdSMax"
-                  [min]="0"
-                  [max]="20"
-                  [step]="0.5"
-                  [minFractionDigits]="1"
-                  suffix=" h"
-                  [showButtons]="true"></p-inputNumber>
+                  [maxHours]="20"
+                  [minuteStep]="15">
+                </app-time-input>
               </div>
             </div>
             
@@ -377,14 +365,11 @@
               <label>M (Medium)</label>
               <div class="threshold-input">
                 <span class="threshold-label">{{ formatHoursMinutes(sizeThresholdSMax()) }} bis</span>
-                <p-inputNumber 
+                <app-time-input
                   [(ngModel)]="sizeThresholdMMax"
-                  [min]="0"
-                  [max]="30"
-                  [step]="0.5"
-                  [minFractionDigits]="1"
-                  suffix=" h"
-                  [showButtons]="true"></p-inputNumber>
+                  [maxHours]="30"
+                  [minuteStep]="15">
+                </app-time-input>
               </div>
             </div>
             
@@ -392,14 +377,11 @@
               <label>L (Large)</label>
               <div class="threshold-input">
                 <span class="threshold-label">{{ formatHoursMinutes(sizeThresholdMMax()) }} bis</span>
-                <p-inputNumber 
+                <app-time-input
                   [(ngModel)]="sizeThresholdLMax"
-                  [min]="0"
-                  [max]="40"
-                  [step]="0.5"
-                  [minFractionDigits]="1"
-                  suffix=" h"
-                  [showButtons]="true"></p-inputNumber>
+                  [maxHours]="40"
+                  [minuteStep]="15">
+                </app-time-input>
               </div>
             </div>
             
@@ -407,16 +389,14 @@
               <label>XL (Extra Large)</label>
               <div class="threshold-input">
                 <span class="threshold-label">ab</span>
-                <p-inputNumber 
+                <app-time-input
                   [(ngModel)]="sizeThresholdXLMin"
-                  [min]="0"
-                  [max]="100"
-                  [step]="1"
-                  [minFractionDigits]="1"
-                  suffix=" h"
-                  [showButtons]="true"
-                  pTooltip="Untere Grenze für XL (obere Grenze = Kapazität)"
-                  tooltipPosition="top"></p-inputNumber>
+                  [maxHours]="100"
+                  [minuteStep]="15">
+                </app-time-input>
+                <i class="pi pi-info-circle ml-2" 
+                   pTooltip="Untere Grenze für XL (obere Grenze = Kapazität)"
+                   tooltipPosition="top"></i>
               </div>
             </div>
           </div>

@@ -28,7 +28,7 @@ import { Topic, TeamMember, Datastore, Tag as TagModel, TShirtSize, TopicConnect
 import { getPriorityStars, getSizeSeverity } from '../../shared/utils/topic-display.utils';
 import { isValidKeyword, sanitizeKeyword } from '../../shared/utils/validation.utils';
 import { formatHoursMinutes } from '../../shared/utils/time-format.utils';
-import { PageWrapperComponent } from '../../shared/components';
+import { PageWrapperComponent, TimeInputComponent } from '../../shared/components';
 
 interface MemberOption {
   id: string;
@@ -42,7 +42,6 @@ interface TopicOption {
 
 @Component({
   selector: 'app-topics',
-  standalone: true,
   imports: [
     CommonModule,
     FormsModule,
@@ -65,7 +64,8 @@ interface TopicOption {
     InputIcon,
     Rating,
     Tooltip,
-    PageWrapperComponent
+    PageWrapperComponent,
+    TimeInputComponent,
   ],
   providers: [MessageService, ConfirmationService],
   templateUrl: './topics.component.html',

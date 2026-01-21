@@ -24,6 +24,7 @@ import { LoadConfigService, MAX_OVERHEAD_FACTOR } from '../../../core/services/l
 import { LoadCalculationService } from '../../../core/services/load-calculation.service';
 import { LoadConfig, DEFAULT_LOAD_CONFIG, BaseLoadComponent } from '../../../core/models';
 import { formatHoursMinutes } from '../../../shared/utils/time-format.utils';
+import { TimeInputComponent } from '../../../shared/components';
 
 @Component({
   selector: 'app-load-config',
@@ -38,6 +39,7 @@ import { formatHoursMinutes } from '../../../shared/utils/time-format.utils';
     Tooltip,
     TableModule,
     Toast,
+    TimeInputComponent,
   ],
   providers: [MessageService],
   templateUrl: './load-config.component.html',

@@ -394,22 +394,22 @@
                 
                 <!-- Effort inputs with better labels -->
                 <div class="p80-field-group">
-                  <label class="p80-group-label">Aufwand pro Ereignis (Stunden)</label>
+                  <label class="p80-group-label">Aufwand pro Ereignis</label>
                   <div class="p80-triple-input">
                     <div class="p80-input-item">
                       <label>Min</label>
-                      <p-inputNumber [(ngModel)]="topic.irregularEstimation!.effortMin" [min]="0" [step]="0.1" [minFractionDigits]="0" [maxFractionDigits]="1" (onInput)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
+                      <app-time-input [(ngModel)]="topic.irregularEstimation!.effortMin" (valueChange)="onIrregularEstimationChange()" [maxHours]="24" [minuteStep]="15"></app-time-input>
                     </div>
                     <div class="p80-input-item">
                       <label>Typisch</label>
-                      <p-inputNumber [(ngModel)]="topic.irregularEstimation!.effortTypical" [min]="0" [step]="0.1" [minFractionDigits]="0" [maxFractionDigits]="1" (onInput)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
+                      <app-time-input [(ngModel)]="topic.irregularEstimation!.effortTypical" (valueChange)="onIrregularEstimationChange()" [maxHours]="24" [minuteStep]="15"></app-time-input>
                     </div>
                     <div class="p80-input-item">
                       <label>Max</label>
-                      <p-inputNumber [(ngModel)]="topic.irregularEstimation!.effortMax" [min]="0" [step]="0.1" [minFractionDigits]="0" [maxFractionDigits]="1" (onInput)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
+                      <app-time-input [(ngModel)]="topic.irregularEstimation!.effortMax" (valueChange)="onIrregularEstimationChange()" [maxHours]="24" [minuteStep]="15"></app-time-input>
                     </div>
                     <div class="p80-computed-value">
-                      → T<sub>P80</sub>: <strong>{{ calculatedP80Result?.effortP80?.toFixed(1) ?? '0.0' }}h</strong>
+                      → T<sub>P80</sub>: <strong>{{ formatHoursMinutes(calculatedP80Result?.effortP80 ?? 0) }}</strong>
                     </div>
                   </div>
                   @if (irregularValidation?.errors?.length) {
