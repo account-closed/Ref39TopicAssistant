@@ -4,10 +4,10 @@ import { VARIANCE_CLASS_WEIGHTS, WAVE_CLASS_MULTIPLIERS } from '../models/irregu
 
 export interface IrregularTaskResult {
   frequencyP80: number;          // N_P80
-  effortP80: number;             // T_P80
-  yearlyHoursP80: number;        // N_P80 * T_P80
-  weeklyPlanningHours: number;   // weeklyPlanningHours_P80
-  weeklyPeakHours: number;       // weeklyPeakHours_P80
+  effortP80: number;             // T_P80 (in minutes)
+  yearlyHoursP80: number;        // N_P80 * T_P80 / 60 (in hours)
+  weeklyPlanningHours: number;   // weeklyPlanningHours_P80 (in hours)
+  weeklyPeakHours: number;       // weeklyPeakHours_P80 (in hours)
 }
 
 export interface IrregularTaskValidation {
@@ -23,6 +23,7 @@ export class IrregularTaskService {
   
   /**
    * Calculate P80 estimation for irregular task
+   * Note: Effort values are in minutes, converted to hours for weekly calculations
    */
   calculateP80(estimation: IrregularTaskEstimation): IrregularTaskResult {
     const k = VARIANCE_CLASS_WEIGHTS[estimation.varianceClass];
@@ -30,18 +31,21 @@ export class IrregularTaskService {
     
     // P80 estimation: value = typical + k * (max - typical)
     const frequencyP80 = estimation.frequencyTypical + k * (estimation.frequencyMax - estimation.frequencyTypical);
-    const effortP80 = estimation.effortTypical + k * (estimation.effortMax - estimation.effortTypical);
+    const effortP80Minutes = estimation.effortTypical + k * (estimation.effortMax - estimation.effortTypical);
     
-    // Weekly planning share
-    const yearlyHoursP80 = frequencyP80 * effortP80;
+    // Convert effort from minutes to hours for weekly calculations
+    const effortP80Hours = effortP80Minutes / 60;
+    
+    // Weekly planning share (in hours)
+    const yearlyHoursP80 = frequencyP80 * effortP80Hours;
     const weeklyPlanningHours = yearlyHoursP80 / 52;
     
-    // Weekly peak load
+    // Weekly peak load (in hours)
     const weeklyPeakHours = w * weeklyPlanningHours;
     
     return {
       frequencyP80,
-      effortP80,
+      effortP80: Math.round(effortP80Minutes), // Keep as minutes for display
       yearlyHoursP80,
       weeklyPlanningHours,
       weeklyPeakHours,
@@ -50,6 +54,7 @@ export class IrregularTaskService {
   
   /**
    * Validate irregular task estimation
+   * Note: Effort values are in minutes
    */
   validate(estimation: IrregularTaskEstimation): IrregularTaskValidation {
     const errors: string[] = [];
@@ -98,15 +103,16 @@ export class IrregularTaskService {
   
   /**
    * Apply defaults when user provides only typical values
+   * Note: Effort values are in minutes
    */
-  applyDefaults(typicalFrequency: number, typicalEffort: number): IrregularTaskEstimation {
+  applyDefaults(typicalFrequency: number, typicalEffortMinutes: number): IrregularTaskEstimation {
     return {
       frequencyMin: typicalFrequency * 0.5,
       frequencyTypical: typicalFrequency,
       frequencyMax: typicalFrequency * 1.5,
-      effortMin: typicalEffort * 0.7,
-      effortTypical: typicalEffort,
-      effortMax: typicalEffort * 1.7,
+      effortMin: Math.round(typicalEffortMinutes * 0.7),
+      effortTypical: typicalEffortMinutes,
+      effortMax: Math.round(typicalEffortMinutes * 1.7),
       varianceClass: 'L2',
       waveClass: 'W2',
     };

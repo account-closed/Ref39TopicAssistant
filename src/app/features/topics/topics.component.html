@@ -394,22 +394,22 @@
                 
                 <!-- Effort inputs with better labels -->
                 <div class="p80-field-group">
-                  <label class="p80-group-label">Aufwand pro Ereignis</label>
+                  <label class="p80-group-label">Aufwand pro Ereignis (Minuten)</label>
                   <div class="p80-triple-input">
                     <div class="p80-input-item">
                       <label>Min</label>
-                      <app-time-input [(ngModel)]="topic.irregularEstimation!.effortMin" (valueChange)="onIrregularEstimationChange()" [maxHours]="24" [minuteStep]="15"></app-time-input>
+                      <p-inputNumber [(ngModel)]="topic.irregularEstimation!.effortMin" [min]="0" [max]="600" [step]="5" suffix=" min" [showButtons]="true" (ngModelChange)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
                     </div>
                     <div class="p80-input-item">
                       <label>Typisch</label>
-                      <app-time-input [(ngModel)]="topic.irregularEstimation!.effortTypical" (valueChange)="onIrregularEstimationChange()" [maxHours]="24" [minuteStep]="15"></app-time-input>
+                      <p-inputNumber [(ngModel)]="topic.irregularEstimation!.effortTypical" [min]="0" [max]="600" [step]="5" suffix=" min" [showButtons]="true" (ngModelChange)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
                     </div>
                     <div class="p80-input-item">
                       <label>Max</label>
-                      <app-time-input [(ngModel)]="topic.irregularEstimation!.effortMax" (valueChange)="onIrregularEstimationChange()" [maxHours]="24" [minuteStep]="15"></app-time-input>
+                      <p-inputNumber [(ngModel)]="topic.irregularEstimation!.effortMax" [min]="0" [max]="600" [step]="5" suffix=" min" [showButtons]="true" (ngModelChange)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
                     </div>
                     <div class="p80-computed-value">
-                      → T<sub>P80</sub>: <strong>{{ formatHoursMinutes(calculatedP80Result?.effortP80 ?? 0) }}</strong>
+                      → T<sub>P80</sub>: <strong>{{ calculatedP80Result?.effortP80?.toFixed(0) ?? '0' }} min</strong>
                     </div>
                   </div>
                   @if (irregularValidation?.errors?.length) {
@@ -439,7 +439,7 @@
                   <div class="p80-intermediate">
                     <span class="p80-calc-step">
                       <i class="pi pi-calculator"></i>
-                      Jahresstunden (P80): {{ calculatedP80Result?.frequencyP80?.toFixed(1) ?? '0' }} × {{ calculatedP80Result?.effortP80?.toFixed(1) ?? '0' }}h = <strong>{{ calculatedP80Result?.yearlyHoursP80?.toFixed(1) ?? '0.0' }}h/Jahr</strong>
+                      Jahresstunden (P80): {{ calculatedP80Result?.frequencyP80?.toFixed(1) ?? '0' }} × {{ calculatedP80Result?.effortP80?.toFixed(0) ?? '0' }}min = <strong>{{ formatHoursMinutes(calculatedP80Result?.yearlyHoursP80 ?? 0) }}/Jahr</strong>
                     </span>
                   </div>
                   <div class="p80-final">

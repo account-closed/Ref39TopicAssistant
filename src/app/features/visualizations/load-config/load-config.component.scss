@@ -220,15 +220,31 @@ h1 {
   gap: 1rem;
 }
 
+.size-thresholds-grid {
+  .config-row {
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    align-items: center;
+    gap: 1rem;
+    
+    label {
+      flex: none;
+      font-weight: 500;
+    }
+  }
+}
+
 .threshold-input {
-  display: flex;
+  display: grid;
+  grid-template-columns: 100px auto auto;
   align-items: center;
   gap: 0.5rem;
-  flex: 1;
   
   .threshold-label {
     color: var(--p-text-muted-color);
     white-space: nowrap;
+    text-align: right;
+    min-width: 100px;
   }
 }
 
