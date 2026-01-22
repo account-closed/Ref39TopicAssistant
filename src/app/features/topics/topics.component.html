@@ -126,6 +126,9 @@
       <tr>
         <td>
           <strong>{{ topic.header }}</strong>
+          @if (topic.topicType === 'container') {
+            <p-tag severity="secondary" value="Container" [rounded]="true" styleClass="ml-2"></p-tag>
+          }
           @if (topic.description) {
             <div class="text-secondary text-sm">
               {{ topic.description | slice:0:100 }}{{ topic.description.length > 100 ? '...' : '' }}
@@ -340,6 +343,22 @@
                   optionValue="value"
                   placeholder="Kategorie wählen...">
                 </p-select>
+              </div>
+              
+              <div class="field">
+                <div class="flex align-items-center gap-2">
+                  <p-toggleSwitch 
+                    id="isContainer"
+                    [(ngModel)]="isContainerTopic"
+                    (onChange)="onTopicTypeChange()">
+                  </p-toggleSwitch>
+                  <label for="isContainer" class="cursor-pointer">
+                    Container-Thema (kein eigener Aufwand)
+                  </label>
+                  <i class="pi pi-info-circle text-muted ml-1" 
+                     pTooltip="Container-Themen haben RACI-Verantwortlichkeiten, aber keinen eigenen Aufwand. Der Aufwand kommt von verknüpften Unter-Themen."
+                     tooltipPosition="top"></i>
+                </div>
               </div>
             </div>
             

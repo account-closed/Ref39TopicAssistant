@@ -24,7 +24,7 @@ import { MessageService, ConfirmationService } from 'primeng/api';
 import { Subscription } from 'rxjs';
 import { BackendService } from '../../core/services/backend.service';
 import { IrregularTaskService, IrregularTaskResult, IrregularTaskValidation } from '../../core/services/irregular-task.service';
-import { Topic, TeamMember, Datastore, Tag as TagModel, TShirtSize, TopicConnection, TopicConnectionType, TaskCategory, DEFAULT_IRREGULAR_ESTIMATION, VARIANCE_CLASS_OPTIONS, WAVE_CLASS_OPTIONS } from '../../core/models';
+import { Topic, TeamMember, Datastore, Tag as TagModel, TShirtSize, TopicConnection, TopicConnectionType, TaskCategory, TopicType, DEFAULT_IRREGULAR_ESTIMATION, VARIANCE_CLASS_OPTIONS, WAVE_CLASS_OPTIONS } from '../../core/models';
 import { getPriorityStars, getSizeSeverity } from '../../shared/utils/topic-display.utils';
 import { isValidKeyword, sanitizeKeyword } from '../../shared/utils/validation.utils';
 import { formatHoursMinutes } from '../../shared/utils/time-format.utils';
@@ -145,6 +145,9 @@ export class TopicsComponent implements OnInit, OnDestroy {
 
   calculatedP80Result: IrregularTaskResult | null = null;
   irregularValidation: IrregularTaskValidation | null = null;
+  
+  /** Whether current topic is a container (has RACI but no effort) */
+  isContainerTopic: boolean = false;
 
   /** All topics available for connection selection. Filtered by getAvailableTopicsForConnection() to exclude current topic. */
   topicOptions: TopicOption[] = [];
@@ -312,7 +315,8 @@ export class TopicsComponent implements OnInit, OnDestroy {
       size: undefined,
       connections: [],
       taskCategory: 'REGULAR',
-      irregularEstimation: undefined
+      irregularEstimation: undefined,
+      topicType: 'leaf'
     };
   }
 
@@ -322,6 +326,7 @@ export class TopicsComponent implements OnInit, OnDestroy {
     this.validToDate = null;
     this.submitted = false;
     this.editMode = false;
+    this.isContainerTopic = false;
     this.updateAvailableTopicsForConnection();
     this.topicDialog = true;
   }
@@ -339,11 +344,15 @@ export class TopicsComponent implements OnInit, OnDestroy {
       },
       connections: topic.connections ? topic.connections.map(c => ({ ...c })) : [],
       taskCategory: topic.taskCategory || 'REGULAR',
-      irregularEstimation: topic.irregularEstimation ? { ...topic.irregularEstimation } : undefined
+      irregularEstimation: topic.irregularEstimation ? { ...topic.irregularEstimation } : undefined,
+      topicType: topic.topicType
     };
     
     this.validFromDate = topic.validity.validFrom ? new Date(topic.validity.validFrom) : null;
     this.validToDate = topic.validity.validTo ? new Date(topic.validity.validTo) : null;
+    
+    // Sync container toggle
+    this.isContainerTopic = topic.topicType === 'container';
     
     // Calculate P80 if irregular task
     this.updateP80Calculation();
@@ -685,6 +694,13 @@ export class TopicsComponent implements OnInit, OnDestroy {
       this.calculatedP80Result = null;
       this.irregularValidation = null;
     }
+  }
+
+  /**
+   * Handle topic type change (leaf/container)
+   */
+  onTopicTypeChange(): void {
+    this.topic.topicType = this.isContainerTopic ? 'container' : 'leaf';
   }
 
   /**
