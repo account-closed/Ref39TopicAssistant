@@ -126,6 +126,9 @@
       <tr>
         <td>
           <strong>{{ topic.header }}</strong>
+          @if (topic.topicType === 'container') {
+            <p-tag severity="secondary" value="Container" [rounded]="true" styleClass="ml-2"></p-tag>
+          }
           @if (topic.description) {
             <div class="text-secondary text-sm">
               {{ topic.description | slice:0:100 }}{{ topic.description.length > 100 ? '...' : '' }}
@@ -341,6 +344,22 @@
                   placeholder="Kategorie wählen...">
                 </p-select>
               </div>
+              
+              <div class="field">
+                <div class="flex align-items-center gap-2">
+                  <p-toggleSwitch 
+                    id="isContainer"
+                    [(ngModel)]="isContainerTopic"
+                    (onChange)="onTopicTypeChange()">
+                  </p-toggleSwitch>
+                  <label for="isContainer" class="cursor-pointer">
+                    Container-Thema (kein eigener Aufwand)
+                  </label>
+                  <i class="pi pi-info-circle text-muted ml-1" 
+                     pTooltip="Container-Themen haben RACI-Verantwortlichkeiten, aber keinen eigenen Aufwand. Der Aufwand kommt von verknüpften Unter-Themen."
+                     tooltipPosition="top"></i>
+                </div>
+              </div>
             </div>
             
             <!-- T-Shirt Size (only for REGULAR tasks) -->
@@ -394,22 +413,22 @@
                 
                 <!-- Effort inputs with better labels -->
                 <div class="p80-field-group">
-                  <label class="p80-group-label">Aufwand pro Ereignis (Stunden)</label>
+                  <label class="p80-group-label">Aufwand pro Ereignis (Minuten)</label>
                   <div class="p80-triple-input">
                     <div class="p80-input-item">
                       <label>Min</label>
-                      <p-inputNumber [(ngModel)]="topic.irregularEstimation!.effortMin" [min]="0" [step]="0.1" [minFractionDigits]="0" [maxFractionDigits]="1" (onInput)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
+                      <p-inputNumber [(ngModel)]="topic.irregularEstimation!.effortMin" [min]="0" [max]="600" [step]="5" suffix=" min" [showButtons]="true" (ngModelChange)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
                     </div>
                     <div class="p80-input-item">
                       <label>Typisch</label>
-                      <p-inputNumber [(ngModel)]="topic.irregularEstimation!.effortTypical" [min]="0" [step]="0.1" [minFractionDigits]="0" [maxFractionDigits]="1" (onInput)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
+                      <p-inputNumber [(ngModel)]="topic.irregularEstimation!.effortTypical" [min]="0" [max]="600" [step]="5" suffix=" min" [showButtons]="true" (ngModelChange)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
                     </div>
                     <div class="p80-input-item">
                       <label>Max</label>
-                      <p-inputNumber [(ngModel)]="topic.irregularEstimation!.effortMax" [min]="0" [step]="0.1" [minFractionDigits]="0" [maxFractionDigits]="1" (onInput)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
+                      <p-inputNumber [(ngModel)]="topic.irregularEstimation!.effortMax" [min]="0" [max]="600" [step]="5" suffix=" min" [showButtons]="true" (ngModelChange)="onIrregularEstimationChange()" styleClass="p80-input"></p-inputNumber>
                     </div>
                     <div class="p80-computed-value">
-                      → T<sub>P80</sub>: <strong>{{ calculatedP80Result?.effortP80?.toFixed(1) ?? '0.0' }}h</strong>
+                      → T<sub>P80</sub>: <strong>{{ calculatedP80Result?.effortP80?.toFixed(0) ?? '0' }} min</strong>
                     </div>
                   </div>
                   @if (irregularValidation?.errors?.length) {
@@ -439,17 +458,17 @@
                   <div class="p80-intermediate">
                     <span class="p80-calc-step">
                       <i class="pi pi-calculator"></i>
-                      Jahresstunden (P80): {{ calculatedP80Result?.frequencyP80?.toFixed(1) ?? '0' }} × {{ calculatedP80Result?.effortP80?.toFixed(1) ?? '0' }}h = <strong>{{ calculatedP80Result?.yearlyHoursP80?.toFixed(1) ?? '0.0' }}h/Jahr</strong>
+                      Jahresstunden (P80): {{ calculatedP80Result?.frequencyP80?.toFixed(1) ?? '0' }} × {{ calculatedP80Result?.effortP80?.toFixed(0) ?? '0' }}min = <strong>{{ formatHoursMinutes(calculatedP80Result?.yearlyHoursP80 ?? 0) }}/Jahr</strong>
                     </span>
                   </div>
                   <div class="p80-final">
                     <div class="p80-result-item p80-planning">
                       <span class="p80-result-label">Wöchentlicher Planungsanteil:</span>
-                      <span class="p80-result-value">{{ calculatedP80Result?.weeklyPlanningHours?.toFixed(2) ?? '0.00' }} h/Woche</span>
+                      <span class="p80-result-value">{{ formatHoursMinutes(calculatedP80Result?.weeklyPlanningHours ?? 0) }}/Woche</span>
                     </div>
                     <div class="p80-result-item p80-peak">
                       <span class="p80-result-label">Wöchentliche Spitzenlast:</span>
-                      <span class="p80-result-value">{{ calculatedP80Result?.weeklyPeakHours?.toFixed(2) ?? '0.00' }} h/Woche</span>
+                      <span class="p80-result-value">{{ formatHoursMinutes(calculatedP80Result?.weeklyPeakHours ?? 0) }}/Woche</span>
                     </div>
                   </div>
                 </div>

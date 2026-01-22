@@ -17,6 +17,9 @@ export type TShirtSize = 'XXS' | 'XS' | 'S' | 'M' | 'L' | 'XL' | 'XXL';
 // Task category
 export type TaskCategory = 'REGULAR' | 'IRREGULAR';
 
+// Topic type for hierarchy
+export type TopicType = 'leaf' | 'container';
+
 // Variance class for P80 calculation
 export type VarianceClass = 'L0' | 'L1' | 'L2' | 'L3' | 'L4';
 
@@ -30,10 +33,10 @@ export interface IrregularTaskEstimation {
   frequencyTypical: number; // N_b
   frequencyMax: number;    // N_c
   
-  // Effort per event (hours/event)
-  effortMin: number;       // T_a
-  effortTypical: number;   // T_b
-  effortMax: number;       // T_c
+  // Effort per event (minutes/event)
+  effortMin: number;       // T_a (in minutes)
+  effortTypical: number;   // T_b (in minutes)
+  effortMax: number;       // T_c (in minutes)
   
   // Classification
   varianceClass: VarianceClass;
@@ -75,4 +78,9 @@ export interface Topic {
   connections?: TopicConnection[]; // Connections to other topics
   taskCategory?: TaskCategory; // Default: 'REGULAR'
   irregularEstimation?: IrregularTaskEstimation;
+  /**
+   * Topic type: 'leaf' (default) has effort, 'container' has RACI responsibilities
+   * but no direct effort (effort comes from child/leaf topics).
+   */
+  topicType?: TopicType;
 }

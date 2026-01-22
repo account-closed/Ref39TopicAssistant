@@ -397,7 +397,11 @@ export class LoadCalculationService {
         const tagWeightSum = this.calculateTagWeightSum(topic, tagsMap);
         const dependencyCount = this.calculateDependencyCount(topic);
         const topicComplexity = this.calculateTopicComplexity(topic, tagsMap, alpha, beta);
-        const loadContribution = roleWeight * topicComplexity;
+        
+        // Container topics have RACI responsibilities but no direct effort contribution
+        // Their effort comes from child/leaf topics
+        const isContainer = topic.topicType === 'container';
+        const loadContribution = isContainer ? 0 : roleWeight * topicComplexity;
 
         return {
           topicId: topic.id,
@@ -417,6 +421,9 @@ export class LoadCalculationService {
       // Calculate irregular task contributions
       let irregularTasksLoad = 0;
       for (const topic of topics) {
+        // Skip container topics - they have no direct effort
+        if (topic.topicType === 'container') continue;
+        
         if (topic.taskCategory === 'IRREGULAR' && topic.irregularEstimation) {
           // Check if member has a role in this topic
           const hasRole = roles.some(r => r.topicId === topic.id);

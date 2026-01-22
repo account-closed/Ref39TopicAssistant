@@ -21,6 +21,7 @@ import { BackendService } from '../../../core/services/backend.service';
 import { LoadCalculationService, LoadCalculationResult, MemberLoadResult, LoadStatus } from '../../../core/services/load-calculation.service';
 import { LoadConfigService } from '../../../core/services/load-config.service';
 import { Datastore, LoadConfig, SizeLabel } from '../../../core/models';
+import { formatHoursMinutes } from '../../../shared/utils/time-format.utils';
 
 @Component({
   selector: 'app-load-dashboard',
@@ -166,6 +167,7 @@ export class LoadDashboardComponent implements OnInit, OnDestroy {
 
   protected getSizeSeverity(size: SizeLabel): 'success' | 'info' | 'warn' | 'danger' | 'secondary' | 'contrast' {
     switch (size) {
+      case 'XXS': return 'secondary';
       case 'XS': return 'secondary';
       case 'S': return 'info';
       case 'M': return 'success';
@@ -202,6 +204,8 @@ export class LoadDashboardComponent implements OnInit, OnDestroy {
   protected formatNumber(value: number): string {
     return value.toFixed(2);
   }
+
+  protected formatHoursMinutes = formatHoursMinutes;
 
   protected formatPercent(value: number): string {
     return (value * 100).toFixed(0) + '%';
