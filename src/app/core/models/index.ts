@@ -7,3 +7,4 @@ export * from './refresh.model';
 export * from './load-config.model';
 export * from './irregular-task.model';
 export * from './instance-config.model';
+export * from './change-event.model';
