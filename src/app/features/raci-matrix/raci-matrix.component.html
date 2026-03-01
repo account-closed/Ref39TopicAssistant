@@ -60,9 +60,9 @@
             <!-- Member role cells -->
             @for (member of activeMembers(); track trackByMemberId($index, member)) {
               <td class="role-cell">
-                @if (getCellRoles(row, member.id).length > 0) {
+                @if (getCellRoles(row, member.uid).length > 0) {
                   <div class="role-tags">
-                    @for (role of getCellRoles(row, member.id); track role) {
+                    @for (role of getCellRoles(row, member.uid); track role) {
                       <p-tag 
                         [value]="role" 
                         [severity]="getRoleSeverity(role)"

@@ -1,5 +1,5 @@
 export interface TeamMember {
-  id: string; // UUID
+  uid: string; // UUID
   displayName: string;
   email?: string;
   active: boolean;

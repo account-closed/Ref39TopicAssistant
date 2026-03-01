@@ -436,9 +436,9 @@ export class NetworkDiagramComponent implements AfterViewInit, OnDestroy {
     if (!ds) return [];
     
     return node.topic.connections.map(conn => {
-      const targetTopic = ds.topics.find(t => t.id === conn.targetTopicId);
+      const targetTopic = ds.topics.find(t => t.uid === conn.targetTopicUid);
       return {
-        id: conn.targetTopicId,
+        id: conn.targetTopicUid,
         name: targetTopic?.header || 'Unbekannt',
         type: conn.type
       };
@@ -523,7 +523,7 @@ export class NetworkDiagramComponent implements AfterViewInit, OnDestroy {
     // Add topic nodes
     topics.forEach(topic => {
       const node: NetworkNode = {
-        id: topic.id,
+        id: topic.uid,
         name: topic.header,
         type: 'topic',
         size: topic.size,
@@ -533,17 +533,17 @@ export class NetworkDiagramComponent implements AfterViewInit, OnDestroy {
         topic
       };
       nodes.push(node);
-      nodeMap.set(topic.id, node);
+      nodeMap.set(topic.uid, node);
     });
     
     // Add connections between topics
     topics.forEach(topic => {
       if (topic.connections) {
         topic.connections.forEach(conn => {
-          if (nodeMap.has(conn.targetTopicId)) {
+          if (nodeMap.has(conn.targetTopicUid)) {
             links.push({
-              source: topic.id,
-              target: conn.targetTopicId,
+              source: topic.uid,
+              target: conn.targetTopicUid,
               type: conn.type
             });
           }
@@ -560,10 +560,10 @@ export class NetworkDiagramComponent implements AfterViewInit, OnDestroy {
       
       tagRefs.forEach(tagRef => {
         // Tags in topics can be either IDs or names, so search by both
-        const tag = ds.tags?.find(t => t.id === tagRef || t.name === tagRef);
+        const tag = ds.tags?.find(t => t.uid === tagRef || t.name === tagRef);
         // Use the tag name if found, otherwise use the reference itself
         const tagName = tag?.name || tagRef;
-        const tagId = tag?.id || tagRef;
+        const tagId = tag?.uid || tagRef;
         
         const node: NetworkNode = {
           id: tagId,
@@ -579,7 +579,7 @@ export class NetworkDiagramComponent implements AfterViewInit, OnDestroy {
         topics.forEach(topic => {
           if (topic.tags?.includes(tagRef)) {
             links.push({
-              source: topic.id,
+              source: topic.uid,
               target: tagId,
               type: 'hasTag'
             });
@@ -598,7 +598,7 @@ export class NetworkDiagramComponent implements AfterViewInit, OnDestroy {
       });
       
       memberIds.forEach(memberId => {
-        const member = ds.members?.find(m => m.id === memberId);
+        const member = ds.members?.find(m => m.uid === memberId);
         if (member) {
           const node: NetworkNode = {
             id: memberId,
@@ -619,7 +619,7 @@ export class NetworkDiagramComponent implements AfterViewInit, OnDestroy {
             
             if (isResponsible) {
               links.push({
-                source: topic.id,
+                source: topic.uid,
                 target: memberId,
                 type: 'hasMember'
               });
@@ -692,7 +692,7 @@ export class NetworkDiagramComponent implements AfterViewInit, OnDestroy {
     // Create simulation
     this.simulation = d3.forceSimulation<NetworkNode>(nodes)
       .force('link', d3.forceLink<NetworkNode, NetworkLink>(links)
-        .id(d => d.id)
+        .id((d: any) => d.id)
         .distance(100))
       .force('charge', d3.forceManyBody().strength(-200))
       .force('center', d3.forceCenter(width / 2, height / 2))

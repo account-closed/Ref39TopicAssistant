@@ -222,16 +222,16 @@ export class LoadCalculationService {
     const roles: MemberTopicRole[] = [];
 
     for (const topic of topics) {
-      if (topic.raci.r1MemberId === member.id) {
-        roles.push({ topicId: topic.id, role: 'R1' });
-      } else if (topic.raci.r2MemberId === member.id) {
-        roles.push({ topicId: topic.id, role: 'R2' });
-      } else if (topic.raci.r3MemberId === member.id) {
-        roles.push({ topicId: topic.id, role: 'R3' });
-      } else if (topic.raci.cMemberIds?.includes(member.id)) {
-        roles.push({ topicId: topic.id, role: 'C' });
-      } else if (topic.raci.iMemberIds?.includes(member.id)) {
-        roles.push({ topicId: topic.id, role: 'I' });
+      if (topic.raci.r1MemberId === member.uid) {
+        roles.push({ topicId: topic.uid, role: 'R1' });
+      } else if (topic.raci.r2MemberId === member.uid) {
+        roles.push({ topicId: topic.uid, role: 'R2' });
+      } else if (topic.raci.r3MemberId === member.uid) {
+        roles.push({ topicId: topic.uid, role: 'R3' });
+      } else if (topic.raci.cMemberIds?.includes(member.uid)) {
+        roles.push({ topicId: topic.uid, role: 'C' });
+      } else if (topic.raci.iMemberIds?.includes(member.uid)) {
+        roles.push({ topicId: topic.uid, role: 'I' });
       }
     }
 
@@ -272,7 +272,7 @@ export class LoadCalculationService {
     tags: Tag[]
   ): LoadValidationWarning[] {
     const warnings: LoadValidationWarning[] = [];
-    const membersMap = new Map(members.map((m) => [m.id, m]));
+    const membersMap = new Map(members.map((m) => [m.uid, m]));
 
     // Check tags
     for (const tag of tags) {
@@ -282,7 +282,7 @@ export class LoadCalculationService {
           warnings.push({
             type: 'tagWeight-invalid',
             message: `Tag "${tag.name}" has invalid tagWeight (NaN or Infinity)`,
-            entityId: tag.id,
+            entityId: tag.uid,
             entityName: tag.name,
           });
         }
@@ -291,7 +291,7 @@ export class LoadCalculationService {
           warnings.push({
             type: 'tagWeight-extreme',
             message: `Tag "${tag.name}" has extreme tagWeight (${tag.tagWeight}), recommended range is -1.0 to +2.0`,
-            entityId: tag.id,
+            entityId: tag.uid,
             entityName: tag.name,
           });
         }
@@ -305,7 +305,7 @@ export class LoadCalculationService {
         warnings.push({
           type: 'topic-no-r1',
           message: `Topic "${topic.header}" has no R1 (main responsible)`,
-          entityId: topic.id,
+          entityId: topic.uid,
           entityName: topic.header,
         });
       } else {
@@ -315,7 +315,7 @@ export class LoadCalculationService {
           warnings.push({
             type: 'topic-inactive-r1',
             message: `Topic "${topic.header}" has inactive R1 (${r1Member.displayName})`,
-            entityId: topic.id,
+            entityId: topic.uid,
             entityName: topic.header,
           });
         }
@@ -379,7 +379,7 @@ export class LoadCalculationService {
       : 3.5;
 
     const tagsMap = new Map(tags.map((t) => [t.name, t]));
-    const topicsMap = new Map(topics.map((t) => [t.id, t]));
+    const topicsMap = new Map(topics.map((t) => [t.uid, t]));
 
     // Calculate loads for each member
     const memberLoads: MemberLoadResult[] = members.map((member) => {
@@ -397,14 +397,14 @@ export class LoadCalculationService {
         const tagWeightSum = this.calculateTagWeightSum(topic, tagsMap);
         const dependencyCount = this.calculateDependencyCount(topic);
         const topicComplexity = this.calculateTopicComplexity(topic, tagsMap, alpha, beta);
-        
+
         // Container topics have RACI responsibilities but no direct effort contribution
         // Their effort comes from child/leaf topics
         const isContainer = topic.topicType === 'container';
         const loadContribution = isContainer ? 0 : roleWeight * topicComplexity;
 
         return {
-          topicId: topic.id,
+          topicId: topic.uid,
           topicHeader: topic.header,
           role: role.role,
           roleWeight,
@@ -417,20 +417,20 @@ export class LoadCalculationService {
 
       const rawLoad = topicContributions.reduce((sum, tc) => sum + tc.loadContribution, 0);
       const topicsLoad = activityMultiplier * rawLoad;
-      
+
       // Calculate irregular task contributions
       let irregularTasksLoad = 0;
       for (const topic of topics) {
         // Skip container topics - they have no direct effort
         if (topic.topicType === 'container') continue;
-        
+
         if (topic.taskCategory === 'IRREGULAR' && topic.irregularEstimation) {
           // Check if member has a role in this topic
-          const hasRole = roles.some(r => r.topicId === topic.id);
+          const hasRole = roles.some(r => r.topicId === topic.uid);
           if (hasRole) {
             const result = this.irregularTaskService.calculateP80(topic.irregularEstimation);
             // Use role weight to proportion the load contribution
-            const role = roles.find(r => r.topicId === topic.id);
+            const role = roles.find(r => r.topicId === topic.uid);
             const roleWeight = this.getRoleWeight(role?.role, loadConfig);
             // R1 gets 100% of planning hours, other roles get proportional share
             const r1Weight = loadConfig?.roleWeights?.R1 ?? ROLE_WEIGHTS.R1;
@@ -454,7 +454,7 @@ export class LoadCalculationService {
         : this.classifySizeDefault(totalLoad, effectiveCapacityHoursPerWeek);
 
       return {
-        memberId: member.id,
+        memberId: member.uid,
         memberName: member.displayName,
         isActive: member.active,
         activityMultiplier,

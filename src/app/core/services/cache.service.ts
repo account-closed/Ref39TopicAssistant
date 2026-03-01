@@ -171,7 +171,7 @@ export class CacheService {
       return { success: false, message: 'Cache nicht initialisiert' };
     }
 
-    const topicIndex = state.datastore.topics.findIndex(t => t.id === topicId);
+    const topicIndex = state.datastore.topics.findIndex(t => t.uid === topicId);
     if (topicIndex === -1) {
       return { success: false, message: 'Thema nicht gefunden' };
     }
@@ -202,7 +202,7 @@ export class CacheService {
 
     const updatedDatastore: Datastore = {
       ...state.datastore,
-      topics: state.datastore.topics.filter(t => t.id !== topicId),
+      topics: state.datastore.topics.filter(t => t.uid !== topicId),
       generatedAt: new Date().toISOString()
     };
 
@@ -218,9 +218,9 @@ export class CacheService {
 
     const timestamp = new Date().toISOString();
     const updateMap = new Map(updates.map(u => [u.topicId, u.changes]));
-    
+
     const updatedTopics = state.datastore.topics.map(topic => {
-      const changes = updateMap.get(topic.id);
+      const changes = updateMap.get(topic.uid);
       if (changes) {
         return { ...topic, ...changes, updatedAt: timestamp };
       }
@@ -261,7 +261,7 @@ export class CacheService {
       return { success: false, message: 'Cache nicht initialisiert' };
     }
 
-    const memberIndex = state.datastore.members.findIndex(m => m.id === memberId);
+    const memberIndex = state.datastore.members.findIndex(m => m.uid === memberId);
     if (memberIndex === -1) {
       return { success: false, message: 'Mitglied nicht gefunden' };
     }
@@ -292,7 +292,7 @@ export class CacheService {
 
     const updatedDatastore: Datastore = {
       ...state.datastore,
-      members: state.datastore.members.filter(m => m.id !== memberId),
+      members: state.datastore.members.filter(m => m.uid !== memberId),
       generatedAt: new Date().toISOString()
     };
 
@@ -324,7 +324,7 @@ export class CacheService {
       return { success: false, message: 'Cache nicht initialisiert' };
     }
 
-    const tagIndex = state.datastore.tags.findIndex(t => t.id === tagId);
+    const tagIndex = state.datastore.tags.findIndex(t => t.uid === tagId);
     if (tagIndex === -1) {
       return { success: false, message: 'Tag nicht gefunden' };
     }
@@ -369,7 +369,7 @@ export class CacheService {
       return { success: false, message: 'Cache nicht initialisiert' };
     }
 
-    const tagToDelete = state.datastore.tags.find(t => t.id === tagId);
+    const tagToDelete = state.datastore.tags.find(t => t.uid === tagId);
     if (!tagToDelete) {
       return { success: false, message: 'Tag nicht gefunden' };
     }
@@ -387,7 +387,7 @@ export class CacheService {
 
     const updatedDatastore: Datastore = {
       ...state.datastore,
-      tags: state.datastore.tags.filter(t => t.id !== tagId),
+      tags: state.datastore.tags.filter(t => t.uid !== tagId),
       topics: updatedTopics,
       generatedAt: new Date().toISOString()
     };

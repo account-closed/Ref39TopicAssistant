@@ -173,7 +173,7 @@ export class MembersComponent implements OnInit, OnDestroy {
 
     this.topicCountCache.clear();
     datastore.members.forEach(member => {
-      this.topicCountCache.set(member.id, this.calculateTopicCount(member.id));
+      this.topicCountCache.set(member.uid, this.calculateTopicCount(member.uid));
     });
 
     const tagSet = new Set<string>();
@@ -209,7 +209,7 @@ export class MembersComponent implements OnInit, OnDestroy {
 
   createEmptyMember(): TeamMember {
     return {
-      id: '',
+      uid: '',
       displayName: '',
       email: '',
       active: true,
@@ -282,9 +282,9 @@ export class MembersComponent implements OnInit, OnDestroy {
 
       let success: boolean;
       if (this.editMode) {
-        success = await this.backend.updateMember(this.member.id, this.member);
+        success = await this.backend.updateMember(this.member.uid, this.member);
       } else {
-        this.member.id = this.backend.generateUUID();
+        this.member.uid = this.backend.generateUUID();
         this.member.updatedAt = new Date().toISOString();
         success = await this.backend.addMember(this.member);
       }
@@ -316,7 +316,7 @@ export class MembersComponent implements OnInit, OnDestroy {
   }
 
   confirmDelete(member: TeamMember): void {
-    const topicCount = this.getTopicCount(member.id);
+    const topicCount = this.getTopicCount(member.uid);
     
     if (topicCount > 0) {
       this.memberToDelete = member;
@@ -336,7 +336,7 @@ export class MembersComponent implements OnInit, OnDestroy {
 
   async deleteMember(member: TeamMember): Promise<void> {
     try {
-      const success = await this.backend.deleteMember(member.id);
+      const success = await this.backend.deleteMember(member.uid);
       if (success) {
         this.messageService.add({
           severity: 'success',
@@ -365,7 +365,7 @@ export class MembersComponent implements OnInit, OnDestroy {
     this.saving = true;
 
     try {
-      const success = await this.backend.updateMember(this.memberToDelete.id, { active: false });
+      const success = await this.backend.updateMember(this.memberToDelete.uid, { active: false });
       if (success) {
         this.messageService.add({
           severity: 'success',
@@ -400,19 +400,19 @@ export class MembersComponent implements OnInit, OnDestroy {
     this.informedTopics = [];
 
     this.topics.forEach(topic => {
-      if (topic.raci.r1MemberId === member.id) {
+      if (topic.raci.r1MemberId === member.uid) {
         this.responsibleTopics.push({ topic, role: 'R1' });
       }
-      if (topic.raci.r2MemberId === member.id) {
+      if (topic.raci.r2MemberId === member.uid) {
         this.responsibleTopics.push({ topic, role: 'R2' });
       }
-      if (topic.raci.r3MemberId === member.id) {
+      if (topic.raci.r3MemberId === member.uid) {
         this.responsibleTopics.push({ topic, role: 'R3' });
       }
-      if (topic.raci.cMemberIds.includes(member.id)) {
+      if (topic.raci.cMemberIds.includes(member.uid)) {
         this.consultedTopics.push({ topic, role: 'C' });
       }
-      if (topic.raci.iMemberIds.includes(member.id)) {
+      if (topic.raci.iMemberIds.includes(member.uid)) {
         this.informedTopics.push({ topic, role: 'I' });
       }
     });

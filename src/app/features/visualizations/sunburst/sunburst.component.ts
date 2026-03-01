@@ -309,8 +309,10 @@ export class SunburstComponent implements AfterViewInit, OnDestroy {
     const topic = this.selectedTopic();
     const ds = this.datastore();
     if (!topic?.tags || !ds?.tags) return [];
-    
-    return ds.tags.filter(tag => topic.tags?.includes(tag.id));
+
+    return ds.tags
+      .filter(tag => topic.tags?.includes(tag.uid))
+      .map(tag => ({ id: tag.uid, name: tag.name, color: tag.color }));
   }
   
   getSizeSeverity(size: TShirtSize | undefined): 'success' | 'info' | 'warn' | 'danger' {
@@ -367,7 +369,7 @@ export class SunburstComponent implements AfterViewInit, OnDestroy {
   
   private findTag(ds: Datastore, tagIdOrName: string) {
     // Tags in topics can be either IDs or names, so search by both
-    return ds.tags?.find(t => t.id === tagIdOrName || t.name === tagIdOrName);
+    return ds.tags?.find(t => t.uid === tagIdOrName || t.name === tagIdOrName);
   }
   
   private buildHierarchy(topics: Topic[], ds: Datastore): SunburstNode {
@@ -411,7 +413,7 @@ export class SunburstComponent implements AfterViewInit, OnDestroy {
             tagNode = {
               name: tagName,
               children: [],
-              data: { type: 'tag', tagId: tag?.id || tagRef, color: tag?.color || '#6366f1' }
+              data: { type: 'tag', tagId: tag?.uid || tagRef, color: tag?.color || '#6366f1' }
             };
             tagMap.set(tagRef, tagNode);
             rootChildren.push(tagNode);

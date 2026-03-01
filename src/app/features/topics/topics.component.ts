@@ -191,8 +191,8 @@ export class TopicsComponent implements OnInit, OnDestroy {
     this.members = datastore.members;
     this.activeMembers = datastore.members
       .filter(m => m.active)
-      .map(m => ({ id: m.id, displayName: m.displayName }));
-    this.memberOptions = datastore.members.map(m => ({ id: m.id, displayName: m.displayName }));
+      .map(m => ({ id: m.uid, displayName: m.displayName }));
+    this.memberOptions = datastore.members.map(m => ({ id: m.uid, displayName: m.displayName }));
 
     this.managedTags = datastore.tags || [];
     this.managedTagsExist = this.managedTags.length > 0;
@@ -205,7 +205,7 @@ export class TopicsComponent implements OnInit, OnDestroy {
     }));
 
     // Build all topic options for connection selection
-    this.topicOptions = datastore.topics.map(t => ({ id: t.id, header: t.header }));
+    this.topicOptions = datastore.topics.map(t => ({ id: t.uid, header: t.header }));
 
     this.allTags = this.managedTags.map(t => t.name).sort();
 
@@ -290,7 +290,7 @@ export class TopicsComponent implements OnInit, OnDestroy {
 
   createEmptyTopic(): Topic {
     return {
-      id: '',
+      uid: '',
       header: '',
       description: '',
       tags: [],
@@ -394,9 +394,9 @@ export class TopicsComponent implements OnInit, OnDestroy {
 
       let success: boolean;
       if (this.editMode) {
-        success = await this.backend.updateTopic(this.topic.id, this.topic);
+        success = await this.backend.updateTopic(this.topic.uid, this.topic);
       } else {
-        this.topic.id = this.backend.generateUUID();
+        this.topic.uid = this.backend.generateUUID();
         this.topic.updatedAt = new Date().toISOString();
         success = await this.backend.addTopic(this.topic);
       }
@@ -441,7 +441,7 @@ export class TopicsComponent implements OnInit, OnDestroy {
 
   async deleteTopic(topic: Topic): Promise<void> {
     try {
-      const success = await this.backend.deleteTopic(topic.id);
+      const success = await this.backend.deleteTopic(topic.uid);
       if (success) {
         this.messageService.add({
           severity: 'success',
@@ -538,7 +538,7 @@ export class TopicsComponent implements OnInit, OnDestroy {
   }
 
   getMemberName(memberId: string): string {
-    const member = this.members.find(m => m.id === memberId);
+    const member = this.members.find(m => m.uid === memberId);
     return member?.displayName || 'Unbekannt';
   }
 
@@ -628,7 +628,7 @@ export class TopicsComponent implements OnInit, OnDestroy {
    * Called when dialog opens to exclude current topic.
    */
   private updateAvailableTopicsForConnection(): void {
-    this.availableTopicsForConnection = this.topicOptions.filter(t => t.id !== this.topic.id);
+    this.availableTopicsForConnection = this.topicOptions.filter(t => t.id !== this.topic.uid);
   }
 
   /**
@@ -639,7 +639,7 @@ export class TopicsComponent implements OnInit, OnDestroy {
       this.topic.connections = [];
     }
     this.topic.connections.push({
-      targetTopicId: '',
+      targetTopicUid: '',
       type: 'relatedTo'
     });
   }

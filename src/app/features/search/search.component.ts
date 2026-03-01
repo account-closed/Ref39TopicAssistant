@@ -342,7 +342,7 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
       return result;
     }
 
-    result.topic = this.currentDatastore.topics.find(t => t.id === hit.entityId);
+    result.topic = this.currentDatastore.topics.find(t => t.uid === hit.entityId);
     return result;
   }
 
@@ -390,7 +390,7 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
       return [];
     }
     return topic.tags
-      .map(tagRef => this.currentDatastore!.tags!.find(t => t.id === tagRef || t.name === tagRef))
+      .map(tagRef => this.currentDatastore!.tags!.find(t => t.uid === tagRef || t.name === tagRef))
       .filter((tag): tag is TagModel => tag !== undefined);
   }
 
@@ -398,7 +398,7 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!this.currentDatastore) {
       return 'Unbekannt';
     }
-    const member = this.currentDatastore.members.find(m => m.id === memberId);
+    const member = this.currentDatastore.members.find(m => m.uid === memberId);
     return member?.displayName || 'Unbekannt';
   }
 
@@ -406,7 +406,7 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!this.currentDatastore) {
       return '';
     }
-    const member = this.currentDatastore.members.find(m => m.id === memberId);
+    const member = this.currentDatastore.members.find(m => m.uid === memberId);
     return member?.email || '';
   }
 
@@ -649,7 +649,7 @@ export class SearchComponent implements OnInit, OnDestroy, AfterViewInit {
       text += `───────────────────────────────────────\n`;
       
       for (const tagRef of topic.tags) {
-        const tag = this.currentDatastore?.tags?.find(t => t.id === tagRef || t.name === tagRef);
+        const tag = this.currentDatastore?.tags?.find(t => t.uid === tagRef || t.name === tagRef);
         if (tag) {
           text += `• ${tag.name}`;
           if (tag.hinweise) {

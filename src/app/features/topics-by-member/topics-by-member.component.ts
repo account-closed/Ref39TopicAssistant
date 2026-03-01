@@ -95,7 +95,7 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
   activeMemberOptions = computed<MemberOption[]>(() => 
     this.members()
       .filter(m => m.active)
-      .map(m => ({ id: m.id, displayName: m.displayName }))
+      .map(m => ({ id: m.uid, displayName: m.displayName }))
       .sort((a, b) => a.displayName.localeCompare(b.displayName))
   );
 
@@ -390,7 +390,7 @@ export class TopicsByMemberComponent implements OnInit, OnDestroy {
   }
 
   trackByTopicId(_index: number, item: TopicWithRoles): string {
-    return item.topic.id;
+    return item.topic.uid;
   }
 
   printTopics(): void {
