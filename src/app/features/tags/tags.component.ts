@@ -122,7 +122,7 @@ export class TagsComponent implements OnInit, OnDestroy {
   }
 
   getMemberName(memberId: string): string {
-    const member = this.members.find(m => m.id === memberId);
+    const member = this.members.find(m => m.uid === memberId);
     return member?.displayName || 'Unbekannt';
   }
 
@@ -203,7 +203,7 @@ export class TagsComponent implements OnInit, OnDestroy {
   createEmptyTag(): Tag {
     const currentMemberId = localStorage.getItem('currentMemberId') || '';
     return {
-      id: '',
+      uid: '',
       name: '',
       searchKeywords: [],
       hinweise: '',
@@ -266,9 +266,9 @@ export class TagsComponent implements OnInit, OnDestroy {
     try {
       let success: boolean;
       if (this.editMode) {
-        success = await this.backend.updateTag(this.tag.id, this.tag);
+        success = await this.backend.updateTag(this.tag.uid, this.tag);
       } else {
-        this.tag.id = this.backend.generateUUID();
+        this.tag.uid = this.backend.generateUUID();
         this.tag.createdAt = new Date().toISOString();
         this.tag.modifiedAt = new Date().toISOString();
         success = await this.backend.addTag(this.tag);
@@ -319,7 +319,7 @@ export class TagsComponent implements OnInit, OnDestroy {
 
   async deleteTag(tag: Tag): Promise<void> {
     try {
-      const success = await this.backend.deleteTag(tag.id);
+      const success = await this.backend.deleteTag(tag.uid);
       if (success) {
         this.messageService.add({
           severity: 'success',

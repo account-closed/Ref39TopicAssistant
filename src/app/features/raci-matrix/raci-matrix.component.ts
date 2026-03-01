@@ -68,31 +68,31 @@ export class RaciMatrixComponent implements OnInit, OnDestroy {
         const roles: string[] = [];
 
         // Check R1
-        if (topic.raci.r1MemberId === member.id) {
+        if (topic.raci.r1MemberId === member.uid) {
           roles.push('R1');
         }
 
         // Check R2
-        if (topic.raci.r2MemberId === member.id) {
+        if (topic.raci.r2MemberId === member.uid) {
           roles.push('R2');
         }
 
         // Check R3
-        if (topic.raci.r3MemberId === member.id) {
+        if (topic.raci.r3MemberId === member.uid) {
           roles.push('R3');
         }
 
         // Check C (Consulted)
-        if (topic.raci.cMemberIds.includes(member.id)) {
+        if (topic.raci.cMemberIds.includes(member.uid)) {
           roles.push('C');
         }
 
         // Check I (Informed)
-        if (topic.raci.iMemberIds.includes(member.id)) {
+        if (topic.raci.iMemberIds.includes(member.uid)) {
           roles.push('I');
         }
 
-        cells.set(member.id, { roles });
+        cells.set(member.uid, { roles });
       });
 
       rows.push({ topic, cells });
@@ -143,10 +143,10 @@ export class RaciMatrixComponent implements OnInit, OnDestroy {
   }
 
   trackByTopicId(_index: number, row: MatrixRow): string {
-    return row.topic.id;
+    return row.topic.uid;
   }
 
   trackByMemberId(_index: number, member: TeamMember): string {
-    return member.id;
+    return member.uid;
   }
 }

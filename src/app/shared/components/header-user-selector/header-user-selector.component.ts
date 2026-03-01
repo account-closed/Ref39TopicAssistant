@@ -45,11 +45,11 @@ export class HeaderUserSelectorComponent implements OnInit, OnDestroy {
           // Validate stored user still exists and is active
           if (this.selectedMemberId) {
             const member = datastore.members.find(
-              m => m.id === this.selectedMemberId && m.active
+              m => m.uid === this.selectedMemberId && m.active
             );
             if (member) {
               // User exists, set them as current user
-              this.backend.setCurrentUser(member.id, member.displayName);
+              this.backend.setCurrentUser(member.uid, member.displayName);
             } else {
               // User no longer valid, clear selection
               this.selectedMemberId = '';
@@ -69,11 +69,11 @@ export class HeaderUserSelectorComponent implements OnInit, OnDestroy {
   onUserChange(event: { value: string }): void {
     const memberId = event.value;
     if (memberId) {
-      const member = this.activeMembers().find(m => m.id === memberId);
+      const member = this.activeMembers().find(m => m.uid === memberId);
       if (member) {
-        localStorage.setItem('currentMemberId', member.id);
+        localStorage.setItem('currentMemberId', member.uid);
         localStorage.setItem('currentMemberName', member.displayName);
-        this.backend.setCurrentUser(member.id, member.displayName);
+        this.backend.setCurrentUser(member.uid, member.displayName);
       }
     } else {
       localStorage.removeItem('currentMemberId');

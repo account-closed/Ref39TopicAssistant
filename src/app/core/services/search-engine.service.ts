@@ -160,7 +160,7 @@ export class SearchEngineService {
     
     // Build tag lookup map first (needed for resolving tag references)
     for (const tag of datastore.tags || []) {
-      this.tagsById.set(tag.id, tag.name);
+      this.tagsById.set(tag.uid, tag.name);
     }
     
     // Create new FlexSearch Document index with multiple weighted fields
@@ -184,7 +184,7 @@ export class SearchEngineService {
     // Index all documents
     const documents = this.createDocuments(datastore);
     for (const doc of documents) {
-      this.documentsMap.set(doc.id, doc);
+      this.documentsMap.set((doc as any).id, doc);
       this.index.add(doc);
     }
 
@@ -231,7 +231,7 @@ export class SearchEngineService {
 
       for (let i = 0; i < fieldResult.result.length; i++) {
         const item = fieldResult.result[i];
-        const id = item.id as string;
+        const id = (item as any).id as string;
         const doc = this.documentsMap.get(id);
         
         if (!doc) continue;
@@ -346,7 +346,7 @@ export class SearchEngineService {
     
     for (const tagRef of topic.tags || []) {
       // Try to find the full tag object
-      const tag = (datastore.tags || []).find(t => t.id === tagRef || t.name === tagRef);
+      const tag = (datastore.tags || []).find(t => t.uid === tagRef || t.name === tagRef);
       if (tag) {
         tagNameParts.push(tag.name);
         if (tag.searchKeywords) {
@@ -365,7 +365,7 @@ export class SearchEngineService {
     }
 
     return {
-      id: createDocumentId('topic', topic.id),
+      id: createDocumentId('topic', topic.uid),
       kind: 'topic',
       title,
       topicKeywords,

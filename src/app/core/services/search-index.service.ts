@@ -42,39 +42,39 @@ export class SearchIndexService {
 
     // Build members map
     datastore.members.forEach(member => {
-      this.membersMap.set(member.id, member);
+      this.membersMap.set(member.uid, member);
     });
 
     // Build topic indexes
     datastore.topics.forEach(topic => {
-      this.topicsMap.set(topic.id, topic);
+      this.topicsMap.set(topic.uid, topic);
 
       // Index header (most important)
       const normalizedHeader = this.normalizeGerman(topic.header);
-      this.headerIndex.add(topic.id, normalizedHeader);
+      this.headerIndex.add(topic.uid, normalizedHeader);
 
       // Index description
       if (topic.description) {
         const normalizedDescription = this.normalizeGerman(topic.description);
-        this.descriptionIndex.add(topic.id, normalizedDescription);
+        this.descriptionIndex.add(topic.uid, normalizedDescription);
       }
 
       // Index tags
       if (topic.tags && topic.tags.length > 0) {
         const normalizedTags = topic.tags.map(t => this.normalizeGerman(t)).join(' ');
-        this.tagsIndex.add(topic.id, normalizedTags);
+        this.tagsIndex.add(topic.uid, normalizedTags);
       }
 
       // Index search keywords
       if (topic.searchKeywords && topic.searchKeywords.length > 0) {
         const normalizedKeywords = topic.searchKeywords.map(k => this.normalizeGerman(k)).join(' ');
-        this.keywordsIndex.add(topic.id, normalizedKeywords);
+        this.keywordsIndex.add(topic.uid, normalizedKeywords);
       }
 
       // Index notes
       if (topic.notes) {
         const normalizedNotes = this.normalizeGerman(topic.notes);
-        this.notesIndex.add(topic.id, normalizedNotes);
+        this.notesIndex.add(topic.uid, normalizedNotes);
       }
     });
   }

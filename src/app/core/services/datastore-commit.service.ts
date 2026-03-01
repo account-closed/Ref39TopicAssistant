@@ -270,12 +270,12 @@ export class DatastoreCommitService {
   async updateTopic(topicId: string, updates: Partial<Topic>): Promise<CommitResult> {
     return this.commitChanges(
       (datastore) => {
-        const index = datastore.topics.findIndex(t => t.id === topicId);
+        const index = datastore.topics.findIndex(t => t.uid === topicId);
         if (index !== -1) {
-          datastore.topics[index] = { 
-            ...datastore.topics[index], 
-            ...updates, 
-            updatedAt: new Date().toISOString() 
+          datastore.topics[index] = {
+            ...datastore.topics[index],
+            ...updates,
+            updatedAt: new Date().toISOString()
           };
         }
         return datastore;
@@ -287,7 +287,7 @@ export class DatastoreCommitService {
   async deleteTopic(topicId: string): Promise<CommitResult> {
     return this.commitChanges(
       (datastore) => {
-        datastore.topics = datastore.topics.filter(t => t.id !== topicId);
+        datastore.topics = datastore.topics.filter(t => t.uid !== topicId);
         return datastore;
       },
       'topic-save'
@@ -307,12 +307,12 @@ export class DatastoreCommitService {
   async updateMember(memberId: string, updates: Partial<TeamMember>): Promise<CommitResult> {
     return this.commitChanges(
       (datastore) => {
-        const index = datastore.members.findIndex(m => m.id === memberId);
+        const index = datastore.members.findIndex(m => m.uid === memberId);
         if (index !== -1) {
-          datastore.members[index] = { 
-            ...datastore.members[index], 
-            ...updates, 
-            updatedAt: new Date().toISOString() 
+          datastore.members[index] = {
+            ...datastore.members[index],
+            ...updates,
+            updatedAt: new Date().toISOString()
           };
         }
         return datastore;
@@ -324,7 +324,7 @@ export class DatastoreCommitService {
   async deleteMember(memberId: string): Promise<CommitResult> {
     return this.commitChanges(
       (datastore) => {
-        datastore.members = datastore.members.filter(m => m.id !== memberId);
+        datastore.members = datastore.members.filter(m => m.uid !== memberId);
         return datastore;
       },
       'member-save'
@@ -351,16 +351,16 @@ export class DatastoreCommitService {
           datastore.tags = [];
           return datastore;
         }
-        const index = datastore.tags.findIndex(t => t.id === tagId);
+        const index = datastore.tags.findIndex(t => t.uid === tagId);
         if (index !== -1) {
           const oldName = datastore.tags[index].name;
-          datastore.tags[index] = { 
-            ...datastore.tags[index], 
-            ...updates, 
-            modifiedAt: new Date().toISOString() 
+          datastore.tags[index] = {
+            ...datastore.tags[index],
+            ...updates,
+            modifiedAt: new Date().toISOString()
           };
           const newName = datastore.tags[index].name;
-          
+
           // Update tag references in topics if name changed
           if (oldName !== newName) {
             datastore.topics = datastore.topics.map(topic => {
@@ -386,7 +386,7 @@ export class DatastoreCommitService {
         if (!datastore.tags) {
           return datastore;
         }
-        const tagToDelete = datastore.tags.find(t => t.id === tagId);
+        const tagToDelete = datastore.tags.find(t => t.uid === tagId);
         if (tagToDelete) {
           // Remove tag from all topics
           datastore.topics = datastore.topics.map(topic => {
@@ -399,7 +399,7 @@ export class DatastoreCommitService {
             return topic;
           });
           // Remove the tag itself
-          datastore.tags = datastore.tags.filter(t => t.id !== tagId);
+          datastore.tags = datastore.tags.filter(t => t.uid !== tagId);
         }
         return datastore;
       },
@@ -411,7 +411,7 @@ export class DatastoreCommitService {
     return this.commitChanges(
       (datastore) => {
         updates.forEach(({ topicId, changes }) => {
-          const index = datastore.topics.findIndex(t => t.id === topicId);
+          const index = datastore.topics.findIndex(t => t.uid === topicId);
           if (index !== -1) {
             datastore.topics[index] = {
               ...datastore.topics[index],
@@ -465,7 +465,7 @@ export class DatastoreCommitService {
 
       members: [
         {
-          id: adminId,
+          uid: adminId,
           displayName: 'Admin',
           email: '',
           active: true,
@@ -536,8 +536,8 @@ export class DatastoreCommitService {
       return errors;
     }
 
-    if (typeof member.id !== 'string' || !member.id) {
-      errors.push({ field: `${prefix}.id`, germanMessage: `${prefix}.id ist erforderlich` });
+    if (typeof member.uid !== 'string' || !member.uid) {
+      errors.push({ field: `${prefix}.uid`, germanMessage: `${prefix}.uid ist erforderlich` });
     }
 
     if (typeof member.displayName !== 'string' || !member.displayName) {
@@ -560,8 +560,8 @@ export class DatastoreCommitService {
       return errors;
     }
 
-    if (typeof topic.id !== 'string' || !topic.id) {
-      errors.push({ field: `${prefix}.id`, germanMessage: `${prefix}.id ist erforderlich` });
+    if (typeof topic.uid !== 'string' || !topic.uid) {
+      errors.push({ field: `${prefix}.uid`, germanMessage: `${prefix}.uid ist erforderlich` });
     }
 
     if (typeof topic.header !== 'string' || !topic.header) {

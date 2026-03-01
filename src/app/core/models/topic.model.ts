@@ -55,12 +55,12 @@ export type TopicConnectionType = 'dependsOn' | 'blocks' | 'relatedTo';
  * Represents a connection from one topic to another.
  */
 export interface TopicConnection {
-  targetTopicId: string; // UUID of the connected topic
+  targetTopicUid: string; // UUID of the connected topic
   type: TopicConnectionType;
 }
 
 export interface Topic {
-  id: string; // UUID
+  uid: string; // UUID
   header: string;
   description?: string;
   tags?: string[];

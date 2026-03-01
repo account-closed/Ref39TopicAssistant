@@ -237,7 +237,7 @@ export class WriteQueueService {
     switch (op.type) {
       case 'add-topic': {
         const payload = op.payload as Topic;
-        return `topic:${payload.id}`;
+        return `topic:${payload.uid}`;
       }
       case 'update-topic':
       case 'delete-topic': {
@@ -246,7 +246,7 @@ export class WriteQueueService {
       }
       case 'add-member': {
         const payload = op.payload as TeamMember;
-        return `member:${payload.id}`;
+        return `member:${payload.uid}`;
       }
       case 'update-member':
       case 'delete-member': {
@@ -255,7 +255,7 @@ export class WriteQueueService {
       }
       case 'add-tag': {
         const payload = op.payload as Tag;
-        return `tag:${payload.id}`;
+        return `tag:${payload.uid}`;
       }
       case 'update-tag':
       case 'delete-tag': {
@@ -450,7 +450,7 @@ export class WriteQueueService {
       case 'update-topic': {
         const { topicId, updates } = operation.payload as { topicId: string; updates: Partial<Topic> };
         updatedDatastore.topics = updatedDatastore.topics.map(t =>
-          t.id === topicId 
+          t.uid === topicId
             ? { ...t, ...updates, updatedAt: timestamp }
             : t
         );
@@ -459,7 +459,7 @@ export class WriteQueueService {
 
       case 'delete-topic': {
         const { topicId } = operation.payload as { topicId: string };
-        updatedDatastore.topics = updatedDatastore.topics.filter(t => t.id !== topicId);
+        updatedDatastore.topics = updatedDatastore.topics.filter(t => t.uid !== topicId);
         break;
       }
 
@@ -472,7 +472,7 @@ export class WriteQueueService {
       case 'update-member': {
         const { memberId, updates } = operation.payload as { memberId: string; updates: Partial<TeamMember> };
         updatedDatastore.members = updatedDatastore.members.map(m =>
-          m.id === memberId 
+          m.uid === memberId
             ? { ...m, ...updates, updatedAt: timestamp }
             : m
         );
@@ -481,7 +481,7 @@ export class WriteQueueService {
 
       case 'delete-member': {
         const { memberId } = operation.payload as { memberId: string };
-        updatedDatastore.members = updatedDatastore.members.filter(m => m.id !== memberId);
+        updatedDatastore.members = updatedDatastore.members.filter(m => m.uid !== memberId);
         break;
       }
 
@@ -497,14 +497,14 @@ export class WriteQueueService {
       case 'update-tag': {
         const { tagId, updates } = operation.payload as { tagId: string; updates: Partial<Tag> };
         if (updatedDatastore.tags) {
-          const index = updatedDatastore.tags.findIndex(t => t.id === tagId);
+          const index = updatedDatastore.tags.findIndex(t => t.uid === tagId);
           if (index !== -1) {
             const oldName = updatedDatastore.tags[index].name;
             // Note: Tags use 'modifiedAt' per the Tag model (not 'updatedAt')
-            const updatedTag = { 
-              ...updatedDatastore.tags[index], 
-              ...updates, 
-              modifiedAt: timestamp 
+            const updatedTag = {
+              ...updatedDatastore.tags[index],
+              ...updates,
+              modifiedAt: timestamp
             };
             updatedDatastore.tags = [
               ...updatedDatastore.tags.slice(0, index),
@@ -533,7 +533,7 @@ export class WriteQueueService {
       case 'delete-tag': {
         const { tagId } = operation.payload as { tagId: string };
         if (updatedDatastore.tags) {
-          const tagToDelete = updatedDatastore.tags.find(t => t.id === tagId);
+          const tagToDelete = updatedDatastore.tags.find(t => t.uid === tagId);
           if (tagToDelete) {
             // Remove tag from all topics
             updatedDatastore.topics = updatedDatastore.topics.map(topic => {
@@ -546,7 +546,7 @@ export class WriteQueueService {
               return topic;
             });
             // Remove the tag itself
-            updatedDatastore.tags = updatedDatastore.tags.filter(t => t.id !== tagId);
+            updatedDatastore.tags = updatedDatastore.tags.filter(t => t.uid !== tagId);
           }
         }
         break;
@@ -556,7 +556,7 @@ export class WriteQueueService {
         const updates = operation.payload as Array<{ topicId: string; changes: Partial<Topic> }>;
         const updateMap = new Map(updates.map(u => [u.topicId, u.changes]));
         updatedDatastore.topics = updatedDatastore.topics.map(topic => {
-          const changes = updateMap.get(topic.id);
+          const changes = updateMap.get(topic.uid);
           if (changes) {
             return {
               ...topic,

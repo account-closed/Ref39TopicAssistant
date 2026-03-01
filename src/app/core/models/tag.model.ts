@@ -1,5 +1,5 @@
 export interface Tag {
-  id: string; // UUID
+  uid: string; // UUID
   name: string;
   searchKeywords?: string[];
   hinweise?: string; // Notes/tips

@@ -132,7 +132,7 @@ export class VisualizationFilterComponent {
     if (!ds?.tags) return [];
     return ds.tags.map(tag => ({
       label: tag.name,
-      value: tag.id
+      value: tag.uid
     }));
   });
   
@@ -143,7 +143,7 @@ export class VisualizationFilterComponent {
       .filter(m => m.active)
       .map(member => ({
         label: member.displayName,
-        value: member.id
+        value: member.uid
       }));
   });
   
@@ -195,10 +195,10 @@ export class VisualizationFilterComponent {
       // Create a set of selected tag names for matching
       const selectedTagNames = new Set<string>();
       this.selectedTagIds.forEach(tagId => {
-        const tag = ds.tags?.find(t => t.id === tagId);
+        const tag = ds.tags?.find(t => t.uid === tagId);
         if (tag) {
           selectedTagNames.add(tag.name);
-          selectedTagNames.add(tag.id);
+          selectedTagNames.add(tag.uid);
         }
       });
       

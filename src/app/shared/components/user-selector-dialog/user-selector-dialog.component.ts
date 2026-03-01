@@ -35,9 +35,9 @@ export class UserSelectorDialogComponent implements OnInit {
       // Load stored user
       this.backend.datastore$.subscribe(datastore => {
         if (datastore) {
-          const member = datastore.members.find(m => m.id === storedMemberId && m.active);
+          const member = datastore.members.find(m => m.uid === storedMemberId && m.active);
           if (member) {
-            this.backend.setCurrentUser(member.id, member.displayName);
+            this.backend.setCurrentUser(member.uid, member.displayName);
           } else {
             // Stored member not found or inactive, show dialog
             this.showDialog();
@@ -57,11 +57,11 @@ export class UserSelectorDialogComponent implements OnInit {
 
   confirm(): void {
     if (this.selectedMemberId) {
-      const member = this.activeMembers.find(m => m.id === this.selectedMemberId);
+      const member = this.activeMembers.find(m => m.uid === this.selectedMemberId);
       if (member) {
-        localStorage.setItem('currentMemberId', member.id);
+        localStorage.setItem('currentMemberId', member.uid);
         localStorage.setItem('currentMemberName', member.displayName);
-        this.backend.setCurrentUser(member.id, member.displayName);
+        this.backend.setCurrentUser(member.uid, member.displayName);
         this.visible = false;
         this.router.navigate(['/search']);
       }

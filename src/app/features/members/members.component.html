@@ -124,13 +124,13 @@
         </td>
         <td>
           <p-button 
-            [label]="getTopicCount(member.id).toString()" 
+            [label]="getTopicCount(member.uid).toString()" 
             icon="pi pi-list" 
             [rounded]="true" 
             [text]="true" 
             severity="info" 
             (onClick)="viewTopics(member)"
-            [badge]="getTopicCount(member.id) > 0 ? '' : undefined"
+            [badge]="getTopicCount(member.uid) > 0 ? '' : undefined"
             ariaLabel="Themen anzeigen">
           </p-button>
         </td>
@@ -400,7 +400,7 @@
       <div class="deactivate-content">
         <i class="pi pi-exclamation-triangle warning-icon"></i>
         <p>
-          Das Mitglied <strong>{{ memberToDelete?.displayName }}</strong> ist {{ getTopicCount(memberToDelete?.id || '') }} Themen zugeordnet 
+          Das Mitglied <strong>{{ memberToDelete?.displayName }}</strong> ist {{ getTopicCount(memberToDelete?.uid || '') }} Themen zugeordnet 
           und kann daher nicht gelöscht werden.
         </p>
         <p>Möchten Sie das Mitglied stattdessen deaktivieren?</p>

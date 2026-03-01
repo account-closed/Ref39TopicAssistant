@@ -52,7 +52,7 @@ export function removeInvalidTagReferences(datastore: Datastore): {
       if (invalidTags.length > 0) {
         removedCount += invalidTags.length;
         changeLog.push(
-          `Topic "${topic.header}" (${topic.id}): removed invalid tags [${invalidTags.join(', ')}]`
+          `Topic "${topic.header}" (${topic.uid}): removed invalid tags [${invalidTags.join(', ')}]`
         );
         return {
           ...topic,
@@ -82,7 +82,7 @@ export function removeInvalidMemberReferences(datastore: Datastore): {
   removedCount: number;
   changeLog: string[];
 } {
-  const validMemberIds = new Set(datastore.members.map((m) => m.id));
+  const validMemberIds = new Set(datastore.members.map((m) => m.uid));
   let removedCount = 0;
   const changeLog: string[] = [];
 
@@ -139,7 +139,7 @@ export function removeInvalidMemberReferences(datastore: Datastore): {
     }
 
     if (changes.length > 0) {
-      changeLog.push(`Topic "${topic.header}" (${topic.id}): ${changes.join('; ')}`);
+      changeLog.push(`Topic "${topic.header}" (${topic.uid}): ${changes.join('; ')}`);
     }
 
     if (hasChanges) {
@@ -214,7 +214,7 @@ export function validateTopicFields(datastore: Datastore): {
     }
 
     if (changes.length > 0) {
-      changeLog.push(`Topic "${topic.header}" (${topic.id}): ${changes.join('; ')}`);
+      changeLog.push(`Topic "${topic.header}" (${topic.uid}): ${changes.join('; ')}`);
     }
 
     return hasChanges ? updatedTopic : topic;
@@ -244,13 +244,13 @@ export function validateMemberColors(datastore: Datastore): {
   const updatedMembers = datastore.members.map((member) => {
     if (member.color !== undefined) {
       if (!isValidHexColor(member.color)) {
-        changeLog.push(`Member "${member.displayName}" (${member.id}): invalid color "${member.color}" removed`);
+        changeLog.push(`Member "${member.displayName}" (${member.uid}): invalid color "${member.color}" removed`);
         correctedCount++;
         return { ...member, color: undefined };
       }
       const normalized = normalizeHexColor(member.color);
       if (normalized !== member.color) {
-        changeLog.push(`Member "${member.displayName}" (${member.id}): color normalized from "${member.color}" to "${normalized}"`);
+        changeLog.push(`Member "${member.displayName}" (${member.uid}): color normalized from "${member.color}" to "${normalized}"`);
         correctedCount++;
         return { ...member, color: normalized };
       }
@@ -286,13 +286,13 @@ export function validateTagColors(datastore: Datastore): {
   const updatedTags = datastore.tags.map((tag) => {
     if (tag.color !== undefined) {
       if (!isValidHexColor(tag.color)) {
-        changeLog.push(`Tag "${tag.name}" (${tag.id}): invalid color "${tag.color}" removed`);
+        changeLog.push(`Tag "${tag.name}" (${tag.uid}): invalid color "${tag.color}" removed`);
         correctedCount++;
         return { ...tag, color: undefined };
       }
       const normalized = normalizeHexColor(tag.color);
       if (normalized !== tag.color) {
-        changeLog.push(`Tag "${tag.name}" (${tag.id}): color normalized from "${tag.color}" to "${normalized}"`);
+        changeLog.push(`Tag "${tag.name}" (${tag.uid}): color normalized from "${tag.color}" to "${normalized}"`);
         correctedCount++;
         return { ...tag, color: normalized };
       }
@@ -322,7 +322,7 @@ export function removeInvalidTopicConnections(datastore: Datastore): {
   removedCount: number;
   changeLog: string[];
 } {
-  const validTopicIds = new Set(datastore.topics.map((t) => t.id));
+  const validTopicIds = new Set(datastore.topics.map((t) => t.uid));
   let removedCount = 0;
   const changeLog: string[] = [];
 
@@ -334,10 +334,10 @@ export function removeInvalidTopicConnections(datastore: Datastore): {
     const changes: string[] = [];
     const seenConnections = new Set<string>();
     const validConnections = topic.connections.filter((connection) => {
-      const connectionKey = `${connection.targetTopicId}:${connection.type}`;
+      const connectionKey = `${connection.targetTopicUid}:${connection.type}`;
 
       // Check for self-reference
-      if (connection.targetTopicId === topic.id) {
+      if (connection.targetTopicUid === topic.uid) {
         changes.push(`self-reference removed`);
         removedCount++;
         return false;
@@ -345,15 +345,15 @@ export function removeInvalidTopicConnections(datastore: Datastore): {
 
       // Check for duplicate
       if (seenConnections.has(connectionKey)) {
-        changes.push(`duplicate connection to "${connection.targetTopicId}" (${connection.type}) removed`);
+        changes.push(`duplicate connection to "${connection.targetTopicUid}" (${connection.type}) removed`);
         removedCount++;
         return false;
       }
       seenConnections.add(connectionKey);
 
       // Check for invalid target topic
-      if (!validTopicIds.has(connection.targetTopicId)) {
-        changes.push(`connection to non-existent topic "${connection.targetTopicId}" removed`);
+      if (!validTopicIds.has(connection.targetTopicUid)) {
+        changes.push(`connection to non-existent topic "${connection.targetTopicUid}" removed`);
         removedCount++;
         return false;
       }
@@ -369,7 +369,7 @@ export function removeInvalidTopicConnections(datastore: Datastore): {
     });
 
     if (changes.length > 0) {
-      changeLog.push(`Topic "${topic.header}" (${topic.id}): ${changes.join('; ')}`);
+      changeLog.push(`Topic "${topic.header}" (${topic.uid}): ${changes.join('; ')}`);
       return { ...topic, connections: validConnections };
     }
 

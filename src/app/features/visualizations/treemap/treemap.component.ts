@@ -418,8 +418,10 @@ export class TreemapComponent implements AfterViewInit, OnDestroy {
     const topic = this.selectedTopic();
     const ds = this.datastore();
     if (!topic?.tags || !ds?.tags) return [];
-    
-    return ds.tags.filter(tag => topic.tags?.includes(tag.id));
+
+    return ds.tags
+      .filter(tag => topic.tags?.includes(tag.uid))
+      .map(tag => ({ id: tag.uid, name: tag.name, color: tag.color }));
   }
   
   getResponsibleMember(): string | null {
@@ -427,7 +429,7 @@ export class TreemapComponent implements AfterViewInit, OnDestroy {
     const ds = this.datastore();
     if (!topic || !ds) return null;
     
-    const member = ds.members.find(m => m.id === topic.raci.r1MemberId);
+    const member = ds.members.find(m => m.uid === topic.raci.r1MemberId);
     return member?.displayName || null;
   }
   
@@ -478,7 +480,7 @@ export class TreemapComponent implements AfterViewInit, OnDestroy {
   
   private findTag(ds: Datastore, tagIdOrName: string) {
     // Tags in topics can be either IDs or names, so search by both
-    return ds.tags?.find(t => t.id === tagIdOrName || t.name === tagIdOrName);
+    return ds.tags?.find(t => t.uid === tagIdOrName || t.name === tagIdOrName);
   }
   
   private buildHierarchy(topics: Topic[], ds: Datastore): TreemapNode {
@@ -495,22 +497,22 @@ export class TreemapComponent implements AfterViewInit, OnDestroy {
             const tag = this.findTag(ds, firstTagRef);
             // Use the tag name if found, otherwise use the reference itself (it might be the name already)
             const tagName = tag?.name || firstTagRef;
-            groupKeys = [{ 
-              id: tag?.id || firstTagRef, 
+            groupKeys = [{
+              id: tag?.uid || firstTagRef,
               name: tagName,
-              color: tag?.color 
+              color: tag?.color
             }];
           } else {
             groupKeys = [{ id: 'no-tag', name: 'Ohne Tag', color: '#9ca3af' }];
           }
           break;
-          
+
         case 'member':
           const memberId = topic.raci.r1MemberId;
           if (memberId) {
-            const member = ds.members.find(m => m.id === memberId);
-            groupKeys = [{ 
-              id: memberId, 
+            const member = ds.members.find(m => m.uid === memberId);
+            groupKeys = [{
+              id: memberId,
               name: member?.displayName || 'Unbekannt',
               color: member?.color 
             }];
