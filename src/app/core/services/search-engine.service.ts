@@ -305,6 +305,87 @@ export class SearchEngineService {
   }
 
   /**
+   * Add or update a single topic in the search index.
+   * This allows for incremental index updates without rebuilding the entire index.
+   *
+   * @param topic - The topic to add/update
+   * @param datastore - The full datastore (needed to resolve tag references)
+   */
+  addOrUpdateTopic(topic: Topic, datastore: Datastore): void {
+    if (!this.index) {
+      // If index doesn't exist, can't perform incremental update
+      return;
+    }
+
+    // Create the search document
+    const doc = this.createTopicDocument(topic, datastore);
+
+    // Remove old version if it exists
+    const docId = doc.id;
+    if (this.documentsMap.has(docId)) {
+      this.index.remove(docId);
+    }
+
+    // Add new version
+    this.documentsMap.set(docId, doc);
+    this.index.add(doc);
+
+    // Increment version to notify consumers
+    this.indexVersionSignal.update(v => v + 1);
+  }
+
+  /**
+   * Remove a topic from the search index.
+   *
+   * @param topicId - The UID of the topic to remove
+   */
+  removeTopic(topicId: string): void {
+    if (!this.index) {
+      return;
+    }
+
+    const docId = createDocumentId('topic', topicId);
+
+    if (this.documentsMap.has(docId)) {
+      this.index.remove(docId);
+      this.documentsMap.delete(docId);
+
+      // Increment version to notify consumers
+      this.indexVersionSignal.update(v => v + 1);
+    }
+  }
+
+  /**
+   * Update multiple topics in the index at once.
+   * More efficient than calling addOrUpdateTopic multiple times.
+   *
+   * @param topics - Array of topics to update
+   * @param datastore - The full datastore (needed to resolve tag references)
+   */
+  updateTopics(topics: Topic[], datastore: Datastore): void {
+    if (!this.index || topics.length === 0) {
+      return;
+    }
+
+    for (const topic of topics) {
+      const doc = this.createTopicDocument(topic, datastore);
+      const docId = doc.id;
+
+      // Remove old version if it exists
+      if (this.documentsMap.has(docId)) {
+        this.index.remove(docId);
+      }
+
+      // Add new version
+      this.documentsMap.set(docId, doc);
+      this.index.add(doc);
+    }
+
+    // Increment version once for all updates
+    this.indexVersionSignal.update(v => v + 1);
+  }
+
+  /**
    * Creates SearchDocument entries from datastore entities.
    * Only indexes Topics since that's what we want to show in search results.
    * Tag content is included in topic documents to make them searchable via tags.

@@ -37,6 +37,41 @@ impl DbKeys {
     pub fn revision_key(instance_id: &str) -> String {
         format!("revision:{}", instance_id)
     }
+
+    // Atomic entity keys
+    pub fn topic_key(instance_id: &str, topic_id: &str) -> String {
+        format!("topic:{}:{}", instance_id, topic_id)
+    }
+
+    pub fn tag_key(instance_id: &str, tag_id: &str) -> String {
+        format!("tag:{}:{}", instance_id, tag_id)
+    }
+
+    pub fn member_key(instance_id: &str, member_id: &str) -> String {
+        format!("member:{}:{}", instance_id, member_id)
+    }
+
+    // Change event keys
+    pub fn change_event_key(instance_id: &str, revision_id: u64) -> String {
+        format!("change:{}:{:020}", instance_id, revision_id)
+    }
+
+    // List prefixes for scanning
+    pub fn topics_prefix(instance_id: &str) -> String {
+        format!("topic:{}:", instance_id)
+    }
+
+    pub fn tags_prefix(instance_id: &str) -> String {
+        format!("tag:{}:", instance_id)
+    }
+
+    pub fn members_prefix(instance_id: &str) -> String {
+        format!("member:{}:", instance_id)
+    }
+
+    pub fn changes_prefix(instance_id: &str) -> String {
+        format!("change:{}:", instance_id)
+    }
 }
 
 /// API response for health check.
@@ -63,4 +98,40 @@ pub struct SuccessResponse {
 #[derive(Debug, Serialize)]
 pub struct ErrorResponse {
     pub error: String,
+}
+
+/// Change event type for notifications.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ChangeEventType {
+    Create,
+    Update,
+    Delete,
+}
+
+/// Entity type for change notifications.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EntityType {
+    Topic,
+    Tag,
+    Member,
+}
+
+/// Change event for notifying clients about data changes.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChangeEvent {
+    pub entity_type: EntityType,
+    pub entity_id: String,
+    pub event_type: ChangeEventType,
+    pub revision_id: u64,
+    pub timestamp: String, // ISO 8601
+    pub by_member_id: Option<String>,
+}
+
+/// Response containing change events since a given revision.
+#[derive(Debug, Serialize)]
+pub struct ChangesResponse {
+    pub changes: Vec<ChangeEvent>,
+    pub current_revision: u64,
 }
