@@ -42,6 +42,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/health", get(api::health))
         .route("/instances/:instance_id/datastore", get(api::get_datastore))
         .route("/instances/:instance_id/revision", get(api::get_revision))
+        .route("/instances/:instance_id/changes", get(api::get_changes))
         .route("/topics", post(api::create_topic))
         .route("/topics/:topic_id", patch(api::update_topic))
         .route("/topics/:topic_id", delete(api::delete_topic))
