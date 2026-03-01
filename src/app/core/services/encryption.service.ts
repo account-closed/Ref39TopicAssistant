@@ -93,9 +93,11 @@ export class EncryptionService {
     const tag = this.base64ToArrayBuffer(payload.tag);
 
     // Combine ciphertext and tag for AES-GCM
-    const ciphertext = new Uint8Array(ciphertextOnly.length + tag.length);
-    ciphertext.set(new Uint8Array(ciphertextOnly), 0);
-    ciphertext.set(new Uint8Array(tag), ciphertextOnly.length);
+    const ciphertextArray = new Uint8Array(ciphertextOnly);
+    const tagArray = new Uint8Array(tag);
+    const ciphertext = new Uint8Array(ciphertextArray.length + tagArray.length);
+    ciphertext.set(ciphertextArray, 0);
+    ciphertext.set(tagArray, ciphertextArray.length);
 
     // Decrypt
     let plaintext: ArrayBuffer;
